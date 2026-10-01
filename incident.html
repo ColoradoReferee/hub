@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Incident report · Colorado Referees</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<link rel="stylesheet" href="app.css?v=2026.10.01-e">
+<style>
+/* The incident report, on the app's tokens. Class names kept from the
+   generator so its logic is untouched. */
+.wrap { padding: 0 20px 24px; }
+.ctx { padding: 14px 20px 0; }
+.ctx-in { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ctx-meta { flex-grow: 1; min-width: 0; }
+.ctx-num { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 32px; line-height: 1; }
+.ctx-teams { font-size: 16px; font-weight: 700; margin-top: 4px; }
+.ctx-where { font-size: 14px; color: var(--muted); }
+.shield { display: none; }
+.x { display: none; }
+.switch-lbl { font-size: 13px; font-weight: 700; color: var(--muted); margin: 16px 0 6px; }
+.switch { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sw { min-height: 54px; border-radius: 10px; border: 2px solid var(--navy); background: var(--surface); color: var(--ink); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-family: inherit; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.sw[aria-pressed="true"] { background: var(--navy); color: var(--surface); }
+.sw-name { font-size: 16px; font-weight: 700; }
+.sw-cost { font-size: 12px; opacity: .8; }
+.switch-note { font-size: 14px; color: var(--muted); line-height: 1.4; margin: 8px 0 0; }
+.sec { margin-top: 20px; }
+.sec-h { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.sec-h h2 { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 24px; margin: 0; line-height: 1; }
+.sec-h .rule { flex-grow: 1; height: 1px; background: var(--line); }
+.sec-h .only { font-size: 12px; font-weight: 700; color: var(--muted); }
+.seg, .codes { display: flex; flex-wrap: wrap; gap: 8px; }
+.seg button, .codes button { min-height: 44px; padding: 0 14px; border-radius: 999px; border: 2px solid var(--navy); background: var(--surface); color: var(--ink); font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.seg button[aria-pressed="true"], .codes button[aria-pressed="true"] { background: var(--navy); color: var(--surface); }
+.seg button[data-tone="red"][aria-pressed="true"] { background: var(--red); border-color: var(--red); color: #fff; }
+.seg button[data-tone="yellow"][aria-pressed="true"] { background: var(--gold); border-color: var(--gold); color: #1B1F2A; }
+.codes button { text-align: left; }
+.codes button small { display: block; font-size: 12px; font-weight: 400; }
+.sitnote { display: none; margin-top: 10px; padding: 12px 14px; border-radius: 10px; background: var(--surface); border: 2px solid var(--gold); font-size: 14px; }
+.sitnote.on { display: block; }
+.sitnote b { display: block; margin-bottom: 2px; }
+.sitnote p { margin: 0; color: var(--muted); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.f { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.f input, .f select, textarea { font: inherit; font-weight: 400; color: var(--ink); width: 100%; padding: 10px 12px; border: 1px solid var(--muted); border-radius: 8px; background: var(--surface); box-sizing: border-box; }
+textarea { min-height: 160px; line-height: 1.45; resize: vertical; }
+.rules { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; font-size: 14px; margin-bottom: 10px; }
+.rules p { margin: 4px 0; }
+.fills { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.fill { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.fill-k { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+.fill-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.fill-opts button, .fill-in button { min-height: 40px; padding: 0 12px; border-radius: 999px; border: 2px solid var(--navy); background: var(--surface); color: var(--ink); font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.fill-in { display: flex; gap: 8px; }
+.fill-in input { flex-grow: 1; font: inherit; padding: 8px 10px; border: 1px solid var(--muted); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.fills-done { font-size: 14px; color: var(--green); font-weight: 700; }
+.narr-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 4px; }
+.blanks { color: var(--red); }
+.blanks.done { color: var(--green); }
+.hint { font-size: 13px; color: var(--muted); line-height: 1.4; margin: 6px 0 0; }
+.prev { margin-top: 12px; }
+.prev h4 { font-size: 13px; font-weight: 700; color: var(--muted); margin: 0 0 6px; }
+.doc { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 15px; line-height: 1.5; white-space: pre-wrap; }
+.checks { display: flex; flex-wrap: wrap; gap: 8px; }
+.chk { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 14px; cursor: pointer; }
+.chk input { width: 18px; height: 18px; }
+.full-only { display: none; }
+body[data-mode="full"] .full-only { display: block; }
+.cond { display: none; margin-top: 10px; padding: 12px 14px; border-radius: 10px; background: var(--surface); border: 2px solid var(--red); }
+.cond.on { display: block; }
+.cond h3 { font-size: 15px; margin: 0 0 8px; }
+.err { color: var(--red); font-weight: 700; font-size: 14px; margin-top: 12px; min-height: 1.2em; }
+.file { width: 100%; min-height: 58px; border: 0; border-radius: 10px; background: var(--red); color: #fff; font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 26px; letter-spacing: .02em; cursor: pointer; margin-top: 10px; }
+.file[disabled] { opacity: .6; }
+.bar { position: sticky; bottom: 0; background: var(--bg); padding: 10px 20px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); }
+.bar-in { max-width: 480px; margin: 0 auto; }
+.bar #barMode { font-weight: 700; font-size: 14px; }
+.bar #barSub { font-size: 13px; color: var(--muted); font-style: normal; display: block; }
+.raphand { display: none; }
+.raphand.on { display: block; }
+.jaref { display: none; }
+.done-screen { display: none; padding: 40px 20px; text-align: center; }
+.done-screen.on { display: block; }
+.done-screen .tick { width: 72px; height: 72px; margin: 0 auto 12px; border-radius: 50%; background: var(--green); color: var(--ongreen); font-size: 40px; line-height: 72px; }
+.done-screen h2 { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 36px; margin: 0 0 6px; }
+.raphand { margin-top: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.raphand h3 { margin: 0 0 4px; font-size: 18px; }
+.raphand .lead { font-size: 14px; color: var(--muted); margin: 0 0 10px; }
+.raphand svg { width: 180px; height: 180px; display: block; margin: 0 auto; }
+.raphand .u { font-size: 13px; color: var(--muted); margin-top: 8px; word-break: break-all; }
+body[data-mode="short"] #form .full-only { display: none; }
+</style>
+</head>
+<body data-mode="short">
+
+<div class="app">
+<div class="top">
+  <a class="backlink" href="#" id="backLink"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>Game card</a>
+  <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+</div>
+<div class="ctx">
+  <div class="ctx-in">
+    <div class="shield" id="brShield">&nbsp;</div>
+    <div class="ctx-meta">
+      <div class="ctx-num" id="cNum">Incident report</div>
+      <div class="ctx-teams" id="cTeams">Loading…</div>
+      <div class="ctx-where" id="cWhere">—</div>
+    </div>
+    <button class="x" onclick="history.back()">Close</button>
+  </div>
+</div>
+
+<div class="wrap" id="form">
+
+  <div class="switch-lbl">Report length</div>
+  <div class="switch" role="group" aria-label="Report length">
+    <button class="sw" id="swShort" aria-pressed="true" onclick="setMode('short')">
+      <span class="sw-name">Short</span><span class="sw-cost">7 fields · about 90 sec</span>
+    </button>
+    <button class="sw" id="swFull" aria-pressed="false" onclick="setMode('full')">
+      <span class="sw-name">Full USSF</span><span class="sw-cost">20+ fields · about 6 min</span>
+    </button>
+  </div>
+  <p class="switch-note" id="modeNote">
+    <b>Short</b> covers cautions and routine dismissals. Anything involving contact with an official,
+    discriminatory language, or an abandoned match switches to Full automatically.
+  </p>
+
+  <div class="sec">
+    <div class="sec-h"><h2>What happened</h2><div class="rule"></div></div>
+    <div class="seg" id="typeSeg">
+      <button data-type="caution"  data-tone="yellow" aria-pressed="true"  onclick="setType(this)">Caution</button>
+      <button data-type="sendoff"  data-tone="red"    aria-pressed="false" onclick="setType(this)">Send-off</button>
+      <button data-type="official" data-tone="red"    aria-pressed="false" onclick="setType(this)">Team official</button>
+      <button data-type="spectator" data-tone="red"   aria-pressed="false" onclick="setType(this)">Spectator</button>
+      <button data-type="injury"                      aria-pressed="false" onclick="setType(this)">Injury</button>
+      <button data-type="abandon"  data-tone="red"    aria-pressed="false" onclick="setType(this)">Abandoned</button>
+    </div>
+    <div class="sitnote" id="sitNote">
+      <b>Goes on the sit out list</b>
+      <p>Tournament staff will see this person is expected to stay off the fields. Nothing about them appears on the public scoreboard.</p>
+    </div>
+  </div>
+
+  <div class="sec" id="codeSec">
+    <div class="sec-h"><h2>Misconduct code</h2><div class="rule"></div></div>
+    <div class="codes" id="codeList"></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-h"><h2>Who</h2><div class="rule"></div></div>
+    <div class="row3">
+      <label class="f" style="grid-column:1/-1"><span>Full name</span>
+        <input type="text" id="pName" oninput="rebuildNarr()" placeholder="Last, First" autocomplete="off"></label>
+      <label class="f"><span>Jersey</span><input type="text" id="pNum" oninput="rebuildNarr()" inputmode="numeric" placeholder="14"></label>
+      <label class="f"><span>Pass / ID</span><input type="text" id="pId" placeholder="Optional"></label>
+      <label class="f"><span>Team</span><select id="pTeam" onchange="rebuildNarr()"></select></label>
+    </div>
+    <div class="row2">
+      <label class="f"><span>Minute</span><input type="text" id="pMin" oninput="rebuildNarr()" inputmode="numeric" placeholder="63"></label>
+      <label class="f"><span>Half</span>
+        <select id="pHalf" onchange="rebuildNarr()"><option>First half</option><option>Second half</option>
+          <option>Halftime</option><option>Before the match</option><option>After the match</option></select></label>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-h"><h2>What you saw</h2><div class="rule"></div></div>
+    <div class="rules">
+      <p><b>Facts only.</b> No opinion, no interpretation.</p>
+      <p><b>Names, never pronouns.</b> Write the name every time, not "he" or "they."</p>
+      <p><b>Laws of the Game wording.</b> Say "struck" and "serious foul play," not "hit" and "bad tackle."</p>
+    </div>
+    <!-- The blanks come BEFORE the narrative.
+         They used to sit underneath it, so a referee opened the form, saw a
+         big empty text box, wrote the whole account by hand, and only then
+         scrolled past it and found the questions that would have written it
+         for them. Eric Henschel raised it after Arsenal Cup and said the
+         feature was excellent -- he just found it after doing the work
+         twice. Answer the questions, watch the narrative fill in. -->
+    <div class="fills" id="fills"></div>
+    <div class="narr-head">
+      <span>Narrative</span>
+      <span class="blanks" id="blankCount">0 blanks left</span>
+    </div>
+    <textarea id="narr" oninput="onNarrInput()" placeholder="Pick a code above and a template lands here."></textarea>
+    <p class="hint">The narrative fills in as you answer above. You can also type
+      straight into it &mdash; either works, and editing it by hand never
+      loses what you have already answered.</p>
+    <div class="prev">
+      <h4>What the committee reads</h4>
+      <div class="doc" id="preview">Pick a misconduct code to load a template.</div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-h"><h2>Observed by</h2><div class="rule"></div></div>
+    <div class="checks" id="witnessList"><span style="color:var(--steel);font-size:13px">Loading crew…</span></div>
+  </div>
+
+  <div class="full-only">
+    <div class="sec">
+      <div class="sec-h"><h2>Circumstances</h2><div class="rule"></div><div class="only">Full only</div></div>
+      <div class="row2">
+        <label class="f"><span>Challenge for the ball?</span>
+          <select id="fChallenge"><option>Not applicable</option><option>Yes, during a challenge</option><option>No, away from the ball</option></select></label>
+        <label class="f"><span>Ball status</span>
+          <select id="fBall"><option>In play</option><option>Out of play</option><option>At a stoppage</option></select></label>
+      </div>
+      <label class="f"><span>Where on the field</span>
+        <input type="text" id="fWhere" placeholder="Centre circle, 30 yards from the goal line"></label>
+      <div class="row2">
+        <label class="f"><span>Anyone injured?</span>
+          <select id="fInjury"><option>No injury</option><option>Yes, treated on field</option>
+            <option>Yes, left the match</option><option>Yes, medical called</option></select></label>
+        <label class="f"><span>Prior incident involved?</span>
+          <select id="fPrior"><option>None</option><option>Yes, earlier foul</option>
+            <option>Yes, ongoing dispute</option><option>Yes, prior caution</option></select></label>
+      </div>
+      <label class="f"><span>Demeanour when told to leave</span>
+        <select id="fDemeanour"><option>Left without incident</option><option>Protested but left</option>
+          <option>Refused, coach escorted</option><option>Refused, match delayed</option></select></label>
+      <label class="f"><span>Other players who entered the area</span>
+        <input type="text" id="fOthers" placeholder="Names, or 'none'"></label>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h"><h2>Exact words or gestures</h2><div class="rule"></div><div class="only">Full only</div></div>
+      <label class="f"><span>Quote it word for word, including profanity</span>
+        <input type="text" id="fQuote" placeholder="&quot;...&quot;"></label>
+      <label class="f"><span>Directed at</span>
+        <input type="text" id="fTarget" placeholder="Name and role of the person targeted"></label>
+      <label class="chk" style="margin-top:2px">
+        <input type="checkbox" id="discChk" onchange="checkDisc()">
+        The language targeted a protected characteristic
+      </label>
+      <div class="cond" id="discBlock">
+        <h3>Discriminatory language protocol</h3>
+        <label class="f"><span>Characteristic targeted</span>
+          <select id="fChar"><option>Race</option><option>Colour</option><option>Gender</option>
+            <option>Sexual orientation</option><option>Religion</option><option>National origin</option>
+            <option>Age</option><option>Disability</option></select></label>
+        <div class="checks" style="margin-bottom:12px">
+          <label class="chk"><input type="checkbox" id="d1"> Both head coaches informed</label>
+          <label class="chk"><input type="checkbox" id="d2"> Event staff called</label>
+          <label class="chk"><input type="checkbox" id="d3"> Final warning given to both benches</label>
+          <label class="chk"><input type="checkbox" id="d4"> Stoppage time added</label>
+        </div>
+        <label class="f" style="margin-bottom:0"><span>Who reported it, if not heard directly</span>
+          <input type="text" id="fReporter" placeholder="Name and role"></label>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h"><h2>Match details</h2><div class="rule"></div><div class="only">Full only</div></div>
+      <div class="row2">
+        <label class="f"><span>Home score</span><input type="text" id="fHomeScore" inputmode="numeric"></label>
+        <label class="f"><span>Away score</span><input type="text" id="fAwayScore" inputmode="numeric"></label>
+      </div>
+      <label class="f"><span>Match completed?</span>
+        <select id="fCompleted"><option>Completed normally</option><option>Abandoned</option>
+          <option>Suspended then resumed</option><option>Terminated</option></select></label>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h"><h2>Submitted by</h2><div class="rule"></div><div class="only">Full only</div></div>
+      <label class="f"><span>Name</span><input type="text" id="fBy"></label>
+      <div class="row2">
+        <label class="f"><span>USSF ID</span><input type="text" id="fUssf" placeholder="Optional, we can look it up"></label>
+        <label class="f"><span>Phone</span><input type="tel" id="fPhone" placeholder="Optional"></label>
+      </div>
+      <label class="f"><span>Email</span><input type="email" id="fEmail" placeholder="Where we reply if there are questions"></label>
+      <p class="hint" style="margin-top:-4px">Do not stall on the ID number. Filing the report matters more than filling every box.</p>
+    </div>
+  </div>
+
+  <div class="err" id="err"></div>
+
+  <div class="id" id="doneId"></div>
+  <a class="btn" href="index.html">Back to the hub</a>
+</div>
+
+<div class="bar" id="bar">
+  <div class="bar-in">
+    <div class="meta"><b id="barMode">Short report</b><i id="barSub">Goes to the tournament administrators</i></div>
+    <button class="file" id="fileBtn" onclick="submitIncident()">File report</button>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+/* ── branding from config.js ─────────────────────────────
+   Nothing tournament-specific is hardcoded on this page. */
+var P=new URLSearchParams(location.search);
+var EV    = {};
+
+/* config.js is what tells a page which tournament it is. When it does not
+   load -- opened outside its folder, a bad upload, a cached 404 -- the
+   page rendered a blank shell reading "Colorado Referee Hub" with no
+   venues and no explanation. Say so instead of guessing. */
+if (!window.HUB) {
+  try {
+    var _cfgWarn = function(){
+      var b=document.createElement('div');
+      b.style.cssText='position:relative;z-index:5;padding:14px 16px;background:#7A1A0E;'+
+        'color:#fff;font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:14px;'+
+        'line-height:1.5;text-align:center';
+      b.innerHTML='<b>Configuration did not load.</b><br>'+
+        'This page cannot tell which tournament it belongs to, so nothing below is real. '+
+        'Open it from its own web address rather than as a file, and check that '+
+        'config.js sits beside it.';
+      document.body.insertBefore(b, document.body.firstChild);
+    };
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',_cfgWarn);
+    else _cfgWarn();
+  } catch(e){}
+}
+
+// Every request names its event, and only when config.js resolved one.
+// Three tournaments run on 13-16 August; without this the backend picks
+// whichever sorts first.
+function evParam(){
+  var id = P.get('event') || '';
+  return id ? '&event='+encodeURIComponent(id) : '';
+}
+function evId(){ return P.get('event') || ''; }
+
+var EVENT = P.get('event') || '';
+function jarBrand(extra){
+  try{
+    document.title = (extra? extra+' \u00b7 ':'') + (EV.full||'Referee Hub');
+    var sh=document.getElementById('brShield'); if(sh) sh.textContent=EV.shield||'';
+    if(EV.accent) document.documentElement.style.setProperty('--accent',EV.accent);
+  }catch(e){}
+}
+
+var BACKEND = (window.HUB && HUB.backend) || '';
+
+var CAUTIONS=[['UB','Unsporting behaviour'],['DT','Dissent, word or action'],
+ ['PI/PO','Persistent infringement'],['DTR/FTRD','Delaying restart or distance'],
+ ['EF/LF','Entering or leaving, no permission']];
+var SENDOFFS=[['SFP','Serious foul play'],['VC','Violent conduct'],['S','Spitting at a person'],
+ ['DGH','Denied goal, handling'],['DGF','Denied goal, foul'],
+ ['AL','Abusive language or gestures'],['2CT','Second caution']];
+
+var T={
+ UB:'In the [MIN] minute, [NAME] ([NUM], [TEAM]) [DESCRIBE THE ACT IN LOTG TERMS]. [NAME] was cautioned for unsporting behaviour.',
+ DT:'In the [MIN] minute, following a decision to award [DECISION], [NAME] ([NUM], [TEAM]) said to the referee, quote: "[EXACT WORDS]". [NAME] was cautioned for dissent.',
+ 'PI/PO':'[NAME] ([NUM], [TEAM]) committed fouls in the [MIN1], [MIN2] and [MIN3] minutes. [NAME] was warned after the second foul and cautioned in the [MIN] minute for persistent infringement.',
+ 'DTR/FTRD':'In the [MIN] minute, at a [FREE KICK / CORNER KICK / THROW-IN] awarded to [TEAM], [NAME] ([NUM], [TEAM]) [KICKED THE BALL AWAY / HELD ONTO THE BALL / STOOD OVER THE BALL / STOOD APPROXIMATELY ... YARDS FROM THE BALL AND DID NOT RETREAT WHEN INSTRUCTED].\n\n[NAME] was cautioned for [DELAYING THE RESTART OF PLAY / FAILURE TO RESPECT THE REQUIRED DISTANCE].',
+ 'EF/LF':'In the [MIN] minute, [NAME] ([NUM], [TEAM]) [ENTERED / RE-ENTERED / LEFT] the field of play without the permission of the referee, following [REASON]. [NAME] was cautioned.',
+ SFP:'In the [MIN] minute, with the ball in play near [LOCATION], [NAME] ([NUM], [TEAM]) challenged [OPPONENT NAME] ([OPP NUM], [OPP TEAM]) for the ball. [NAME] made contact with [OPPONENT NAME] [ABOVE / AT / BELOW] the ankle with [ONE FOOT / BOTH FEET], studs [SHOWING / DOWN], at [HIGH / MODERATE] speed, endangering the safety of [OPPONENT NAME].\n\n[OPPONENT NAME] [RECEIVED TREATMENT FOR ... / WAS NOT INJURED].\n\n[NAME] was shown the red card in the [MIN] minute and [LEFT THE FIELD WITHOUT INCIDENT / REQUIRED AN ESCORT].',
+ VC:'In the [MIN] minute, with the ball [IN PLAY / OUT OF PLAY] and located approximately [DISTANCE] from the incident, [NAME] ([NUM], [TEAM]) [STRUCK / KICKED / ELBOWED / HEADBUTTED / PUSHED] [TARGET NAME] ([TARGET NUM], [TARGET TEAM]) to the [HEAD / FACE / CHEST / BACK] with [A CLOSED FIST / AN OPEN HAND / THE ELBOW / THE FOREARM]. The action was not a challenge for the ball.\n\n[TARGET NAME] [RECEIVED TREATMENT FOR ... / WAS NOT INJURED]. [OTHER PLAYERS WHO ENTERED THE AREA: ... / No other players entered the area.]\n\n[NAME] was shown the red card in the [MIN] minute and [LEFT THE FIELD WITHOUT INCIDENT / REQUIRED AN ESCORT].',
+ S:'In the [MIN] minute, at a [STOPPAGE / RESTART] near [LOCATION], [NAME] ([NUM], [TEAM]) spat [AT / TOWARD] [TARGET NAME] ([TARGET ROLE]). The spittle [MADE CONTACT WITH ... / did not make contact].\n\n[NAME] was shown the red card in the [MIN] minute and [LEFT THE FIELD WITHOUT INCIDENT / REQUIRED AN ESCORT].',
+ DGH:'In the [MIN] minute, [ATTACKER NAME] ([ATT NUM], [ATT TEAM]) played the ball toward the goal from approximately [DISTANCE] yards. [NAME] ([NUM], [TEAM]), who was not the goalkeeper, deliberately handled the ball with [THE HAND / THE ARM], preventing the ball from entering the goal.\n\nA penalty kick was awarded. [NAME] was shown the red card in the [MIN] minute.',
+ DGF:'In the [MIN] minute, [ATTACKER NAME] ([ATT NUM], [ATT TEAM]) was moving toward goal from approximately [DISTANCE] yards with [NUMBER] defenders between the ball and the goal. [NAME] ([NUM], [TEAM]) committed [OFFENCE] on [ATTACKER NAME], denying an obvious goalscoring opportunity.\n\nA [DIRECT FREE KICK / PENALTY KICK] was awarded. [NAME] was shown the red card in the [MIN] minute.',
+ AL:'In the [MIN] minute, at a [STOPPAGE OF PLAY / DURING PLAY], [NAME] ([NUM], [TEAM]) said to [TARGET NAME AND ROLE], quote: "[EXACT WORDS, INCLUDING PROFANITY]".\n\nThese words were [HEARD DIRECTLY BY THE REFEREE / REPORTED TO THE REFEREE BY ...]. [ANY GESTURE MADE: ... / No gesture accompanied the words.]\n\n[NAME] was shown the red card in the [MIN] minute and [LEFT THE FIELD WITHOUT INCIDENT / REQUIRED AN ESCORT].',
+ '2CT':'First caution: in the [MIN1] minute, [NAME] ([NUM], [TEAM]) was cautioned for [FIRST OFFENCE AND CODE]. [BRIEF DESCRIPTION].\n\nSecond caution: in the [MIN2] minute, [NAME] was cautioned for [SECOND OFFENCE AND CODE]. [BRIEF DESCRIPTION].\n\n[NAME] was shown the second yellow card followed by the red card and [LEFT THE FIELD WITHOUT INCIDENT / REQUIRED AN ESCORT].'
+};
+
+var FORCE_FULL={VC:1,S:1,AL:1,SFP:1};
+var SITOUT_TYPES={sendoff:1,official:1,spectator:1};
+
+var S={mode:'short',type:'caution',code:null,
+       gameId:P.get('gameId')||'', date:P.get('date')||'',
+       by:P.get('by')||'', game:null, narrDirty:false};
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+function setMode(m){
+  S.mode=m; document.body.dataset.mode=m;
+  document.getElementById('swShort').setAttribute('aria-pressed',m==='short');
+  document.getElementById('swFull').setAttribute('aria-pressed',m==='full');
+  document.getElementById('barMode').textContent=m==='short'?'Short report':'Full USSF report';
+  document.getElementById('barSub').textContent=m==='short'
+    ?'Goes to the tournament administrators'
+    :'Goes to the tournament administrators and CSA discipline';
+}
+
+function setType(btn){
+  S.type=btn.dataset.type;
+  document.querySelectorAll('#typeSeg button').forEach(function(b){
+    b.setAttribute('aria-pressed',b===btn);});
+  document.getElementById('sitNote').classList.toggle('on',!!SITOUT_TYPES[S.type]);
+  renderCodes();
+  if(S.type==='abandon'||S.type==='spectator') setMode('full');
+}
+
+function renderCodes(){
+  var sec=document.getElementById('codeSec'), list=document.getElementById('codeList');
+  if(S.type!=='caution'&&S.type!=='sendoff'){ sec.style.display='none'; S.code=null; return; }
+  sec.style.display='';
+  var set=S.type==='caution'?CAUTIONS:SENDOFFS;
+  var red=S.type==='sendoff'?' red':'';
+  list.innerHTML=set.map(function(c){
+    return '<button class="code'+red+'" aria-pressed="false" onclick="pickCode(this,\''+c[0]+'\')">'+
+      '<b>'+c[0]+'</b><i>'+c[1]+'</i></button>';}).join('');
+  S.code=null;
+}
+
+function pickCode(btn,code){
+  S.code=code;
+  document.querySelectorAll('#codeList .code').forEach(function(b){
+    b.setAttribute('aria-pressed',b===btn);});
+  S.narrDirty=false;
+  setNarr(applyTokens(T[code]||''));
+  if(FORCE_FULL[code]){
+    setMode('full');
+    document.getElementById('modeNote').innerHTML='<b>'+code+' requires the full report.</b> '+
+      'Contact with a person, or language of this kind, goes to a disciplinary committee. '+
+      'The short form does not carry enough detail for them to act on.';
+  } else {
+    document.getElementById('modeNote').innerHTML='<b>Short</b> covers cautions and routine dismissals. '+
+      'Anything involving contact with an official, discriminatory language, or an abandoned match '+
+      'switches to Full automatically.';
+  }
+}
+
+// 25 -> 25th, 1 -> 1st. Match reports read as prose, not as a form.
+function ord(n){
+  var d=String(n||'').replace(/\D/g,'');
+  if(!d) return '';
+  var i=+d, j=i%10, k=i%100;
+  if(j===1&&k!==11) return i+'st';
+  if(j===2&&k!==12) return i+'nd';
+  if(j===3&&k!==13) return i+'rd';
+  return i+'th';
+}
+
+// Everything the WHO section already knows, keyed by the token it fills.
+function knownTokens(){
+  var name=document.getElementById('pName').value.trim();
+  var num =document.getElementById('pNum').value.trim();
+  var teamRaw=document.getElementById('pTeam').value||'';
+  var team=teamRaw.replace(/\s*\((home|away)\)\s*$/i,'').trim();
+  var min =document.getElementById('pMin').value.trim();
+
+  var m={};
+  if(name){ m['NAME']=name; }
+  if(num){  m['NUM']=num; }
+  if(team && team.toLowerCase().indexOf('neither')<0){ m['TEAM']=team; }
+  if(min){  m['MIN']=ord(min); m['MIN1']=ord(min); }
+
+  // The other side, for templates that name an opponent or a target
+  if(S.game){
+    var opp = (team && team===S.game.home) ? S.game.away
+            : (team && team===S.game.away) ? S.game.home : '';
+    if(opp){ m['OPP TEAM']=opp; m['TARGET TEAM']=opp; m['ATT TEAM']=opp; }
+  }
+  return m;
+}
+
+// Substitute every token we know. Leaves anything we cannot know alone.
+function applyTokens(text){
+  var m=knownTokens();
+  Object.keys(m).forEach(function(k){
+    text = text.split('['+k+']').join(m[k]);
+  });
+  return text;
+}
+
+var _writing=false;
+function setNarr(v){
+  _writing=true;
+  document.getElementById('narr').value=v;
+  _writing=false;
+  countBlanks();
+}
+function onNarrInput(){
+  if(!_writing) S.narrDirty=true;   // the referee took over, stop rewriting under them
+  countBlanks();
+}
+
+// Called whenever the WHO section changes. Rebuilds cleanly if the referee
+// has not typed in the narrative yet, otherwise only fills blanks still left.
+function rebuildNarr(){
+  if(!S.code) return;
+  if(S.narrDirty){
+    setNarr(applyTokens(document.getElementById('narr').value));
+  } else {
+    setNarr(applyTokens(T[S.code]||''));
+  }
+}
+
+// One control per remaining blank. A slash list becomes tappable options,
+// anything else becomes a small text box.
+function renderFills(){
+  var el=document.getElementById('fills');
+  var v=document.getElementById('narr').value;
+  var found=v.match(/\[[^\]]+\]/g)||[];
+  var seen={}, uniq=[];
+  found.forEach(function(b){ if(!seen[b]){ seen[b]=1; uniq.push(b); } });
+
+  if(!uniq.length){
+    el.innerHTML = v.trim()
+      ? '<div class="fills-done">Nothing left to fill. Read the narrative below, then file.</div>' : '';
+    return;
+  }
+  el.innerHTML = uniq.map(function(b,i){
+    var inner=b.slice(1,-1);
+    var label=inner.replace(/\s*\/\s*/g,'  /  ');
+    if(inner.indexOf('/')>=0 && inner.split('/').length<=6){
+      var opts=inner.split('/').map(function(o){return o.trim();}).filter(Boolean);
+      return '<div class="fill"><div class="fill-k">'+esc(label)+'</div><div class="fill-opts">'+
+        opts.map(function(o,j){
+          return '<button onclick="fillPick('+i+','+j+')">'+esc(o.charAt(0)+o.slice(1).toLowerCase())+'</button>';
+        }).join('')+'</div></div>';
+    }
+    return '<div class="fill"><div class="fill-k">'+esc(label)+'</div><div class="fill-in">'+
+      '<input type="text" id="fi'+i+'" placeholder="Type it" '+
+        'onkeydown="if(event.key===\'Enter\'){event.preventDefault();fillType('+i+')}">'+
+      '<button onclick="fillType('+i+')">Add</button></div></div>';
+  }).join('');
+  el._uniq=uniq;
+}
+
+// Templates are written in caps for legibility. What gets inserted has to
+// match its position in the sentence, so "STRUCK" lands as "struck" mid
+// sentence but "Struck" if it opens one.
+function caseFor(text, narrative, bracket){
+  var body = text.slice(1).toLowerCase();
+  var lower = text.charAt(0).toLowerCase() + body;
+  var upper = text.charAt(0).toUpperCase() + body;
+  var at = narrative.indexOf(bracket);
+  if(at <= 0) return upper;
+  var before = narrative.slice(0, at).replace(/\s+$/,'');
+  if(!before) return upper;
+  return /[.!?:]$/.test(before) ? upper : lower;
+}
+
+function fillPick(i,j){
+  var el=document.getElementById('fills');
+  var b=(el._uniq||[])[i]; if(!b) return;
+  var opts=b.slice(1,-1).split('/').map(function(o){return o.trim();});
+  var raw=opts[j]||'';
+  var narr=document.getElementById('narr').value;
+  S.narrDirty=true;
+  setNarr(narr.split(b).join(caseFor(raw, narr, b)));
+}
+
+function fillType(i){
+  var el=document.getElementById('fills');
+  var b=(el._uniq||[])[i]; if(!b) return;
+  var inp=document.getElementById('fi'+i);
+  var val=(inp&&inp.value||'').trim();
+  if(!val) return;
+  S.narrDirty=true;
+  setNarr(document.getElementById('narr').value.split(b).join(val));
+}
+
+function countBlanks(){
+  var v=document.getElementById('narr').value;
+  var m=v.match(/\[[^\]]+\]/g)||[];
+  var el=document.getElementById('blankCount');
+  el.textContent=m.length===0?'all blanks filled':m.length+(m.length===1?' blank left':' blanks left');
+  el.classList.toggle('done',m.length===0);
+  var pv=document.getElementById('preview');
+  if(!v.trim()){ pv.textContent='Pick a misconduct code to load a template.'; return; }
+  pv.innerHTML=v.replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/\[[^\]]+\]/g,function(s){return '<em>'+s+'</em>';});
+  renderFills();
+}
+
+function checkDisc(){
+  var on=document.getElementById('discChk').checked;
+  document.getElementById('discBlock').classList.toggle('on',on);
+  if(on) setMode('full');
+}
+
+function loadGame(){
+  if(!S.gameId){ noGame(); return; }
+  fetch(BACKEND+'?action=eventBoard&date='+encodeURIComponent(S.date)+evParam())
+    .then(function(r){return r.json();})
+    .then(function(res){
+      if(!res||res.status!=='ok'||!res.data){ noGame(); return; }
+      var g=null;
+      res.data.forEach(function(x){ if(String(x.gameId)===String(S.gameId)) g=x; });
+      if(!g){ noGame(); return; }
+      S.game=g;
+      document.getElementById('cNum').textContent='#'+(g.gameNumber||'')+' · '+(g.division||'');
+      document.getElementById('cTeams').textContent=(g.home||'?')+' vs '+(g.away||'?');
+      document.getElementById('cWhere').textContent=
+        [g.venue,g.field,g.time].filter(Boolean).join(' · ');
+      var sel=document.getElementById('pTeam');
+      sel.innerHTML='<option>'+esc(g.home||'Home')+' (home)</option>'+
+                    '<option>'+esc(g.away||'Away')+' (away)</option>'+
+                    '<option>Neither / spectator</option>';
+      var w=document.getElementById('witnessList');
+      w.innerHTML=(g.crew&&g.crew.length)
+        ? g.crew.map(function(c,i){
+            var mine=S.by&&c.name.toLowerCase()===S.by.toLowerCase();
+            return '<label class="chk"><input type="checkbox" class="wit" value="'+
+              esc(c.name+' ('+c.pos+')')+'"'+(mine?' checked':'')+'> '+esc(c.name)+' ('+esc(c.pos)+')</label>';
+          }).join('')
+        : '<span style="color:var(--steel);font-size:13px">No crew on file for this game.</span>';
+      rebuildNarr();
+      if(g.homeScore!=null) document.getElementById('fHomeScore').value=g.homeScore;
+      if(g.awayScore!=null) document.getElementById('fAwayScore').value=g.awayScore;
+    })
+    .catch(noGame);
+}
+function noGame(){
+  document.getElementById('cTeams').textContent='No game attached';
+  document.getElementById('cWhere').textContent='Filing a standalone report';
+  document.getElementById('pTeam').innerHTML='<option>Home</option><option>Away</option><option>Neither / spectator</option>';
+  document.getElementById('witnessList').innerHTML=
+    '<span style="color:var(--steel);font-size:13px">No crew on file.</span>';
+}
+
+function submitIncident(){
+  var err=document.getElementById('err'); err.textContent='';
+  var narr=document.getElementById('narr').value.trim();
+  var name=document.getElementById('pName').value.trim();
+
+  if(!name){ err.textContent='Who is this report about?'; return; }
+  if(!narr){ err.textContent='The narrative is required.'; return; }
+  var left=(narr.match(/\[[^\]]+\]/g)||[]).length;
+  if(left){ err.textContent='Still '+left+' blank'+(left===1?'':'s')+' to fill in the narrative.'; return; }
+
+  var wit=[].slice.call(document.querySelectorAll('.wit:checked')).map(function(c){return c.value;});
+
+  var body={
+    action:'fileIncident', event:evId(),
+    gameId:S.gameId, date:S.date,
+    type:S.type, mode:S.mode, code:S.code||'',
+    personName:name,
+    personNum:document.getElementById('pNum').value.trim(),
+    personId:document.getElementById('pId').value.trim(),
+    personTeam:document.getElementById('pTeam').value,
+    minute:document.getElementById('pMin').value.trim(),
+    half:document.getElementById('pHalf').value,
+    narrative:narr,
+    witnesses:wit.join(', '),
+    submittedBy:S.by||document.getElementById('fBy').value.trim()
+  };
+
+  if(S.mode==='full'){
+    body.discriminatory=document.getElementById('discChk').checked;
+    body.characteristic=body.discriminatory?document.getElementById('fChar').value:'';
+    body.exactWords=document.getElementById('fQuote').value.trim();
+    body.target=document.getElementById('fTarget').value.trim();
+    body.ussfId=document.getElementById('fUssf').value.trim();
+    body.phone=document.getElementById('fPhone').value.trim();
+    body.email=document.getElementById('fEmail').value.trim();
+    var hs=document.getElementById('fHomeScore').value.trim();
+    var as=document.getElementById('fAwayScore').value.trim();
+    if(hs!=='') body.homeScore=Number(hs);
+    if(as!=='') body.awayScore=Number(as);
+    body.circumstances={
+      challenge:document.getElementById('fChallenge').value,
+      ball:document.getElementById('fBall').value,
+      location:document.getElementById('fWhere').value.trim(),
+      injury:document.getElementById('fInjury').value,
+      prior:document.getElementById('fPrior').value,
+      demeanour:document.getElementById('fDemeanour').value,
+      others:document.getElementById('fOthers').value.trim(),
+      completed:document.getElementById('fCompleted').value,
+      reporter:document.getElementById('fReporter').value.trim(),
+      coachesInformed:document.getElementById('d1').checked,
+      eventStaffCalled:document.getElementById('d2').checked,
+      finalWarning:document.getElementById('d3').checked,
+      stoppageAdded:document.getElementById('d4').checked
+    };
+  }
+
+  var btn=document.getElementById('fileBtn');
+  btn.disabled=true; btn.textContent='Sending…';
+
+  fetch(BACKEND,{method:'POST',body:JSON.stringify(body)})
+    .then(function(r){return r.json();})
+    .then(function(res){
+      if(res&&res.status==='ok'){
+        document.getElementById('form').style.display='none';
+        document.getElementById('bar').style.display='none';
+        document.getElementById('done').classList.add('on');
+        document.getElementById('doneId').textContent='Reference '+(res.incidentId||'');
+        if(res.sitOut){
+          document.getElementById('doneMsg').textContent=
+            'The tournament administrators have it, and this person is on the sit out list.';
+          document.getElementById('rapHand').classList.add('on');
+        }
+        window.scrollTo(0,0);
+      } else {
+        btn.disabled=false; btn.textContent='File report';
+        err.textContent=(res&&res.message)||'Could not send the report.';
+      }
+    })
+    .catch(function(){
+      btn.disabled=false; btn.textContent='File report';
+      err.textContent='No signal. Stay on this page and try again in a moment.';
+    });
+}
+
+if(document.getElementById('fBy')) document.getElementById('fBy').value=S.by;
+renderCodes(); countBlanks(); loadGame();
+
+
+/* boot */
+try{ jarBrand('Incident report');
+  var ru=document.getElementById('rapUrl');
+  if(ru) ru.textContent=EV.rapUrl||'jareferee.com/rap';
+}catch(e){}
+
+
+/* ── PAGE VERSION ─────────────────────────────────────────
+   The .gs files carry GCC_VERSION; these pages carried nothing, so there
+   was no way to tell whether a browser was running the current file or a
+   cached one from three deploys ago. Printed in the console and shown in
+   the footer. If this does not match what was last shipped, the page is
+   stale -- hard refresh before reporting a bug. */
+var PAGE_VERSION='2026.08.25-a';
+try{
+  console.log('page '+PAGE_VERSION);
+  var _v=document.createElement('div');
+  _v.textContent='v'+PAGE_VERSION;
+  _v.style.cssText='position:relative;z-index:1;text-align:center;padding:14px 0 20px;'+
+    'font-family:ui-monospace,Menlo,monospace;font-size:10px;letter-spacing:.1em;'+
+    'color:rgba(142,155,169,.55)';
+  document.body.appendChild(_v);
+}catch(e){}
+</script>
+<div class="credit"><span class="chip"><img src="assets/jareferee-mark.png" alt=""></span><a href="https://jareferee.com">Built with JAReferee</a><span class="ver">v2026.10.01-e</span></div>
+</div>
+</body>
+</html>
