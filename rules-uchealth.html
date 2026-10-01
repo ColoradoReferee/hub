@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>UC Health Cup rules · Colorado Referees</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<link rel="stylesheet" href="app.css?v=2026.10.01-c">
+<style>
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 20px 0; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .tile b { display: block; font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 30px; line-height: 1; }
+  .tile i { font-style: normal; font-size: 13px; color: var(--muted); }
+  .rule { margin: 10px 20px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+  .rule.gold { border-color: var(--gold); border-width: 2px; }
+  .rule.red { border-color: var(--red); border-width: 2px; }
+  .rule b { display: block; font-size: 17px; margin-bottom: 4px; }
+  .rule p { margin: 0; font-size: 15px; line-height: 1.45; }
+  .rules-h { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 26px; margin: 22px 20px 0; }
+  ul { margin: 8px 20px 0; padding-left: 20px; font-size: 15px; line-height: 1.5; }
+  li { margin-bottom: 6px; }
+  .jump { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 20px 0; }
+  .jump a { font-size: 14px; font-weight: 700; text-decoration: none; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <a class="backlink" href="index.html#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>Your day</a>
+    <div class="tools">
+      <button class="iconbtn" id="themeBtn" aria-label="Switch between light and dark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
+      <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+  </div>
+
+  <div class="pad" style="padding-top:16px">
+    <div class="lead">UC Health Cup, U9 and U10 recreational</div>
+    <div class="disp" style="font-size:44px">RULES</div>
+    <div class="lead" style="margin-top:6px">7v7 under the Laws of the Game with the CSA changes below. Anything these don't cover goes to the Tournament or Site Director.</div>
+  </div>
+
+  <div class="tiles">
+    <div class="tile"><b>7v7</b><i>Format, roster max 14</i></div>
+    <div class="tile"><b>2 × 20</b><i>Minute halves</i></div>
+    <div class="tile"><b>5</b><i>Players to start or continue</i></div>
+    <div class="tile"><b>Size 4</b><i>Ball, you pick</i></div>
+    <div class="tile"><b>8 yds</b><i>Penalty mark</i></div>
+    <div class="tile"><b>8 yds</b><i>Free kick distance</i></div>
+  </div>
+
+  <div class="rule gold"><b>No overtime, ever</b><p>Group games: a tie stands. Semifinal or final tied after 40 minutes: straight to kicks from the mark.</p></div>
+  <div class="rule gold"><b>15-minute grace period</b><p>Kick off at the scheduled time. A team without 5 properly uniformed, checked-in players at the end of the grace period forfeits, recorded 3 to 0.</p></div>
+  <div class="rule"><b>Added time</b><p>Only for serious injuries, not trifling stoppages. Keep the field on schedule.</p></div>
+
+  <div class="jump"><a href="#subs">Subs</a><a href="#kit">Kit</a><a href="#field">Field and sideline</a><a href="#cards">Send-offs</a><a href="#weather">Weather and injury</a><a href="#after">After the game</a></div>
+
+  <div class="rules-h" id="subs">SUBSTITUTIONS</div>
+  <ul>
+    <li><b>Unlimited</b>, at any stoppage, with your permission.</li>
+    <li>A <b>cautioned player may be subbed at the time of the caution</b>. The opponent may then sub one player.</li>
+    <li>Players enter <b>at the halfway line only</b>, after the outgoing player is fully off and you signal them on. Outgoing players may leave at the nearest boundary.</li>
+    <li>A <b>sent-off player cannot be replaced</b>. The team plays short for the rest of the game.</li>
+    <li>If a team drops <b>below 5 players</b>, the game cannot continue. One of the 5 must be the goalkeeper.</li>
+    <li><b>No guest players.</b> A player can play for only one team in the tournament.</li>
+  </ul>
+
+  <div class="rules-h" id="kit">UNIFORMS AND EQUIPMENT</div>
+  <ul>
+    <li><b>Home team is listed first</b> on the schedule and wears <b>dark</b>. Visitors wear white or light.</li>
+    <li>Goalkeeper colors must differ from both teams and from you.</li>
+    <li>Shin guards required.</li>
+    <li><b>No earrings or jewelry.</b> Taping or bandaging earrings is not allowed.</li>
+    <li>Religious medals and medical tags only if <b>taped to the body</b>.</li>
+    <li>Casts, splints and braces are <b>your call</b>: allowed if not dangerous or padded with soft material.</li>
+  </ul>
+
+  <div class="rules-h" id="field">FIELD AND SIDELINE</div>
+  <ul>
+    <li><b>Both teams on the same side.</b> Each team area starts 10 yards from halfway and runs 12 yards toward its goal.</li>
+    <li>Maximum <b>4 coaches or staff</b> on the sideline. Each must be on the frozen cup roster or have a current PlayMetrics coaching pass.</li>
+    <li>Players and coaches stay in their team area, behind any spectator line or 5+ feet from the touchline. Exceptions: subs warming up, or staff you call on for an injured player.</li>
+    <li>Spectators on the <b>opposite</b> side, at least 5 feet from the touchlines and goal lines. Nobody behind the goals without Tournament Director approval. <b>One warning, then they may be ejected.</b></li>
+    <li>Cameras like Veo on the spectator side, base at least 4 yards from the touchline.</li>
+    <li>No drones, horns, whistles, large megaphones or noisemakers.</li>
+  </ul>
+
+  <div class="rules-h" id="cards">SEND-OFFS AND SUSPENSIONS</div>
+  <div class="pad lead" style="margin-top:4px">You report. Cup staff enforce.</div>
+  <div class="rule red"><b>Foul or abusive language, or persistent misconduct after a caution</b><p>Sits out the <b>next</b> tournament game.</p></div>
+  <div class="rule red"><b>Violent conduct</b><p>Sits out <b>at least the next 2</b> tournament games.</p></div>
+  <div class="rule red"><b>Bench personnel dismissed</b><p>Sits out that team's next game, and no Cup role with any team until served.</p></div>
+  <div class="rule red"><b>Ejected coach or spectator</b><p>Must be <b>100 yards</b> from the field within <b>5 minutes</b> of notice. If not, <b>abandon the match</b>. Their team forfeits, 3 to 0 or the current score, whichever favors the opponent more.</p></div>
+  <ul>
+    <li>Unserved suspensions <b>carry to the player's next CSA league game</b> or next Cup enrollment.</li>
+    <li>A dismissed coach or spectator may also cost the team 1 standings point. Cup staff decide.</li>
+    <li>If a team tells you about a suspended player or coach, <b>record the name on your game report</b>.</li>
+    <li>Harassment or insults toward referees or staff are not tolerated. Coaches are responsible for their supporters. <b>Report it</b>; the Tournament Committee and CSA handle discipline.</li>
+  </ul>
+
+  <div class="rules-h" id="weather">WEATHER AND INJURIES</div>
+  <div class="rule"><b>Siren</b><p>Play stops for rain, cold, high wind or lightning. When the siren sounds, clear the field. Play resumes on the next siren. Only the Tournament Director cancels, shortens or moves games.</p></div>
+  <div class="rule"><b>Stopped games</b><p>If play doesn't resume and at least one half was completed, the score at the stoppage stands.</p></div>
+  <div class="rule"><b>Suspected head injury</b><p>The on-site medical trainer evaluates and reports to Cup staff. The player <b>cannot return until cleared by a medical professional</b>.</p></div>
+
+  <div class="rules-h" id="after">AFTER THE GAME</div>
+  <div class="rule gold"><b>Complete the game card in full</b><p>Final score, plus any suspended players or coaches who sat out if the team told you.</p></div>
+  <ul>
+    <li>Tell CSA tournament staff about <b>every send-off</b>: players, coaches, spectators.</li>
+    <li>Submit a <b>supplemental report</b> for any send-off, abandonment or unusual incident.</li>
+    <li><b>No protests.</b> Your on-field decisions are final and cannot be appealed.</li>
+    <li>Standings (3 for a win, 1 for a tie) and tiebreakers are handled by tournament staff, not you.</li>
+  </ul>
+
+  <div class="pad hint" style="margin-top:18px">From the CSA Referee Quick Guide, 26 September 2026. <a href="https://jareferee.com/ref/rules-uchealth.pdf">The guide as a PDF</a>.</div>
+  <div class="foot" style="flex-direction:column"><a class="btn help" href="index.html#help">I NEED HELP</a></div>
+  <div class="credit"><span class="chip"><img src="assets/jareferee-mark.png" alt=""></span><a href="https://jareferee.com">Built with JAReferee</a><span class="ver">v2026.10.01-c</span></div>
+</div>
+<script>
+(function () {
+  try { var th = localStorage.getItem('hub-theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}
+  document.getElementById('themeBtn').onclick = function () {
+    var cur = document.documentElement.getAttribute('data-theme');
+    var dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var next = dark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('hub-theme', next); } catch (e) {}
+  };
+})();
+</script>
+</body>
+</html>

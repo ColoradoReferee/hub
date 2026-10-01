@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F6F3EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#142850" media="(prefers-color-scheme: dark)">
+<title>Colorado Referees</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<link rel="stylesheet" href="app.css?v=2026.10.01-c">
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ── Sign in ─────────────────────────────────────────────── -->
+  <section class="screen" id="s-signin">
+    <div class="top">
+      <a class="brand" href="#"><img id="markSignin" alt=""><span class="disp" data-t="appName"></span></a>
+      <div class="tools">
+        <button class="iconbtn" id="themeBtn0" data-title="theme"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
+        <button class="linkbtn" id="langBtn0" data-t="langSwitch"></button>
+      </div>
+    </div>
+    <div class="signin">
+      <div class="disp" style="font-size:44px" data-t="signinTitle"></div>
+      <div class="lead" data-t="signinLead"></div>
+      <div id="stepEmail">
+        <label for="email" data-t="email"></label>
+        <input id="email" type="email" autocomplete="email" inputmode="email">
+        <button class="btn" id="sendBtn" style="margin-top:12px;width:100%" data-t="sendCode"></button>
+        <div id="msgEmail" class="msg" hidden></div>
+      </div>
+      <div id="stepCode" hidden>
+        <label for="code" data-t="codeLabel"></label>
+        <input id="code" inputmode="numeric" pattern="[0-9]*" maxlength="10" autocomplete="one-time-code">
+        <button class="btn" id="verifyBtn" style="margin-top:12px;width:100%" data-t="signIn"></button>
+        <div id="msgCode" class="msg" hidden></div>
+      </div>
+    </div>
+    <div class="credit"><span class="chip"><img id="ja0" alt=""></span><span class="ver"></span><a href="https://jareferee.com" data-t="builtWith"></a></div>
+  </section>
+
+  <!-- ── Your day ────────────────────────────────────────────── -->
+  <section class="screen" id="s-day">
+    <div class="top">
+      <a class="brand" href="#day"><img id="markDay" alt="Colorado Soccer Association"><span class="disp" data-t="appName"></span></a>
+      <div class="tools">
+        <button class="iconbtn" id="themeBtn1" data-title="theme"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
+        <button class="linkbtn" id="langBtn1" data-t="langSwitch"></button>
+      </div>
+    </div>
+    <div class="pad" style="padding-top:20px">
+      <div class="lead" id="dayLead"></div>
+      <div class="count" id="countdown" hidden><div class="disp n" id="countN"></div><div class="disp w" id="countW"></div></div>
+    </div>
+    <div id="nextCard"></div>
+    <div class="list" id="laterList"></div>
+    <div id="noteBox"></div>
+    <div id="bulletins"></div>
+    <div id="coachEntry"></div>
+    <div id="reviewEntry"></div>
+    <div id="centerEntry"></div>
+    <div id="opsEntry"></div>
+    <div id="peopleEntry"></div>
+    <div class="foot">
+      <a class="btn outline" style="flex-grow:1" id="rulesLink" href="#" data-t="rules"></a>
+      <a class="btn help" href="#help" data-t="help"></a>
+    </div>
+    <div class="credit"><span class="chip"><img id="ja1" alt=""></span><span class="ver"></span><a href="https://jareferee.com" data-t="builtWith"></a></div>
+  </section>
+
+  <!-- ── Game card ───────────────────────────────────────────── -->
+  <section class="screen" id="s-game">
+    <div class="top">
+      <a class="backlink" href="#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="yourDay"></span></a>
+      <div class="tools">
+        <button class="iconbtn" id="themeBtn2" data-title="theme"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
+        <img id="markGame" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+      </div>
+    </div>
+    <div id="gameBody"></div>
+    <div class="foot" style="flex-direction:column">
+      <a class="btn help" href="#help" data-t="help"></a>
+    </div>
+    <div class="credit"><span class="chip"><img id="ja2" alt=""></span><span class="ver"></span><a href="https://jareferee.com" data-t="builtWith"></a></div>
+  </section>
+
+  <!-- ── All notes ───────────────────────────────────────────── -->
+  <section class="screen" id="s-notes">
+    <div class="top">
+      <a class="backlink" href="#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="yourDay"></span></a>
+      <img id="markNotes" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+    <div class="pad" style="padding-top:16px"><div class="disp" style="font-size:44px" data-t="allNotes"></div></div>
+    <div id="notesList"></div>
+    <div class="credit" style="margin-top:auto"><span class="chip"><img id="ja3" alt=""></span><span class="ver"></span><a href="https://jareferee.com" data-t="builtWith"></a></div>
+  </section>
+
+  <!-- ── Coaching: pick a venue and a game ───────────────────── -->
+  <section class="screen" id="s-coach">
+    <div class="top">
+      <a class="backlink" href="#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="yourDay"></span></a>
+      <div class="tools"><a class="linkbtn" href="#coach/notes" data-t="myNotes"></a><img id="markCoach" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain"></div>
+    </div>
+    <div class="pad" style="padding-top:16px"><div class="disp" style="font-size:44px" data-t="coachingTitle"></div><div class="lead" data-t="coachingLead"></div></div>
+    <div id="venuePick"></div>
+    <div id="coachGames"></div>
+    <div class="credit" style="margin-top:auto"><span class="chip"><img id="ja5" alt=""></span><span class="ver"></span></div>
+  </section>
+
+  <!-- ── Coaching: one game, write a note ────────────────────── -->
+  <section class="screen" id="s-coachgame">
+    <div class="top">
+      <a class="backlink" href="#coach"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="back"></span></a>
+      <img id="markCoachGame" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+    <div id="coachGameBody"></div>
+    <div class="credit" style="margin-top:auto"><span class="chip"><img id="ja6" alt=""></span><span class="ver"></span></div>
+  </section>
+
+  <!-- ── Coaching: my notes, raw beside cleaned ──────────────── -->
+  <section class="screen" id="s-mynotes">
+    <div class="top">
+      <a class="backlink" href="#coach"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="back"></span></a>
+      <img id="markMyNotes" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+    <div class="pad" style="padding-top:16px"><div class="disp" style="font-size:44px" data-t="myNotes"></div><div class="lead" data-t="myNotesLead"></div></div>
+    <div id="myNotesList"></div>
+    <div class="credit" style="margin-top:auto"><span class="chip"><img id="ja7" alt=""></span><span class="ver"></span></div>
+  </section>
+
+  <!-- ── Review: notes waiting for approval ──────────────────── -->
+  <section class="screen" id="s-review">
+    <div class="top">
+      <a class="backlink" href="#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="yourDay"></span></a>
+      <img id="markReview" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+    <div class="pad" style="padding-top:16px"><div class="disp" style="font-size:44px" data-t="reviewTitle"></div><div class="lead" data-t="reviewLead"></div></div>
+    <div id="reviewTools"></div>
+    <div id="reviewList"></div>
+    <div class="credit" style="margin-top:auto"><span class="chip"><img id="ja8" alt=""></span><span class="ver"></span></div>
+  </section>
+
+  <!-- ── Command Center: referee development ─────────────────── -->
+  <section class="screen" id="s-center">
+    <div class="top">
+      <a class="backlink" href="#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="yourDay"></span></a>
+      <img id="markCenter" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+    <div class="pad" style="padding-top:16px"><div class="disp" style="font-size:44px" data-t="centerTitle"></div><div class="lead" data-t="centerLead"></div></div>
+    <div id="centerBody"></div>
+    <div class="credit" style="margin-top:auto"><span class="chip"><img id="ja9" alt=""></span><span class="ver"></span></div>
+  </section>
+
+  <!-- ── Command Center: operations (the weekend board) ──────── -->
+  <section class="screen" id="s-ops">
+    <div class="top">
+      <a class="backlink" href="#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="yourDay"></span></a>
+      <img id="markOps" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+    <div class="pad" style="padding-top:16px"><div class="disp" style="font-size:44px" data-t="opsTitle"></div><div class="lead" data-t="opsLead"></div></div>
+    <div id="opsBody"></div>
+    <div class="credit" style="margin-top:auto"><span class="chip"><img id="ja10" alt=""></span><span class="ver"></span></div>
+  </section>
+
+  <!-- ── People: find a person, give or remove a title ───────── -->
+  <section class="screen" id="s-people">
+    <div class="top">
+      <a class="backlink" href="#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="yourDay"></span></a>
+      <img id="markPeople" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+    <div class="pad" style="padding-top:16px"><div class="disp" style="font-size:44px" data-t="peopleTitle"></div><div class="lead" data-t="peopleLead"></div>
+      <label for="peopleQ" class="sr" data-t="peopleSearch"></label>
+      <input id="peopleQ" type="search" autocomplete="off" style="font:inherit;width:100%;margin-top:12px;padding:12px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">
+    </div>
+    <div id="peopleResults"></div>
+    <div id="personCard"></div>
+    <div class="credit" style="margin-top:auto"><span class="chip"><img id="ja11" alt=""></span><span class="ver"></span></div>
+  </section>
+
+  <!-- ── Help ────────────────────────────────────────────────── -->
+  <section class="screen" id="s-help">
+    <div class="top">
+      <a class="backlink" href="#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="back"></span></a>
+      <img id="markHelp" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+    <div class="pad" style="padding-top:16px">
+      <div class="disp" style="font-size:44px;color:var(--red)" data-t="helpTitle"></div>
+      <div style="font-size:16px;line-height:1.4;margin-top:6px" data-t="helpLead"></div>
+    </div>
+    <div class="reasons" id="reasons"></div>
+    <div id="helpConfirm"></div>
+    <div class="pad hint" style="margin-top:auto;padding-top:12px;padding-bottom:12px;color:var(--ink)" data-t="helpFoot"></div>
+    <div class="credit"><span class="chip"><img id="ja4" alt=""></span><span class="ver"></span><a href="https://jareferee.com" data-t="builtWith"></a></div>
+  </section>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="lang.js?v=2026.10.01-c"></script>
+<script src="app.js?v=2026.10.01-c"></script>
+</body>
+</html>
