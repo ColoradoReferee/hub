@@ -8,10 +8,11 @@
 <title>Colorado Referees</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
-<link rel="stylesheet" href="app.css?v=2026.10.01-f">
+<link rel="stylesheet" href="app.css?v=2026.10.01-g">
 </head>
 <body>
 <div class="app" id="app">
+  <div id="previewBar" hidden style="background:var(--gold);color:#1B1F2A;padding:10px 20px;font-size:14px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:10px"><span id="previewText"></span><button class="linkbtn" id="previewStop" style="min-height:36px;color:#1B1F2A"></button></div>
 
   <!-- ── Sign in ─────────────────────────────────────────────── -->
   <section class="screen" id="s-signin">
@@ -63,6 +64,7 @@
     <div id="centerEntry"></div>
     <div id="opsEntry"></div>
     <div id="peopleEntry"></div>
+    <div id="viewAsEntry"></div>
     <div class="foot">
       <a class="btn outline" style="flex-grow:1" id="rulesLink" href="#" data-t="rules"></a>
       <a class="btn help" href="#help" data-t="help"></a>
@@ -199,7 +201,7 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="lang.js?v=2026.10.01-f"></script>
-<script src="app.js?v=2026.10.01-f"></script>
+<script src="lang.js?v=2026.10.01-g"></script>
+<script src="app.js?v=2026.10.01-g"></script>
 </body>
 </html>
