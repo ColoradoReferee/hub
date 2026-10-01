@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.01-c';
+  var VERSION = '2026.10.01-d';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -98,6 +98,8 @@
     S.notes = n.data || [];
     var b = await sb.from('announcements').select('title,body,severity,created_at,venue,event_id,start_date,end_date').lte('start_date', today).gte('end_date', today).order('created_at', { ascending: false }).limit(5);
     S.bulletins = b.data || [];
+    var sc = await sb.from('scores').select('game_id,home_score,away_score,status,entered_by,created_at').eq('date', today);
+    S.scores = {}; (sc.data || []).forEach(function (r) { S.scores[String(r.game_id)] = r; });
     var cv = await sb.rpc('coached_venues', { p_date: today });
     S.coachedVenues = (cv.data || []).map(function (r) { return typeof r === 'string' ? r : r.coached_venues; });
   }
@@ -736,10 +738,11 @@
       (ev && ev.blurb ? '<div class="sep">' + esc(ev.blurb) + '</div>' : '') + '</div>' +
       '<div style="margin:14px 20px 0;display:grid;grid-template-columns:1fr 1fr;gap:10px">' + (r ? '<a class="btn outline" href="' + esc(r) + '">' + esc(t('rules')) + '</a>' : '') + '<a class="btn outline" href="' + esc(C.oldHub) + 'index.html">' + esc(t('map')) + '</a></div>' +
       '<div class="disp h2">' + esc(t('afterGame')) + '</div>' +
-      '<a class="rowbtn" href="' + esc(C.oldHub) + 'scoreboard.html"><span><span class="t">' + esc(t('reportScore')) + '</span><br><span class="s">' + esc(t('reportScoreHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' +
+      scoreHtml(g) +
       '<a class="rowbtn" href="' + esc(C.oldHub) + 'incident.html"><span><span class="t">' + esc(t('incident')) + '</span><br><span class="s">' + esc(t('incidentHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' +
       '<div class="hint" style="margin:8px 24px 0">' + esc(t('incidentNote')) + '</div>';
     wireCheckin(g, $('gameBody'));
+    wireScore(g);
   }
 
   // ── Notes ────────────────────────────────────────────────────────
@@ -747,6 +750,39 @@
     var ids = (notes || []).map(function (n) { return n.id; }).filter(Boolean);
     if (!ids.length) return;
     sb.rpc('mark_read', { ids: ids }).then(function () {}, function () {});
+  }
+  function scoreHtml(g) {
+    var sc = (S.scores || {})[String(g.game_id)], started = new Date(g.kickoff).getTime() < Date.now();
+    if (sc && sc.home_score != null) {
+      return '<div class="card" style="gap:6px;border-color:var(--green)"><div class="hint" style="font-weight:700">' + esc(t('scoreSent')) + '</div><div style="display:flex;justify-content:space-between;align-items:baseline"><div><b>' + esc(g.home || t('home')) + '</b></div><div class="disp" style="font-size:40px">' + esc(sc.home_score) + ' <span style="color:var(--muted)">:</span> ' + esc(sc.away_score) + '</div><div style="text-align:right"><b>' + esc(g.away || t('away')) + '</b></div></div><div class="hint">' + esc(sc.status || '') + (sc.entered_by ? ', ' + esc(sc.entered_by) : '') + '. ' + esc(t('scoreFix')) + '</div><button class="btn outline small" id="scoreEdit">' + esc(t('scoreChange')) + '</button></div>';
+    }
+    if (!started) return '<div class="card"><div class="hint">' + esc(t('scoreLater')) + '</div></div>';
+    return scoreForm(g, null);
+  }
+  function scoreForm(g, sc) {
+    var num = function (id, v) { return '<input id="' + id + '" type="number" inputmode="numeric" min="0" max="99" value="' + (v == null ? '' : esc(v)) + '" style="font:inherit;font-family:var(--disp);font-style:italic;font-weight:800;font-size:40px;width:100%;text-align:center;padding:6px;border:2px solid var(--navy);border-radius:10px;background:var(--surface);color:var(--ink)">'; };
+    return '<div class="card" style="gap:10px"><div class="hint" style="font-weight:700">' + esc(t('reportScore')) + '</div>' +
+      '<div class="grid2"><div><div class="hint" style="text-align:center">' + esc(g.home || t('home')) + '</div>' + num('scHome', sc && sc.home_score) + '</div><div><div class="hint" style="text-align:center">' + esc(g.away || t('away')) + '</div>' + num('scAway', sc && sc.away_score) + '</div></div>' +
+      '<button class="btn primary" id="scoreSend">' + esc(t('scoreSend')) + '</button><div class="hint">' + esc(t('reportScoreHint')) + '</div><div class="msg" id="scMsg" hidden></div></div>';
+  }
+  function wireScore(g) {
+    var ed = $('scoreEdit');
+    if (ed) ed.onclick = function () { ed.closest('.card').outerHTML = scoreForm(g, (S.scores || {})[String(g.game_id)]); wireScore(g); };
+    var b = $('scoreSend');
+    if (!b) return;
+    b.onclick = async function () {
+      var h = $('scHome').value.trim(), a = $('scAway').value.trim();
+      if (h === '' || a === '') { say('scMsg', t('scoreBoth'), 'bad'); return; }
+      b.disabled = true; b.textContent = t('sending');
+      var ev = eventFor(g);
+      try {
+        var res = await fetch(C.backend, { method: 'POST', body: JSON.stringify({ action: 'refPostScore', event: ev ? ev.id : '', gameId: g.game_id, date: g.date, homeScore: Number(h), awayScore: Number(a), refName: myNameOn(g) }) });
+        var j = await res.json();
+        if (!j || j.status !== 'ok') throw new Error(j && j.message || 'error');
+        S.scores[String(g.game_id)] = { game_id: g.game_id, home_score: Number(h), away_score: Number(a), status: 'Reported', entered_by: myNameOn(g) };
+        renderGame(g.game_id);
+      } catch (e) { b.disabled = false; b.textContent = t('scoreSend'); say('scMsg', t('scoreFailed') + ' ' + (e.message || ''), 'bad'); }
+    };
   }
   function renderNotes() {
     markRead(S.notes);
