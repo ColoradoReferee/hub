@@ -8,7 +8,7 @@
 <title>Colorado Referees</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
-<link rel="stylesheet" href="app.css?v=2026.10.01-g">
+<link rel="stylesheet" href="app.css?v=2026.10.01-h">
 </head>
 <body>
 <div class="app" id="app">
@@ -65,6 +65,7 @@
     <div id="opsEntry"></div>
     <div id="peopleEntry"></div>
     <div id="viewAsEntry"></div>
+    <div id="setupEntry"></div>
     <div class="foot">
       <a class="btn outline" style="flex-grow:1" id="rulesLink" href="#" data-t="rules"></a>
       <a class="btn help" href="#help" data-t="help"></a>
@@ -182,6 +183,17 @@
     <div class="credit" style="margin-top:auto"><span class="chip"><img id="ja11" alt=""></span><span class="ver"></span></div>
   </section>
 
+  <!-- ── Setup: events ───────────────────────────────────────── -->
+  <section class="screen" id="s-setup">
+    <div class="top">
+      <a class="backlink" href="#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="yourDay"></span></a>
+      <img id="markSetup" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+    <div class="pad" style="padding-top:16px"><div class="disp" style="font-size:44px" data-t="setupTitle"></div><div class="lead" data-t="setupLead"></div></div>
+    <div id="setupBody"></div>
+    <div class="credit" style="margin-top:auto"><span class="chip"><img id="ja12" alt=""></span><span class="ver"></span></div>
+  </section>
+
   <!-- ── Help ────────────────────────────────────────────────── -->
   <section class="screen" id="s-help">
     <div class="top">
@@ -201,7 +213,7 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="lang.js?v=2026.10.01-g"></script>
-<script src="app.js?v=2026.10.01-g"></script>
+<script src="lang.js?v=2026.10.01-h"></script>
+<script src="app.js?v=2026.10.01-h"></script>
 </body>
 </html>
