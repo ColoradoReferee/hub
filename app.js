@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.01-e';
+  var VERSION = '2026.10.01-f';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -870,6 +870,34 @@
     await start();
   };
 
+  // ── Live updates ─────────────────────────────────────────────────
+  // One subscription while signed in. A change to anything the person can
+  // see refreshes the screen they are on, a few hundred milliseconds later
+  // so a burst of writes becomes one redraw. The 60-second timer stays as
+  // the fallback for a phone that lost its connection.
+  var LIVE = { channel: null, timer: null };
+  function liveStart() {
+    if (LIVE.channel || !sb.channel) return;
+    try {
+      LIVE.channel = sb.channel('hub-live');
+      ['checkins', 'emergencies', 'scores', 'observations', 'announcements', 'coach_assignments', 'alerts'].forEach(function (table) {
+        LIVE.channel.on('postgres_changes', { event: '*', schema: 'public', table: table }, function () { liveBump(); });
+      });
+      LIVE.channel.subscribe();
+    } catch (e) { LIVE.channel = null; }
+  }
+  function liveBump() {
+    clearTimeout(LIVE.timer);
+    LIVE.timer = setTimeout(function () {
+      var h = location.hash;
+      if (h === '#ops') loadOps().then(renderOps);
+      else if (h === '#center') loadCenter().then(renderCenter);
+      else if (h === '#coach') loadCoach().then(renderCoach);
+      else if (h.indexOf('#game/') === 0) loadDay().then(function () { renderGame(h.slice(6)); });
+      else if (h === '' || h === '#day') loadDay().then(renderDay);
+    }, 400);
+  }
+
   // ── Routing ──────────────────────────────────────────────────────
   function route() {
     if (!S.me) { show('s-signin'); return; }
@@ -897,6 +925,7 @@
     if (S.me.language === 'es' && S.lang !== 'es') { S.lang = 'es'; applyWords(); }
     await loadDay();
     route();
+    liveStart();
     setInterval(function () { if (!S.me) return; if (location.hash === '#ops' && OPS.tab === 'board') loadOps().then(renderOps); else if (location.hash.indexOf('game') < 0 && location.hash.indexOf('#') !== 0 || location.hash === '#day' || location.hash === '') renderDay(); }, 60000);
   }
 
@@ -910,6 +939,7 @@
     ['markGame', 'markNotes', 'markHelp', 'markCoach', 'markCoachGame', 'markMyNotes', 'markReview', 'markCenter', 'markOps', 'markPeople'].forEach(function (id) { $(id).src = C.marks.program; });
     ['ja0', 'ja1', 'ja2', 'ja3', 'ja4', 'ja5', 'ja6', 'ja7', 'ja8', 'ja9', 'ja10', 'ja11'].forEach(function (id) { $(id).src = C.marks.ja; });
     $('peopleQ').oninput = function () { var q = $('peopleQ').value.trim(); clearTimeout(PP.timer); PP.timer = setTimeout(function () { searchPeople(q); }, 250); };
+    $('signOut').onclick = async function (e) { e.preventDefault(); if (LIVE.channel) { try { sb.removeChannel(LIVE.channel); } catch (er) {} LIVE.channel = null; } await sb.auth.signOut(); S.me = null; location.hash = ''; show('s-signin'); };
     applyWords();
     document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v' + VERSION; });
     sb.auth.getSession().then(function (r) { if (r.data && r.data.session) start(); else show('s-signin'); });
