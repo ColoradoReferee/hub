@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.02-c';
+  var VERSION = '2026.10.02-d';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -79,7 +79,7 @@
     return null;
   }
   var BUSY = 0;
-  function busy(on) { BUSY += on ? 1 : -1; if (BUSY < 0) BUSY = 0; var b = $('busy'); if (b) b.hidden = BUSY === 0; }
+  function busy(on) { BUSY += on ? 1 : -1; if (BUSY < 0) BUSY = 0; var b = $('busy'); if (b) b.style.display = BUSY === 0 ? 'none' : 'flex'; }
   async function load(p) { busy(true); try { return await p; } finally { busy(false); } }
   async function loadDay() { return load(loadDay_()); }
   async function loadOps() { return load(loadOps_()); }
@@ -116,7 +116,7 @@
   async function loadDay_() {
     var today = todayStr();
     var g = await fetchAll(function () { return sb.from('games').select('game_id,date,game_num,kickoff,field,age_group,gender,competition,home,away,cr,ar1,ar2,fourth,venue,status,home_club,away_club')
-      .eq('date', today).neq('status', 'C').order('kickoff'); });
+      .eq('date', today).not('status', 'in', '(C,X,canceled_no_pay)').order('kickoff'); });
     var keys = S.me.nameKeys || [];
     S.games = (g.data || []).filter(function (x) { return ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(x[k])) >= 0; }); });
     var ev = await sb.from('events').select('id,name,game_prefix,venues,blurb,tools');
@@ -189,7 +189,7 @@
           busy(true);
           var parts = q.split(/\s+/);
           var qr = sb.from('people').select('id,first_name,last_name,city').limit(10);
-          qr = parts.length >= 2 ? qr.ilike('first_name', parts[0] + '%').ilike('last_name', parts.slice(1).join(' ') + '%') : qr.or('last_name.ilike.' + parts[0] + '%,first_name.ilike.' + parts[0] + '%');
+          qr = parts.length >= 2 ? qr.ilike('first_name', parts[0] + '%').ilike('last_name', parts.slice(1).join(' ') + '%') : qr.or('last_name.ilike.' + parts[0] + '*,first_name.ilike.' + parts[0] + '*');
           var r = await qr.order('last_name');
           busy(false);
           var m = $('viewAsMsg');
@@ -207,6 +207,7 @@
     var bl = $('badgeLink'); if (bl) bl.onclick = function (e) { e.preventDefault(); var bx = $('badgeBox'); bx.hidden = !bx.hidden; };
     var r = rulesFor(g || S.games[0]);
     $('rulesLink').style.display = r ? '' : 'none'; if (r) $('rulesLink').href = r;
+    $('libraryLink').href = C.library || '#';
   }
   function cardHtml(g) {
     var inAt = S.checkins[String(g.game_id)];
@@ -245,13 +246,13 @@
   async function loadCoach_() {
     var today = todayStr();
     var g = await fetchAll(function () { return sb.from('games').select('game_id,date,game_num,kickoff,field,age_group,gender,competition,home,away,cr,ar1,ar2,fourth,venue,status')
-      .eq('date', today).neq('status', 'C').order('venue').order('kickoff'); });
+      .eq('date', today).not('status', 'in', '(C,X,canceled_no_pay)').order('venue').order('kickoff'); });
     S.coach.games = g.data || [];
     var mine = await sb.from('coach_assignments').select('venue,block,fields,note').eq('date', today);
     S.coach.mine = mine.data || [];
     if (S.coach.mine.length && !S.coach.venue) S.coach.venue = S.coach.mine[0].venue;
     // Days ahead with games, for saying when I am free.
-    var ahead = await fetchAll(function () { return sb.from('games').select('date').gte('date', today).lte('date', shiftDate(today, 10)).neq('status', 'C').order('date'); });
+    var ahead = await fetchAll(function () { return sb.from('games').select('date').gte('date', today).lte('date', shiftDate(today, 10)).not('status', 'in', '(C,X,canceled_no_pay)').order('date'); });
     var days = {}; (ahead.data || []).forEach(function (x) { days[x.date] = 1; }); S.coach.days = Object.keys(days).sort();
     var av = await sb.from('coach_availability').select('date,block').gte('date', today);
     S.coach.avail = {}; (av.data || []).forEach(function (x) { S.coach.avail[x.date + x.block] = 1; });
@@ -466,8 +467,8 @@
   var CC = { tab: 'coverage', cov: [], obs: [], reads: {}, drafts: null, from: '', to: '', sdate: '', coaches: [], assigns: [], venues: [], pick: null };
   function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   async function loadCenter_() {
-    var cov = await fetchAll(function () { return sb.from('referee_coverage').select('name,name_key,person_id,games,last_game,notes,released,read,last_seen').order('games', { ascending: false }).order('name_key'); });
-    CC.cov = cov.data || [];
+    var cov = await sb.rpc('coverage_rows');
+    CC.cov = (cov.data || []).sort(function (a, b) { return b.games - a.games; });
     var since = iso(new Date(Date.now() - 30 * 86400000));
     var obs = await sb.from('observations').select('id,observer,rater_role,ref_name,date,cleanup_status').gte('date', since).limit(2000);
     CC.obs = obs.data || [];
@@ -483,7 +484,7 @@
     if (!CC.sdate) CC.sdate = todayStr();
     if (!CC.block) CC.block = 'am';
     if (!CC.coaches.length) { var c = await sb.from('coaches').select('person_id,first_name,last_name,coaching_title').order('last_name'); CC.coaches = c.data || []; }
-    var g = await fetchAll(function () { return sb.from('games').select('venue,field,kickoff').eq('date', CC.sdate).neq('status', 'C').order('venue'); });
+    var g = await fetchAll(function () { return sb.from('games').select('venue,field,kickoff').eq('date', CC.sdate).not('status', 'in', '(C,X,canceled_no_pay)').order('venue'); });
     var vs = {}, fs = {};
     (g.data || []).forEach(function (x) { if (!x.venue) return; vs[x.venue] = 1; (fs[x.venue] = fs[x.venue] || {})[x.field || ''] = 1; });
     CC.venues = Object.keys(vs).sort();
@@ -594,7 +595,7 @@
   function shiftDate(iso, n) { var d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return iso.length ? iso.slice(0, 0) + d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') : iso; }
   async function loadOps_() {
     if (!OPS.date) OPS.date = todayStr();
-    var g = await fetchAll(function () { return sb.from('games').select('game_id,kickoff,field,age_group,competition,cr,ar1,ar2,fourth,venue,status,game_num,hq_role,hq_staff,home,away').eq('date', OPS.date).neq('status', 'C').order('venue').order('kickoff'); });
+    var g = await fetchAll(function () { return sb.from('games').select('game_id,kickoff,field,age_group,competition,cr,ar1,ar2,fourth,venue,status,game_num,hq_role,hq_staff,home,away').eq('date', OPS.date).not('status', 'in', '(C,X,canceled_no_pay)').order('venue').order('kickoff'); });
     OPS.games = g.data || [];
     var ci = await fetchAll(function () { return sb.from('checkins').select('ref_name,game_id,created_at').eq('date', OPS.date).order('created_at'); });
     OPS.checkins = ci.data || [];
@@ -610,7 +611,7 @@
     var staff = [], seen = {};
     games.filter(isHQ).forEach(function (g) {
       var arr = []; try { arr = JSON.parse(g.hq_staff || '[]'); } catch (e) {}
-      if (!arr.length && g.cr) arr = [{ name: g.cr, posAb: g.hq_role || 'SC' }];
+      if (!arr.length) ['cr', 'ar1', 'ar2', 'fourth'].forEach(function (k) { if (g[k]) arr.push({ name: g[k], posAb: g.hq_role || (/standby/i.test(g.field + ' ' + g.age_group) ? 'Standby' : 'SC') }); });
       arr.forEach(function (p) { if (p.name && !seen[p.name]) { seen[p.name] = 1; staff.push(p); } });
     });
     if (!staff.length) return '';
@@ -805,7 +806,7 @@
     var parts = q.split(/\s+/).filter(Boolean);
     var query = sb.from('people').select('id,first_name,last_name,city,dob').limit(20);
     if (parts.length >= 2) query = query.ilike('first_name', parts[0] + '%').ilike('last_name', parts.slice(1).join(' ') + '%');
-    else query = query.or('last_name.ilike.' + parts[0] + '%,first_name.ilike.' + parts[0] + '%');
+    else query = query.or('last_name.ilike.' + parts[0] + '*,first_name.ilike.' + parts[0] + '*');
     busy(true); var r = await query.order('last_name').order('first_name'); busy(false);
     if (PP.q !== q) return;
     PP.results = r.data || [];

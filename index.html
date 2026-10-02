@@ -8,10 +8,10 @@
 <title>Colorado Referees</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
-<link rel="stylesheet" href="app.css?v=2026.10.02-c">
+<link rel="stylesheet" href="app.css?v=2026.10.02-d">
 </head>
 <body>
-<div id="busy" hidden aria-live="polite"><span class="ball">&#9917;</span></div>
+<div id="busy" style="display:none" aria-live="polite"><span class="ball">&#9917;</span></div>
 <div class="app" id="app">
   <div id="previewBar" hidden style="background:var(--gold);color:#1B1F2A;padding:10px 20px;font-size:14px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:10px"><span id="previewText"></span><button class="linkbtn" id="previewStop" style="min-height:36px;color:#1B1F2A"></button></div>
 
@@ -69,6 +69,7 @@
     <div id="setupEntry"></div>
     <div class="foot">
       <a class="btn outline" style="flex-grow:1" id="rulesLink" href="#" data-t="rules"></a>
+      <a class="btn outline" style="flex-grow:1" id="libraryLink" href="#" data-t="library"></a>
       <a class="btn help" href="#help" data-t="help"></a>
     </div>
     <div class="credit"><span class="chip"><img id="ja1" alt=""></span><span class="ver"></span><a href="https://jareferee.com" data-t="builtWith"></a></div>
@@ -214,7 +215,7 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="lang.js?v=2026.10.02-c"></script>
-<script src="app.js?v=2026.10.02-c"></script>
+<script src="lang.js?v=2026.10.02-d"></script>
+<script src="app.js?v=2026.10.02-d"></script>
 </body>
 </html>
