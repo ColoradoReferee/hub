@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.01-h';
+  var VERSION = '2026.10.02-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -78,12 +78,34 @@
     for (var p in C.rules) if (num.indexOf(p) === 0) return C.rules[p];
     return null;
   }
+  var BUSY = 0;
+  function busy(on) { BUSY += on ? 1 : -1; if (BUSY < 0) BUSY = 0; var b = $('busy'); if (b) b.hidden = BUSY === 0; }
+  async function load(p) { busy(true); try { return await p; } finally { busy(false); } }
+  async function loadDay() { return load(loadDay_()); }
+  async function loadOps() { return load(loadOps_()); }
+  async function loadCenter() { return load(loadCenter_()); }
+  async function loadSetup() { return load(loadSetup_()); }
+  async function loadReview() { return load(loadReview_()); }
+  async function loadCoach() { return load(loadCoach_()); }
+  async function loadSchedule() { return load(loadSchedule_()); }
   function show(id) {
     document.querySelectorAll('.screen').forEach(function (s) { s.classList.toggle('on', s.id === id); });
     window.scrollTo(0, 0);
   }
 
   // ── Data ─────────────────────────────────────────────────────────
+  // The database answers at most 1,000 rows per request. A Saturday has
+  // more games than that. Page until a short page comes back.
+  async function fetchAll(build) {
+    var out = [], page = 0, size = 1000;
+    for (;;) {
+      var r = await build().range(page * size, page * size + size - 1);
+      if (r.error) return { data: out, error: r.error };
+      out = out.concat(r.data || []);
+      if (!r.data || r.data.length < size || page > 20) return { data: out, error: null };
+      page++;
+    }
+  }
   async function loadMe() {
     var who = await sb.rpc('whoami');
     if (who.error || !who.data) return null;
@@ -91,10 +113,10 @@
     who.data.nameKeys = (names.data || []).map(function (r) { return typeof r === 'string' ? r : r.my_name_keys; });
     return who.data;
   }
-  async function loadDay() {
+  async function loadDay_() {
     var today = todayStr();
-    var g = await sb.from('games').select('game_id,date,game_num,kickoff,field,age_group,gender,competition,home,away,cr,ar1,ar2,fourth,venue,status,home_club,away_club')
-      .eq('date', today).neq('status', 'C').order('kickoff');
+    var g = await fetchAll(function () { return sb.from('games').select('game_id,date,game_num,kickoff,field,age_group,gender,competition,home,away,cr,ar1,ar2,fourth,venue,status,home_club,away_club')
+      .eq('date', today).neq('status', 'C').order('kickoff'); });
     var keys = S.me.nameKeys || [];
     S.games = (g.data || []).filter(function (x) { return ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(x[k])) >= 0; }); });
     var ev = await sb.from('events').select('id,name,game_prefix,venues,blurb,tools');
@@ -158,22 +180,27 @@
     var pb = $('previewBar');
     if (S.me.previewing) { pb.hidden = false; $('previewText').textContent = t('previewing').replace('{name}', S.me.first_name + ' ' + S.me.last_name) + ' ' + t('previewNoWrite'); $('previewStop').textContent = t('previewStop'); $('previewStop').onclick = async function () { await sb.rpc('clear_preview'); location.hash = ''; start(); }; }
     else pb.hidden = true;
-    $('viewAsEntry').innerHTML = S.me.real_admin ? '<div class="card" style="gap:8px;margin-top:8px"><div class="hint" style="font-weight:700">' + esc(t('viewAs')) + '</div><div class="hint">' + esc(t('viewAsHint')) + '</div><input id="viewAsQ" placeholder="' + esc(t('coachSearch')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><div class="chips" id="viewAsPicks"></div></div>' : '';
+    $('viewAsEntry').innerHTML = S.me.real_admin ? '<div class="card" style="gap:8px;margin-top:8px"><div class="hint" style="font-weight:700">' + esc(t('viewAs')) + '</div><div class="hint">' + esc(t('viewAsHint')) + '</div><div class="go"><input id="viewAsQ" placeholder="' + esc(t('coachSearch')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn outline" id="viewAsGo">' + esc(t('go')) + '</button></div><div class="chips" id="viewAsPicks"></div><div class="msg" id="viewAsMsg" hidden></div></div>' : '';
     var vq = $('viewAsQ');
     if (vq) {
       var vt = null;
-      vq.oninput = function () {
-        clearTimeout(vt);
-        vt = setTimeout(async function () {
+      var runViewAs = async function () {
           var q = vq.value.trim(); if (q.length < 2) { $('viewAsPicks').innerHTML = ''; return; }
+          busy(true);
           var parts = q.split(/\s+/);
           var qr = sb.from('people').select('id,first_name,last_name,city').limit(10);
           qr = parts.length >= 2 ? qr.ilike('first_name', parts[0] + '%').ilike('last_name', parts.slice(1).join(' ') + '%') : qr.or('last_name.ilike.' + parts[0] + '%,first_name.ilike.' + parts[0] + '%');
           var r = await qr.order('last_name');
+          busy(false);
+          var m = $('viewAsMsg');
+          if (r.error) { m.hidden = false; m.className = 'msg bad'; m.textContent = r.error.message; return; }
+          m.hidden = (r.data || []).length > 0; m.className = 'msg'; m.textContent = t('noMatchShort');
           $('viewAsPicks').innerHTML = (r.data || []).map(function (p) { return '<button class="chip-btn" data-viewas="' + p.id + '">' + esc(p.first_name + ' ' + p.last_name) + (p.city ? ' <small>' + esc(p.city) + '</small>' : '') + '</button>'; }).join('');
-          $('viewAsPicks').querySelectorAll('[data-viewas]').forEach(function (b) { b.onclick = async function () { b.disabled = true; var rr = await sb.rpc('set_preview', { p_target: parseInt(b.getAttribute('data-viewas'), 10) }); if (rr.error) { b.disabled = false; return; } location.hash = ''; start(); }; });
-        }, 250);
+          $('viewAsPicks').querySelectorAll('[data-viewas]').forEach(function (b) { b.onclick = async function () { b.disabled = true; busy(true); var rr = await sb.rpc('set_preview', { p_target: parseInt(b.getAttribute('data-viewas'), 10) }); busy(false); if (rr.error) { b.disabled = false; m.hidden = false; m.className = 'msg bad'; m.textContent = rr.error.message; return; } location.hash = ''; start(); }; });
       };
+      vq.oninput = function () { clearTimeout(vt); vt = setTimeout(runViewAs, 300); };
+      vq.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(vt); runViewAs(); } };
+      $('viewAsGo').onclick = runViewAs;
     }
     $('setupEntry').innerHTML = iCan('setup') ? '<a class="rowbtn" href="#setup" style="margin-top:8px"><span><span class="t">' + esc(t('setupEntry')) + '</span><br><span class="s">' + esc(t('setupEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
     $('peopleEntry').innerHTML = iCan('people') ? '<a class="rowbtn" href="#people" style="margin-top:8px"><span><span class="t">' + esc(t('peopleEntry')) + '</span><br><span class="s">' + esc(t('peopleEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
@@ -215,16 +242,16 @@
   // ── Coaching ─────────────────────────────────────────────────────
   function iCan(section) { return !!(S.me && (S.me.unlocks || []).indexOf(section) >= 0); }
   var AREAS = ['laws', 'reading', 'fitness', 'presence'];
-  async function loadCoach() {
+  async function loadCoach_() {
     var today = todayStr();
-    var g = await sb.from('games').select('game_id,date,game_num,kickoff,field,age_group,gender,competition,home,away,cr,ar1,ar2,fourth,venue,status')
-      .eq('date', today).neq('status', 'C').order('venue').order('kickoff');
+    var g = await fetchAll(function () { return sb.from('games').select('game_id,date,game_num,kickoff,field,age_group,gender,competition,home,away,cr,ar1,ar2,fourth,venue,status')
+      .eq('date', today).neq('status', 'C').order('venue').order('kickoff'); });
     S.coach.games = g.data || [];
     var mine = await sb.from('coach_assignments').select('venue,block,fields,note').eq('date', today);
     S.coach.mine = mine.data || [];
     if (S.coach.mine.length && !S.coach.venue) S.coach.venue = S.coach.mine[0].venue;
     // Days ahead with games, for saying when I am free.
-    var ahead = await sb.from('games').select('date').gte('date', today).lte('date', shiftDate(today, 10)).neq('status', 'C').limit(5000);
+    var ahead = await fetchAll(function () { return sb.from('games').select('date').gte('date', today).lte('date', shiftDate(today, 10)).neq('status', 'C').order('date'); });
     var days = {}; (ahead.data || []).forEach(function (x) { days[x.date] = 1; }); S.coach.days = Object.keys(days).sort();
     var av = await sb.from('coach_availability').select('date,block').gte('date', today);
     S.coach.avail = {}; (av.data || []).forEach(function (x) { S.coach.avail[x.date + x.block] = 1; });
@@ -275,9 +302,11 @@
         return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0"><span style="min-width:0">' + esc(dayLong(d)) + '</span><span class="chips" style="flex-shrink:0"><button class="chip-btn' + (S.coach.avail[d + 'am'] ? ' on' : '') + '" data-av="' + d + '|am">' + esc(t('blockAm')) + '</button><button class="chip-btn' + (S.coach.avail[d + 'pm'] ? ' on' : '') + '" data-av="' + d + '|pm">' + esc(t('blockPm')) + '</button></span></div>';
       }).join('') + '<div class="msg" id="avMsg" hidden></div></div>' : '';
     expected = expected + availability;
-    $('venuePick').innerHTML = expected + (venues.length ? '<div class="pad" style="padding-top:14px"><div class="hint" style="font-weight:700;padding-bottom:8px">' + esc(t('venue')) + '</div><div class="chips">' + venues.map(function (v) {
-      return '<button class="chip-btn' + (v === S.coach.venue ? ' on' : '') + '" data-venue="' + esc(v) + '">' + esc(v) + '</button>';
-    }).join('') + '</div></div>' : '<div class="card"><div class="hint">' + esc(t('noVenuesToday')) + '</div></div>');
+    var venuePicker = venues.length > 8
+      ? '<select id="venueSel" style="font:inherit;width:100%;padding:12px;border:2px solid var(--navy);border-radius:8px;background:var(--surface);color:var(--ink)">' + venues.map(function (v) { return '<option value="' + esc(v) + '"' + (v === S.coach.venue ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('') + '</select>'
+      : '<div class="chips">' + venues.map(function (v) { return '<button class="chip-btn' + (v === S.coach.venue ? ' on' : '') + '" data-venue="' + esc(v) + '">' + esc(v) + '</button>'; }).join('') + '</div>';
+    $('venuePick').innerHTML = expected + (venues.length ? '<div class="pad" style="padding-top:14px"><div class="hint" style="font-weight:700;padding-bottom:8px">' + esc(t('venue')) + '</div>' + venuePicker + '</div>' : '<div class="card"><div class="hint">' + esc(t('noVenuesToday')) + '</div></div>');
+    var vsel = $('venueSel'); if (vsel) vsel.onchange = function () { S.coach.venue = vsel.value; renderCoach(); };
     $('venuePick').querySelectorAll('[data-venue]').forEach(function (b) { b.onclick = function () { S.coach.venue = b.getAttribute('data-venue'); renderCoach(); }; });
     $('venuePick').querySelectorAll('[data-av]').forEach(function (b) {
       b.onclick = async function () {
@@ -369,7 +398,7 @@
     if (!j || j.status !== 'ok') throw new Error(j && j.message || 'error');
     return j;
   }
-  async function loadReview() {
+  async function loadReview_() {
     var from = new Date(Date.now() - 45 * 86400000);
     var j = await post({ action: 'pendingNotes', dateFrom: from.toISOString().slice(0, 10) });
     REV.notes = (j.data || []).filter(function (n) { return n.notesPublic || n.cleanedNote; });
@@ -435,8 +464,8 @@
   // ── Command Center: referee development ──────────────────────────
   var CC = { tab: 'coverage', cov: [], obs: [], reads: {}, drafts: null, from: '', to: '', sdate: '', coaches: [], assigns: [], venues: [], pick: null };
   function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
-  async function loadCenter() {
-    var cov = await sb.from('referee_coverage').select('name,name_key,person_id,games,last_game,notes,released,read,last_seen').order('games', { ascending: false }).limit(2000);
+  async function loadCenter_() {
+    var cov = await fetchAll(function () { return sb.from('referee_coverage').select('name,name_key,person_id,games,last_game,notes,released,read,last_seen').order('games', { ascending: false }).order('name_key'); });
     CC.cov = cov.data || [];
     var since = iso(new Date(Date.now() - 30 * 86400000));
     var obs = await sb.from('observations').select('id,observer,rater_role,ref_name,date,cleanup_status').gte('date', since).limit(2000);
@@ -449,11 +478,11 @@
     }
     if (!CC.from) { var d = new Date(); var dow = d.getDay(); var sat = new Date(d.getTime() - ((dow + 1) % 7) * 86400000); CC.from = iso(sat); CC.to = iso(new Date(sat.getTime() + 86400000)); }
   }
-  async function loadSchedule() {
+  async function loadSchedule_() {
     if (!CC.sdate) CC.sdate = todayStr();
     if (!CC.block) CC.block = 'am';
     if (!CC.coaches.length) { var c = await sb.from('coaches').select('person_id,first_name,last_name,coaching_title').order('last_name'); CC.coaches = c.data || []; }
-    var g = await sb.from('games').select('venue,field,kickoff').eq('date', CC.sdate).neq('status', 'C').limit(2000);
+    var g = await fetchAll(function () { return sb.from('games').select('venue,field,kickoff').eq('date', CC.sdate).neq('status', 'C').order('venue'); });
     var vs = {}, fs = {};
     (g.data || []).forEach(function (x) { if (!x.venue) return; vs[x.venue] = 1; (fs[x.venue] = fs[x.venue] || {})[x.field || ''] = 1; });
     CC.venues = Object.keys(vs).sort();
@@ -562,11 +591,11 @@
   // ── Command Center: operations (the board) ───────────────────────
   var OPS = { tab: 'board', date: '', venue: null, edit: null, games: [], checkins: [], help: [], bulletins: [], alerts: [] };
   function shiftDate(iso, n) { var d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return iso.length ? iso.slice(0, 0) + d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') : iso; }
-  async function loadOps() {
+  async function loadOps_() {
     if (!OPS.date) OPS.date = todayStr();
-    var g = await sb.from('games').select('game_id,kickoff,field,age_group,competition,cr,ar1,ar2,fourth,venue,status,game_num').eq('date', OPS.date).neq('status', 'C').order('venue').order('kickoff').limit(2000);
+    var g = await fetchAll(function () { return sb.from('games').select('game_id,kickoff,field,age_group,competition,cr,ar1,ar2,fourth,venue,status,game_num,hq_role,hq_staff,home,away').eq('date', OPS.date).neq('status', 'C').order('venue').order('kickoff'); });
     OPS.games = g.data || [];
-    var ci = await sb.from('checkins').select('ref_name,game_id,created_at').eq('date', OPS.date).limit(2000);
+    var ci = await fetchAll(function () { return sb.from('checkins').select('ref_name,game_id,created_at').eq('date', OPS.date).order('created_at'); });
     OPS.checkins = ci.data || [];
     var h = await sb.from('emergencies').select('id,src_key,created_at,ref_name,venue,field,reason,status,ack_by').gte('created_at', OPS.date + 'T00:00:00').lte('created_at', OPS.date + 'T23:59:59').order('created_at', { ascending: false });
     OPS.help = h.data || [];
@@ -574,6 +603,49 @@
     OPS.bulletins = b.data || [];
     var al = await sb.from('alerts').select('id,kind,game_id,ref_name,position,game_date,venue,field,kickoff,age_group,detail,status,seen_by').gte('game_date', todayStr()).order('game_date').order('kickoff').limit(300);
     OPS.alerts = al.data || [];
+  }
+  function isHQ(g) { return /ref(eree)?\s*hq|site coordinator|standby/i.test(String(g.field || '') + ' ' + String(g.age_group || '')) || (g.hq_role && g.hq_role !== ''); }
+  function hqCardHtml(games) {
+    var staff = [], seen = {};
+    games.filter(isHQ).forEach(function (g) {
+      var arr = []; try { arr = JSON.parse(g.hq_staff || '[]'); } catch (e) {}
+      if (!arr.length && g.cr) arr = [{ name: g.cr, posAb: g.hq_role || 'SC' }];
+      arr.forEach(function (p) { if (p.name && !seen[p.name]) { seen[p.name] = 1; staff.push(p); } });
+    });
+    if (!staff.length) return '';
+    return '<div class="hqcard"><div class="disp" style="font-size:22px">' + esc(t('refereeHQ')) + '</div><div class="hint" style="margin-top:4px">' + esc(t('siteStaff')) + '</div><div class="chips" style="margin-top:6px">' + staff.map(function (p) { return '<span class="pill ok">' + esc(p.name) + ' <small>' + esc(p.posAb || '') + '</small></span>'; }).join('') + '</div></div>';
+  }
+  function searchHtml() {
+    return '<div class="pad" style="padding-top:12px"><input id="opsFind" type="search" placeholder="' + esc(t('findRefHere')) + '" value="' + esc(OPS.find || '') + '" style="font:inherit;width:100%;padding:12px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div>';
+  }
+  function gameState(g) {
+    var k = new Date(g.kickoff).getTime(), now = Date.now();
+    if (now < k) return 'upcoming';
+    if (now < k + 100 * 60000) return 'live';
+    return 'done';
+  }
+  function slotsHtml(games, ins) {
+    var find = (OPS.find || '').toLowerCase();
+    var slots = {}, order = [];
+    games.filter(function (g) { return !isHQ(g); }).forEach(function (g) {
+      if (find && !['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return g[k] && g[k].toLowerCase().indexOf(find) >= 0; })) return;
+      var k = clock(g.kickoff); if (!slots[k]) { slots[k] = []; order.push(k); }
+      slots[k].push(g);
+    });
+    if (!order.length) return '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>';
+    return order.map(function (k) {
+      var list = slots[k].sort(function (a, b) { return String(a.field).localeCompare(String(b.field), undefined, { numeric: true }); });
+      return '<div class="slot"><div class="disp">' + esc(k) + '</div><div class="hint">' + list.length + ' ' + esc(t(list.length === 1 ? 'fieldOne' : 'fieldMany')) + '</div></div><div class="fields">' + list.map(function (g) {
+        var open = OPS.edit === String(g.game_id) && !OPS.editForm, st = gameState(g);
+        var crew = ['cr', 'ar1', 'ar2', 'fourth'].filter(function (x) { return g[x]; });
+        var dots = crew.map(function (x) { var n = g[x]; var tbd = /^(tbd|open|none)$/i.test(n); return '<span class="dot' + (tbd ? ' none' : ins[key(n)] ? ' in' : '') + '"></span>'; }).join('');
+        var body = !open ? '' : '<div style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px;display:flex;flex-direction:column;gap:6px">' +
+          '<div class="hint">' + esc(g.age_group || '') + (g.game_num ? ', ' + esc(g.game_num) : '') + (g.home ? '. ' + esc(g.home) + ' v ' + esc(g.away || '') : '') + '</div>' +
+          crew.map(function (x) { var n = g[x], at = ins[key(n)]; return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b>' + esc(n) + '</b> <span class="hint">' + esc(t('role.' + x)) + '</span></span>' + (at ? '<span class="state in">' + esc(clock(at)) + '</span>' : (iCan('scheduling') || iCan('command_center') ? '<button class="btn outline small" data-checkin="' + esc(n) + '" data-gid="' + esc(g.game_id) + '">' + esc(t('staffCheckin')) + '</button>' : '<span class="state out">' + esc(t('notIn')) + '</span>')) + '</div>'; }).join('') +
+          (iCan('scheduling') ? '<button class="btn outline small" data-switch="' + esc(g.game_id) + '">' + esc(t('change')) + '</button>' : '') + '</div>';
+        return '<div class="fcard' + (st === 'live' ? ' live' : '') + (open ? ' open' : '') + '" data-fcard="' + esc(g.game_id) + '"><div class="fname">' + esc(g.field || '') + '</div><div class="dots">' + dots + '</div><div class="fstate' + (st === 'live' ? ' live' : '') + '">' + esc(t('state_' + st)) + '</div>' + body + '</div>';
+      }).join('') + '</div>';
+    }).join('');
   }
   function inSet() { var s = {}; OPS.checkins.forEach(function (c) { s[key(c.ref_name)] = c.created_at; }); return s; }
   function renderOps() {
@@ -595,6 +667,12 @@
       body = '<div class="datebar"><button class="iconbtn" data-day="-1" aria-label="Previous day">&#8249;</button><div class="d">' + esc(dayLong(OPS.date)) + '</div><button class="iconbtn" data-day="1" aria-label="Next day">&#8250;</button></div>' +
         '<div class="stats" style="grid-template-columns:repeat(4,1fr)"><div class="stat"><b>' + vlist.length + '</b><i>' + esc(t('stVenues')) + '</i></div><div class="stat"><b>' + OPS.games.length + '</b><i>' + esc(t('stGames')) + '</i></div><div class="stat green"><b>' + totIn + '</b><i>' + esc(t('stCheckedIn')) + ' / ' + totSlots + '</i></div><div class="stat' + (open ? ' red' : '') + '"><b>' + open + '</b><i>' + esc(t('stHelpOpen')) + '</i></div></div>';
       if (!vlist.length) body += '<div class="card"><div class="hint">' + esc(t('noGamesDay')) + '</div></div>';
+      else if (!OPS.venue && vlist.length > 8) {
+        body += '<div class="pad" style="padding-top:12px"><select id="opsVenueSel" style="font:inherit;width:100%;padding:12px;border:2px solid var(--navy);border-radius:8px;background:var(--surface);color:var(--ink)"><option value="">' + esc(t('allVenuesPick')) + '</option>' + vlist.map(function (v) { return '<option value="' + esc(v.name) + '">' + esc(v.name) + ' (' + v.in + '/' + v.slots + (v.help ? ', ' + v.help + ' ' + esc(t('helpOpenAt')) : '') + ')</option>'; }).join('') + '</select></div>' +
+          vlist.map(function (v) {
+            return '<a class="venue" href="#" data-venue="' + esc(v.name) + '"><div class="t">' + esc(v.name) + '</div><div class="m"><span>' + v.games + ' ' + esc(t('stGames')) + '</span><span class="in">' + v.in + ' / ' + v.slots + ' ' + esc(t('stCheckedIn')) + '</span>' + (v.help ? '<span class="help">' + v.help + ' ' + esc(t('helpOpenAt')) + '</span>' : '') + '</div></a>';
+          }).join('');
+      }
       else if (!OPS.venue) {
         body += vlist.map(function (v) {
           return '<a class="venue" href="#" data-venue="' + esc(v.name) + '"><div class="t">' + esc(v.name) + '</div><div class="m"><span>' + v.games + ' ' + esc(t('stGames')) + '</span><span class="in">' + v.in + ' / ' + v.slots + ' ' + esc(t('stCheckedIn')) + '</span>' + (v.help ? '<span class="help">' + v.help + ' ' + esc(t('helpOpenAt')) + '</span>' : '') + '</div></a>';
@@ -604,8 +682,9 @@
         var helps = OPS.help.filter(function (h) { return h.venue === OPS.venue; });
         body += '<div class="pad" style="padding-top:12px"><button class="btn outline small" data-venue="">' + esc(t('allVenues')) + '</button></div><div class="disp h2">' + esc(OPS.venue) + '</div>' +
           (helps.length ? helps.map(function (h) { return '<div class="card" style="border-color:' + (h.status === 'open' ? 'var(--red)' : 'var(--line)') + '"><b>' + esc(h.reason || '') + '</b><div class="hint">' + esc(h.ref_name || '') + ', ' + esc(h.field || '') + ', ' + esc(clock(h.created_at)) + (h.status !== 'open' ? ', ' + esc(h.status) + (h.ack_by ? ' ' + esc(h.ack_by) : '') : '') + '</div>' + (h.status === 'open' && iCan('scheduling') ? '<div class="actions" style="padding:0"><button class="btn outline small" data-ack="enroute" data-key="' + esc(h.src_key) + '">' + esc(t('ackEnroute')) + '</button><button class="btn go small" data-ack="handled" data-key="' + esc(h.src_key) + '">' + esc(t('ackHandled')) + '</button></div>' : (h.status === 'open' ? '<div class="hint" style="color:var(--red)">' + esc(t('ackInOld')) + '</div>' : '')) + '</div>'; }).join('') : '') +
-          '<div class="list">' + games.map(function (g) {
-            var crew = ['cr', 'ar1', 'ar2', 'fourth'].filter(function (k) { return g[k]; }).map(function (k) { var at = ins[key(g[k])]; return '<span class="' + (at ? 'in' : 'out') + '">' + esc(g[k]) + (at ? ' ' + esc(clock(at)) : '') + '</span>'; }).join(', ');
+          hqCardHtml(games) + searchHtml() + slotsHtml(games, ins) +
+          '<div class="list" style="display:' + (OPS.editForm ? '' : 'none') + '">' + games.filter(function (g) { return !OPS.editForm || String(g.game_id) === String(OPS.edit); }).map(function (g) {
+            var crew = ['cr', 'ar1', 'ar2', 'fourth'].filter(function (k) { return g[k]; }).map(function (k) { var at = ins[key(g[k])]; return '<span class="' + (at ? 'in' : 'out') + '">' + esc(g[k]) + (at ? ' ' + esc(clock(at)) : (iCan('scheduling') || iCan('command_center') ? ' <button class="linkbtn" style="display:inline;min-height:0;padding:0 4px;color:var(--green);text-decoration:underline" data-checkin="' + esc(g[k]) + '" data-gid="' + esc(g.game_id) + '">' + esc(t('staffCheckin')) + '</button>' : '')) + '</span>'; }).join(', ');
             var edit = OPS.edit === String(g.game_id);
             var warn = OPS.alerts.filter(function (a) { return a.status === 'open' && String(a.game_id) === String(g.game_id); });
             var form = !edit ? '' : '<div class="card" style="margin:8px 0 0;gap:8px">' +
@@ -646,9 +725,12 @@
     $('opsBody').innerHTML = head + body;
     $('opsBody').querySelectorAll('[data-otab]').forEach(function (b) { b.onclick = function () { OPS.tab = b.getAttribute('data-otab'); if (OPS.tab === 'retain' && !CC.cov.length) loadCenter().then(renderOps); else renderOps(); }; });
     $('opsBody').querySelectorAll('[data-day]').forEach(function (b) { b.onclick = function () { OPS.date = shiftDate(OPS.date, parseInt(b.getAttribute('data-day'), 10)); OPS.venue = null; loadOps().then(renderOps); }; });
-    $('opsBody').querySelectorAll('[data-venue]').forEach(function (b) { b.onclick = function (e) { e.preventDefault(); OPS.venue = b.getAttribute('data-venue') || null; OPS.edit = null; renderOps(); }; });
-    $('opsBody').querySelectorAll('[data-switch]').forEach(function (b) { b.onclick = function () { OPS.edit = b.getAttribute('data-switch'); renderOps(); }; });
-    $('opsBody').querySelectorAll('[data-cancel-switch]').forEach(function (b) { b.onclick = function () { OPS.edit = null; renderOps(); }; });
+    $('opsBody').querySelectorAll('[data-venue]').forEach(function (b) { b.onclick = function (e) { e.preventDefault(); OPS.venue = b.getAttribute('data-venue') || null; OPS.edit = null; renderOps(); window.scrollTo(0, 0); }; });
+    var ovs = $('opsVenueSel'); if (ovs) ovs.onchange = function () { OPS.venue = ovs.value || null; OPS.edit = null; renderOps(); window.scrollTo(0, 0); };
+    $('opsBody').querySelectorAll('[data-fcard]').forEach(function (c) { c.onclick = function (e) { if (e.target.closest && e.target.closest('button')) return; var id = c.getAttribute('data-fcard'); OPS.edit = OPS.edit === id ? null : id; OPS.editForm = false; renderOps(); }; });
+    var of = $('opsFind'); if (of) { of.oninput = function () { OPS.find = of.value; clearTimeout(OPS.findT); OPS.findT = setTimeout(function () { renderOps(); var x = $('opsFind'); if (x) { x.focus(); x.setSelectionRange(x.value.length, x.value.length); } }, 250); }; }
+    $('opsBody').querySelectorAll('[data-switch]').forEach(function (b) { b.onclick = function () { OPS.edit = b.getAttribute('data-switch'); OPS.editForm = true; renderOps(); }; });
+    $('opsBody').querySelectorAll('[data-cancel-switch]').forEach(function (b) { b.onclick = function () { OPS.edit = null; OPS.editForm = false; renderOps(); }; });
     $('opsBody').querySelectorAll('[data-save-switch]').forEach(function (b) {
       b.onclick = async function () {
         var id = b.getAttribute('data-save-switch'), g = OPS.games.filter(function (x) { return String(x.game_id) === id; })[0];
@@ -661,7 +743,7 @@
           var changed = ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return (g[k] || '') !== crew[k.toUpperCase()]; });
           if (changed) await post({ action: 'crewSwitch', event: ev ? ev.id : '', gameId: g.game_id, date: OPS.date, crew: crew, by: S.me.first_name + ' ' + S.me.last_name });
           if (field && field !== (g.field || '')) await post({ action: 'moveField', event: ev ? ev.id : '', gameId: g.game_id, date: OPS.date, newField: field, by: S.me.first_name + ' ' + S.me.last_name });
-          OPS.edit = null; await loadOps(); renderOps();
+          OPS.edit = null; OPS.editForm = false; await loadOps(); renderOps();
         } catch (e) { b.disabled = false; b.textContent = t('saveChanges'); var m = $('sw-msg'); if (m) { m.hidden = false; m.textContent = t('reviewFailed') + ' ' + (e.message || ''); } }
       };
     });
@@ -669,6 +751,16 @@
     if (ar) ar.onclick = async function () { ar.disabled = true; await sb.rpc('refresh_protection_alerts', { days_ahead: 14 }); await loadOps(); renderOps(); };
     $('opsBody').querySelectorAll('[data-alert]').forEach(function (b) {
       b.onclick = async function () { b.disabled = true; var r = await sb.rpc('mark_alert', { p_id: parseInt(b.getAttribute('data-id'), 10), p_status: b.getAttribute('data-alert') }); if (r.error) { b.disabled = false; return; } await loadOps(); renderOps(); };
+    });
+    $('opsBody').querySelectorAll('[data-checkin]').forEach(function (b) {
+      b.onclick = async function () {
+        var name = b.getAttribute('data-checkin'), g = OPS.games.filter(function (x) { return String(x.game_id) === b.getAttribute('data-gid'); })[0];
+        if (!g) return;
+        b.disabled = true; b.textContent = t('checkingIn');
+        var ev = eventFor(g);
+        try { await post({ action: 'checkinVenue', event: ev ? ev.id : '', refName: name, venue: g.venue, date: OPS.date, by: S.me.first_name + ' ' + S.me.last_name }); await loadOps(); renderOps(); }
+        catch (e) { b.disabled = false; b.textContent = t('staffCheckin'); }
+      };
     });
     $('opsBody').querySelectorAll('[data-ack]').forEach(function (b) {
       b.onclick = async function () {
@@ -713,7 +805,7 @@
     var query = sb.from('people').select('id,first_name,last_name,city,dob').limit(20);
     if (parts.length >= 2) query = query.ilike('first_name', parts[0] + '%').ilike('last_name', parts.slice(1).join(' ') + '%');
     else query = query.or('last_name.ilike.' + parts[0] + '%,first_name.ilike.' + parts[0] + '%');
-    var r = await query.order('last_name').order('first_name');
+    busy(true); var r = await query.order('last_name').order('first_name'); busy(false);
     if (PP.q !== q) return;
     PP.results = r.data || [];
     renderPeople();
@@ -752,11 +844,11 @@
   var SU = { events: [], venues: [], sites: [], leagues: [], ev: null, vq: '', check: null };
   var TOOLS = ['hub', 'coaching', 'checkin', 'scoreboard', 'scoreentry', 'rules', 'screports', 'incident'];
   function slug(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24); }
-  async function loadSetup() {
+  async function loadSetup_() {
     var e = await sb.from('events').select('id,name,type,year,start_date,end_date,site_id,league,venues,tools,url,accent,blurb,active,alert_emails,game_prefix').order('start_date', { ascending: false }).limit(200);
     SU.events = e.data || [];
     var from = shiftDate(todayStr(), -60), to = shiftDate(todayStr(), 60);
-    var g = await sb.from('games').select('venue,site_id,competition').gte('date', from).lte('date', to).limit(5000);
+    var g = await fetchAll(function () { return sb.from('games').select('venue,site_id,competition').gte('date', from).lte('date', to).order('venue'); });
     var vs = {}, ss = {}, ls = {};
     (g.data || []).forEach(function (x) { if (x.venue) vs[x.venue] = (vs[x.venue] || 0) + 1; if (x.site_id) ss[x.site_id] = 1; if (x.competition) ls[x.competition] = (ls[x.competition] || 0) + 1; });
     SU.venues = Object.keys(vs).sort(); SU.sites = Object.keys(ss).sort(); SU.leagues = Object.keys(ls).sort(function (a, b) { return ls[b] - ls[a]; });
@@ -1061,7 +1153,9 @@
     $('markSignin').src = C.marks.csa; $('markDay').src = C.marks.csa;
     ['markGame', 'markNotes', 'markHelp', 'markCoach', 'markCoachGame', 'markMyNotes', 'markReview', 'markCenter', 'markOps', 'markPeople', 'markSetup'].forEach(function (id) { $(id).src = C.marks.program; });
     ['ja0', 'ja1', 'ja2', 'ja3', 'ja4', 'ja5', 'ja6', 'ja7', 'ja8', 'ja9', 'ja10', 'ja11', 'ja12'].forEach(function (id) { $(id).src = C.marks.ja; });
-    $('peopleQ').oninput = function () { var q = $('peopleQ').value.trim(); clearTimeout(PP.timer); PP.timer = setTimeout(function () { searchPeople(q); }, 250); };
+    $('peopleQ').oninput = function () { var q = $('peopleQ').value.trim(); clearTimeout(PP.timer); PP.timer = setTimeout(function () { searchPeople(q); }, 300); };
+    $('peopleQ').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); } };
+    $('peopleGo').onclick = function () { clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); };
     $('signOut').onclick = async function (e) { e.preventDefault(); if (LIVE.channel) { try { sb.removeChannel(LIVE.channel); } catch (er) {} LIVE.channel = null; } await sb.auth.signOut(); S.me = null; location.hash = ''; show('s-signin'); };
     applyWords();
     document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v' + VERSION; });

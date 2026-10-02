@@ -176,4 +176,27 @@ textarea { font: inherit; width: 100%; min-height: 140px; padding: 12px; border:
 .crewline .out { color: var(--muted); }
 .chip-btn.avail { border-color: var(--green); }
 .mine { border-left: 0; outline: 2px solid var(--gold); outline-offset: -2px; border-radius: 8px; padding-left: 8px; }
+#busy { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.08); z-index: 50; pointer-events: none; }
+#busy .ball { font-size: 56px; line-height: 1; animation: spin 1.1s linear infinite; filter: drop-shadow(0 2px 6px rgba(0,0,0,.3)); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.go { display: flex; gap: 8px; }
+.go input { flex-grow: 1; }
+.go .btn { min-height: 48px; }
+.slot { display: flex; align-items: baseline; gap: 10px; margin: 18px 20px 6px; padding-bottom: 6px; border-bottom: 2px solid var(--count); }
+.slot .disp { font-size: 26px; color: var(--count); }
+.slot .hint { font-size: 13px; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 20px; }
+@media (min-width: 700px) { .fields { grid-template-columns: 1fr 1fr 1fr; } }
+.fcard { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; text-align: left; font: inherit; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.fcard.live { border-color: var(--green); }
+.fcard.open { grid-column: 1 / -1; }
+.fcard .fname { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 20px; line-height: 1; }
+.dots { display: flex; gap: 5px; }
+.dot { width: 11px; height: 11px; border-radius: 50%; background: var(--red); }
+.dot.in { background: var(--green); }
+.dot.none { background: var(--line); }
+.fstate { font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
+.fstate.live { color: var(--green); }
+.hqcard { margin: 14px 20px 0; background: var(--surface); border: 2px solid var(--count); border-radius: 12px; padding: 12px 14px; }
+.hqcard .hint { font-weight: 700; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
