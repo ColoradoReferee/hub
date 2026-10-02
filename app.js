@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.02-l';
+  var VERSION = '2026.10.02-m';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -59,6 +59,7 @@
     return 'cr';
   }
   function myNameOn(g) { return g[myRole(g)] || (S.me.first_name + ' ' + S.me.last_name); }
+  function isCoachSlot(g) { return /coach|mentor/i.test(String(g.age_group || '')) || String(g.hq_role || '').toUpperCase() === 'CM'; }
   function fieldShort(f) { return String(f || '').replace(/^Field\s*/i, ''); }
   function eventFor(g) {
     var num = String(g.game_num || '').toUpperCase(), venue = key(g.venue);
@@ -218,7 +219,7 @@
   function cardHtml(g) {
     var inAt = S.checkins[String(g.game_id)];
     return '<div class="card"><div class="row"><div class="disp big">' + esc(clock(g.kickoff)) + '</div><div class="disp big">' + esc(String(g.field || '').toUpperCase()) + '</div></div>' +
-      '<div>' + esc(g.age_group || '') + (g.competition ? ', ' + esc(g.competition) : '') + '. ' + esc(t('youAre')) + ' ' + esc(t('role.' + myRole(g))) + '.</div>' +
+      '<div>' + (isCoachSlot(g) ? esc(t('coachSlot')) + (g.field ? ', ' + esc(g.field) : '') : esc(g.age_group || '') + (g.competition ? ', ' + esc(g.competition) : '') + '. ' + esc(t('youAre')) + ' ' + esc(t('role.' + myRole(g)))) + '.</div>' +
       '<div class="actions">' + checkinBtn(g, inAt) + '<a class="btn outline" href="#game/' + esc(g.game_id) + '">' + esc(t('details')) + '</a></div>' +
       '<div class="hint">' + esc(t('checkinWhere')) + '</div><div class="msg bad" id="ci-msg-' + esc(g.game_id) + '" hidden></div></div>';
   }
@@ -259,6 +260,14 @@
     if (S.coach.mine.length && !S.coach.venue) S.coach.venue = S.coach.mine[0].venue;
     var ea = await sb.from('eval_requests').select('id,game_id,game_date,venue,purpose,status,ref_name').eq('coach_person_id', S.me.person_id).eq('status', 'assigned').gte('game_date', today).order('game_date');
     S.coach.evals = ea.data || [];
+    // Coaching slots Assignr gave me, today and the next ten days.
+    var keys = S.me.nameKeys || [];
+    var slots = await fetchAll(function () { return sb.from('games').select('game_id,date,kickoff,venue,field,age_group,hq_role,cr,ar1,ar2,fourth').gte('date', today).lte('date', shiftDate(today, 10)).not('status', 'in', '(C,X,canceled_no_pay)').order('date').order('kickoff'); });
+    S.coach.assignr = (slots.data || []).filter(function (g) { return isCoachSlot(g) && ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(g[k])) >= 0; }); });
+    S.coach.assignr.filter(function (g) { return g.date === today; }).forEach(function (g) {
+      if (!S.coach.mine.some(function (m) { return m.venue === g.venue; })) S.coach.mine.push({ venue: g.venue, block: 'all', fields: g.field ? [g.field] : [], note: t('fromAssignr') + (g.kickoff ? ', ' + clock(g.kickoff) : '') });
+    });
+    if (S.coach.mine.length && !S.coach.venue) S.coach.venue = S.coach.mine[0].venue;
     // Days ahead with games, for saying when I am free.
     var ahead = await fetchAll(function () { return sb.from('games').select('date').gte('date', today).lte('date', shiftDate(today, 10)).not('status', 'in', '(C,X,canceled_no_pay)').order('date'); });
     var days = {}; (ahead.data || []).forEach(function (x) { days[x.date] = 1; }); S.coach.days = Object.keys(days).sort();
@@ -308,7 +317,9 @@
         return '<div>' + esc(t(m.block === 'am' ? 'blockAm' : m.block === 'pm' ? 'blockPm' : 'blockAll')) + ', ' + esc(m.venue) + ((m.fields || []).length ? ', ' + esc(m.fields.map(fieldShort).join(', ')) : '') + (m.note ? '. ' + esc(m.note) : '') + '<br><span class="hint">' + esc(t('blockJob')) + ' ' + esc(t('debriefed').replace('{d}', done).replace('{n}', total)) + '</span></div>';
       }).join('') + '</div>' : '';
     var evalsCard = (S.coach.evals || []).length ? '<div class="card" style="border-color:var(--red);gap:6px"><b>' + esc(t('evalAssignedTitle')) + '</b>' + S.coach.evals.map(function (r) { return '<div>' + refLink(r.ref_name) + ', ' + esc(dayLong(r.game_date)) + ', ' + esc(r.venue || '') + '. ' + esc(t('evalPurpose.' + r.purpose)) + ' <a class="refname" href="#coach/game/' + esc(r.game_id) + '">' + esc(t('details')) + '</a></div>'; }).join('') + '<div class="hint">' + esc(t('evalAssignedHint')) + '</div></div>' : '';
-    expected = evalsCard + expected;
+    var upcoming = (S.coach.assignr || []).filter(function (g) { return g.date > todayStr(); });
+    var upcomingCard = upcoming.length ? '<div class="card" style="gap:4px"><b>' + esc(t('comingUp')) + '</b>' + upcoming.map(function (g) { return '<div>' + esc(dayLong(g.date)) + ', ' + esc(clock(g.kickoff)) + ', ' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + ' <span class="hint">' + esc(t('fromAssignr')) + '</span></div>'; }).join('') + '</div>' : '';
+    expected = evalsCard + expected + upcomingCard;
     var availability = (S.coach.days || []).length ? '<div class="card" style="gap:6px"><div class="hint" style="font-weight:700">' + esc(t('whenFree')) + '</div>' + S.coach.days.map(function (d) {
         return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0"><span style="min-width:0">' + esc(dayLong(d)) + '</span><span class="chips" style="flex-shrink:0"><button class="chip-btn' + (S.coach.avail[d + 'am'] ? ' on' : '') + '" data-av="' + d + '|am">' + esc(t('blockAm')) + '</button><button class="chip-btn' + (S.coach.avail[d + 'pm'] ? ' on' : '') + '" data-av="' + d + '|pm">' + esc(t('blockPm')) + '</button></span></div>';
       }).join('') + '<div class="msg" id="avMsg" hidden></div></div>' : '';
