@@ -199,5 +199,6 @@ textarea { font: inherit; width: 100%; min-height: 140px; padding: 12px; border:
 .fstate.live { color: var(--green); }
 .hqcard { margin: 14px 20px 0; background: var(--surface); border: 2px solid var(--count); border-radius: 12px; padding: 12px 14px; }
 .hqcard .hint { font-weight: 700; }
+b[style*="--red"] a.refname { color: var(--red); }
 a.refname, button.refname { color: inherit; font: inherit; font-weight: inherit; background: none; border: 0; padding: 0; text-decoration: underline; text-decoration-color: var(--count); text-underline-offset: 3px; cursor: pointer; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
