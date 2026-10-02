@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>National 1 League rules · Colorado Referees</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<link rel="stylesheet" href="app.css?v=2026.10.02-f">
+<style>
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 20px 0; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .tile b { display: block; font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 30px; line-height: 1; }
+  .tile i { font-style: normal; font-size: 13px; color: var(--muted); }
+  .rule { margin: 10px 20px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+  .rule.gold { border-color: var(--gold); border-width: 2px; }
+  .rule.red { border-color: var(--red); border-width: 2px; }
+  .rule b { display: block; font-size: 17px; margin-bottom: 4px; }
+  .rule p { margin: 0; font-size: 15px; line-height: 1.45; }
+  .rules-h { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 26px; margin: 22px 20px 0; }
+  ul { margin: 8px 20px 0; padding-left: 20px; font-size: 15px; line-height: 1.5; }
+  li { margin-bottom: 6px; }
+  .jump { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 20px 0; }
+  .jump a { font-size: 14px; font-weight: 700; text-decoration: none; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <a class="backlink" href="index.html#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>Your day</a>
+    <div class="tools">
+      <button class="iconbtn" id="themeBtn" aria-label="Switch between light and dark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
+      <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+  </div>
+
+  <div class="pad" style="padding-top:16px">
+    <div class="lead">National 1 League, Colorado (West District 1)</div>
+    <div class="disp" style="font-size:44px">RULES</div>
+    <div class="lead" style="margin-top:6px">The parts a referee needs on the field. FIFA Laws of the Game apply with the National 1 changes below. Where the Handbook and the Laws differ, the Handbook wins. Numbers in grey are Handbook sections.</div>
+  </div>
+
+  <div class="tiles">
+    <div class="tile"><b>2 × 35</b><i>U13 and U14, 10 min half-time</i></div>
+    <div class="tile"><b>2 × 40</b><i>U15 and U16, 10 min half-time</i></div>
+    <div class="tile"><b>2 × 45</b><i>U17 and U18/19, 10 min half-time</i></div>
+    <div class="tile"><b>18</b><i>Max on a game day roster</i></div>
+    <div class="tile"><b>7</b><i>Players to start, within 10 min</i></div>
+    <div class="tile"><b>3</b><i>Officials; the referee may appoint club ARs</i></div>
+  </div>
+
+  <div class="rule gold"><b>Kickoff and forfeit <span class="hint">5.14</span></b><p>A team must be present and ready with at least 7 players within 10 minutes of the scheduled kickoff, or it is a forfeit. No extra time in league play; a tie is a tie.</p></div>
+  <div class="rule gold"><b>Your authority <span class="hint">6.7</span></b><p>Starts when you arrive at the site. Ends when you leave, or 30 minutes after the final whistle, whichever is first. Anything in that window is yours to deal with and report.</p></div>
+  <div class="rule"><b>Weather is your call <span class="hint">5.23, 5.24</span></b><p>You may suspend or terminate for lightning, rain, fog or any unplayable condition, before or during the match. Your decision is final. A match stopped by weather counts as complete if the first half was completed.</p></div>
+
+  <div class="jump"><a href="#subs">Subs</a><a href="#kit">Kit and roster</a><a href="#field">Field and sideline</a><a href="#cards">Cards</a><a href="#conduct">Conduct</a><a href="#after">After the game</a></div>
+
+  <div class="rules-h" id="subs">SUBSTITUTIONS <span class="hint" style="font-size:14px">5.7</span></div>
+  <div class="rule gold"><b>Moments, not numbers</b><p>Any number of players may come on at a stoppage with your permission. What is counted is the <b>moment</b>: each time a team substitutes is one moment, whatever the other team does. A substitution during play is a moment too.</p></div>
+  <ul>
+    <li><b>U13 and U14:</b> unlimited players over <b>3 moments per half</b>, plus half-time.</li>
+    <li><b>U15 to U18/19:</b> unlimited players over <b>4 moments per match</b>, plus half-time.</li>
+    <li>Half-time substitutions do not count as a moment.</li>
+    <li><b>Coaches may not agree to change the substitution policy.</b> If they ask, the answer is no.</li>
+    <li><b>No substitute for a sent-off player</b> in the match where the red card is issued.</li>
+  </ul>
+
+  <div class="rules-h" id="kit">KIT AND ROSTER <span class="hint" style="font-size:14px">6.1, 6.5, 5.3</span></div>
+  <ul>
+    <li>Every team carries two kits. <b>Home (listed first) wears light, away wears dark.</b> You decide what counts as light or dark; the team causing a clash changes.</li>
+    <li>Numbers on shirts must match the game day roster. A temporary jersey is allowed; <b>note it on the game card</b>.</li>
+    <li>Goalkeeper shirt distinct from all players and from you.</li>
+    <li><b>Game day roster: 18 players maximum.</b> Both teams must have the official N1 roster available on request.</li>
+    <li><b>Passcards:</b> digital when available, otherwise printed and laminated, for every player and coach in the technical area. <b>No passcard, no participation</b>, unless the Commissioner or designee says otherwise.</li>
+    <li>Confirm eligibility of everyone before kickoff. The home team should have a printed game card; the away team a backup.</li>
+    <li>Corrective glasses and casts: your call, casts also with the athletic trainer if there is one.</li>
+    <li>Home team provides at least two quality game balls.</li>
+  </ul>
+
+  <div class="rules-h" id="field">FIELD AND SIDELINE <span class="hint" style="font-size:14px">6.6</span></div>
+  <ul>
+    <li>Coaches, players and spectators stay <b>18 yards from the goal lines</b>. No coaching from within 18 yards of a goal line or from behind it.</li>
+    <li>Coaches and players on one side, spectators on the other where possible.</li>
+    <li>Everyone at least <b>2 yards from the touchline</b>.</li>
+    <li>Nobody enters the field during the match unless you invite them.</li>
+    <li>If a suspected head injury and <b>no certified athletic trainer</b> is present, the player <b>does not return</b>. A player removed with a suspected concussion needs medical clearance to play again.</li>
+  </ul>
+
+  <div class="rules-h" id="cards">CARDS <span class="hint" style="font-size:14px">5.15 to 5.17</span></div>
+  <div class="rule red"><b>Red card, player <span class="hint">5.15</span></b><p>Suspended for the rest of the day and the team's next N1 match. The player leaves the field of play but <b>may stay in the bench area supervised by a team official</b> if no parent is available. Further misconduct and you may remove them from the field area entirely, supervised away from the field.</p></div>
+  <div class="rule red"><b>Red card, coach or team official <span class="hint">5.16</span></b><p>Out of sight and hearing for the rest of the match, and no communication with the team by any means, phone included. Same sit-out as a player. If they refuse to leave, you may terminate: forfeit 3 to 0 against them, or the actual score if worse.</p></div>
+  <ul>
+    <li><b>No yellow card accumulation</b> in N1 league play.</li>
+    <li>Racism, spitting, discriminatory language or any <b>banned word</b> (Handbook 7.2) goes to the US Club Soccer discipline matrix. Report every word exactly as said.</li>
+    <li>Referee abuse or assault: the U.S. Soccer Referee Abuse Policy applies on top of everything else.</li>
+    <li>Cards from other competitions do not carry into N1, and N1 cards do not carry out, unless the Operator says otherwise.</li>
+  </ul>
+
+  <div class="rules-h" id="conduct">CONDUCT <span class="hint" style="font-size:14px">7.1</span></div>
+  <ul>
+    <li><b>The coach is responsible for the parents and spectators.</b> A coach may be sent off for their sideline's behavior or for inciting it.</li>
+    <li>You can ask a parent or spectator to leave the site. If they refuse, you may terminate the match.</li>
+    <li>A match abandoned for behavior is a forfeit against the offending team.</li>
+  </ul>
+
+  <div class="rules-h" id="after">AFTER THE GAME <span class="hint" style="font-size:14px">6.3, 6.7</span></div>
+  <div class="rule gold"><b>Complete the game card and turn it in at Referee HQ</b><p>Confirm the score, team and player names and numbers against every card issued. Note any temporary jersey. Then the Assignr game report as normal.</p></div>
+  <ul>
+    <li>A supplemental report for every send-off, dismissal, abandonment, banned word or unusual incident. Blank USSF supplementals are at Referee HQ; the Hub's incident report writes one for you.</li>
+    <li>Score reporting follows the Operator's published process; the Hub's score entry feeds Colorado's board.</li>
+    <li>Judgment decisions are final and cannot be protested. Protests are for rule violations, by the teams involved only.</li>
+  </ul>
+
+  <div class="pad hint" style="margin-top:18px">From the National 1 League Handbook, Section 5 to 7, as published 28 September 2026. <a href="https://national1league.org/about/rules-handbook/#section-5">The full Handbook</a>.</div>
+  <div class="foot" style="flex-direction:column"><a class="btn help" href="index.html#help">I NEED HELP</a></div>
+  <div class="credit"><span class="chip"><img src="assets/jareferee-mark.png" alt=""></span><a href="https://jareferee.com">Built with JAReferee</a><span class="ver">v2026.10.02-f</span></div>
+</div>
+<script>
+(function () {
+  try { var th = localStorage.getItem('hub-theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}
+  document.getElementById('themeBtn').onclick = function () {
+    var cur = document.documentElement.getAttribute('data-theme');
+    var dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var next = dark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('hub-theme', next); } catch (e) {}
+  };
+})();
+</script>
+</body>
+</html>
