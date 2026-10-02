@@ -8,12 +8,12 @@
 <title>Colorado Referees</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
-<link rel="stylesheet" href="app.css?v=2026.10.02-d">
+<link rel="stylesheet" href="app.css?v=2026.10.02-f">
 </head>
 <body>
 <div id="busy" style="display:none" aria-live="polite"><span class="ball">&#9917;</span></div>
 <div class="app" id="app">
-  <div id="previewBar" hidden style="background:var(--gold);color:#1B1F2A;padding:10px 20px;font-size:14px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:10px"><span id="previewText"></span><button class="linkbtn" id="previewStop" style="min-height:36px;color:#1B1F2A"></button></div>
+  <div id="previewBar" style="display:none;background:var(--gold);color:#1B1F2A;padding:10px 20px;font-size:14px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:10px"><span id="previewText"></span><button class="linkbtn" id="previewStop" style="min-height:36px;color:#1B1F2A"></button></div>
 
   <!-- ── Sign in ─────────────────────────────────────────────── -->
   <section class="screen" id="s-signin">
@@ -54,7 +54,7 @@
     </div>
     <div class="pad" style="padding-top:20px">
       <div class="lead" id="dayLead"></div>
-      <div class="count" id="countdown" hidden><div class="disp n" id="countN"></div><div class="disp w" id="countW"></div></div>
+      <div class="count" id="countdown" style="display:none"><div class="disp n" id="countN"></div><div class="disp w" id="countW"></div></div>
     </div>
     <div id="nextCard"></div>
     <div class="list" id="laterList"></div>
@@ -67,6 +67,7 @@
     <div id="peopleEntry"></div>
     <div id="viewAsEntry"></div>
     <div id="setupEntry"></div>
+    <div id="eodEntry"></div>
     <div class="foot">
       <a class="btn outline" style="flex-grow:1" id="rulesLink" href="#" data-t="rules"></a>
       <a class="btn outline" style="flex-grow:1" id="libraryLink" href="#" data-t="library"></a>
@@ -178,6 +179,7 @@
     </div>
     <div class="pad" style="padding-top:16px"><div class="disp" style="font-size:44px" data-t="peopleTitle"></div><div class="lead" data-t="peopleLead"></div>
       <label for="peopleQ" class="sr" data-t="peopleSearch"></label>
+      <div class="chips" style="margin-top:10px"><button class="chip-btn" id="staffBtn" data-t="staffList"></button></div>
       <div class="go" style="margin-top:12px"><input id="peopleQ" type="search" autocomplete="off" style="font:inherit;width:100%;padding:12px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn outline" id="peopleGo" data-t="go"></button></div>
     </div>
     <div id="peopleResults"></div>
@@ -194,6 +196,27 @@
     <div class="pad" style="padding-top:16px"><div class="disp" style="font-size:44px" data-t="setupTitle"></div><div class="lead" data-t="setupLead"></div></div>
     <div id="setupBody"></div>
     <div class="credit" style="margin-top:auto"><span class="chip"><img id="ja12" alt=""></span><span class="ver"></span></div>
+  </section>
+
+  <!-- ── End of day: hours for pay ───────────────────────────── -->
+  <section class="screen" id="s-eod">
+    <div class="top">
+      <a class="backlink" href="#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="yourDay"></span></a>
+      <img id="markEod" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+    <div class="pad" style="padding-top:16px"><div class="disp" style="font-size:44px" data-t="eodTitle"></div><div class="lead" data-t="eodLead"></div></div>
+    <div id="eodBody"></div>
+    <div class="credit" style="margin-top:auto"><span class="chip"><img id="ja13" alt=""></span><span class="ver"></span></div>
+  </section>
+
+  <!-- ── A referee's card ────────────────────────────────────── -->
+  <section class="screen" id="s-ref">
+    <div class="top">
+      <a class="backlink" href="#" id="refBack"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="back"></span></a>
+      <img id="markRef" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+    <div id="refBody"></div>
+    <div class="credit" style="margin-top:auto"><span class="chip"><img id="ja14" alt=""></span><span class="ver"></span></div>
   </section>
 
   <!-- ── Help ────────────────────────────────────────────────── -->
@@ -215,7 +238,7 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="lang.js?v=2026.10.02-d"></script>
-<script src="app.js?v=2026.10.02-d"></script>
+<script src="lang.js?v=2026.10.02-f"></script>
+<script src="app.js?v=2026.10.02-f"></script>
 </body>
 </html>
