@@ -15,7 +15,5 @@ window.HUB = {
   library: 'https://coloradoreferee.github.io/CREST_Reference/',
   hotline: '3035297718',
   hotlineShown: '303-529-7718',
-  // Rules page by game-number prefix. Moves into the events table with Setup.
-  rules: { UCH: 'rules-uchealth.html', NAT: 'rules-nat1.html' },
   marks: { csa: 'assets/csa-mark.png', program: 'assets/co-referee-program.png', ja: 'assets/jareferee-mark.png' }
 };
