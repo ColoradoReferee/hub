@@ -5,7 +5,7 @@
 window.HUB = {
   org: 'csa',
   supabaseUrl: 'https://dtjnwdlzxzvwsccwcmkw.supabase.co',
-  publishableKey: 'PASTE_PUBLISHABLE_KEY_HERE',
+  publishableKey: 'sb_publishable_eH2WN0U_uZFDxAOXW6U1tg_JKwpbJAW',
   // The current backend. Check-ins, Help, scores and notes go through it so
   // the sheet and the database both get them. Retires with the old pages.
   backend: 'https://script.google.com/macros/s/AKfycbxQXvVq-gtGfUvgXF3NJXkFU_4aVlqFclU0bF0B0dQWbpjb42tstU7UnbKLf5DFP3PY/exec',
