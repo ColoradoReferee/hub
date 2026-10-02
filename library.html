@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="description" content="Colorado Referees Library: the Laws, the CSA guide, game day procedures, career and policy.">
+<meta name="theme-color" content="#0D1525">
+<title>Library · Colorado Referees</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --nv:#1E3A73;--nv2:#142850;--nv3:#0E1E3F;--nv4:#0B1733;
+  --gold:#F2B800;--glt:#FFD24A;--red:#E24B5A;--grn:#3DBA63;
+  --g4:#D6DCEA;--g6:#BFC9E0;--g8:#2E4A85;
+  --bebas:"Barlow Condensed",sans-serif;--font:"Atkinson Hyperlegible",system-ui,sans-serif;
+  --c-guide:#F5C842;--c-laws:#64b4ff;--c-gameday:#2ecc71;
+  --c-career:#e67e22;--c-policy:#e63946;--c-contacts:#b39ddb;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+[style*="--bebas"],.header-title,.sec-title,.mod-title,.hero-title,.cat-title,.law-num,.page-title,h1,h2{font-family:var(--bebas);font-style:italic;font-weight:800;}
+html,body{height:100%;font-family:var(--font);background:var(--nv3);color:#fff;-webkit-font-smoothing:antialiased;}
+a{color:inherit;text-decoration:none;}
+
+/* ── HEADER ── */
+.site-header{
+  background:var(--nv2);
+  border-bottom:2px solid var(--gold);
+  padding:0 20px;
+  position:sticky;top:0;z-index:100;
+}
+.header-inner{
+  max-width:900px;margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  height:60px;gap:16px;
+}
+.header-brand{display:flex;align-items:center;gap:12px;}
+.header-logos{display:flex;align-items:center;gap:8px;}
+.header-logos img{height:32px;width:auto;opacity:.85;}
+.header-titles{}
+.header-title{
+  font-family:var(--bebas);font-size:20px;
+  letter-spacing:.08em;color:var(--glt);line-height:1;
+}
+.header-sub{
+  font-size:9px;color:rgba(255,255,255,.4);
+  letter-spacing:.1em;text-transform:uppercase;margin-top:1px;
+}
+.header-badge{
+  background:rgba(46,204,113,.15);
+  border:1px solid rgba(46,204,113,.3);
+  border-radius:20px;padding:3px 10px;
+  font-size:9px;font-weight:700;color:var(--grn);
+  letter-spacing:.06em;white-space:nowrap;
+}
+
+/* ── SEARCH ── */
+.search-bar{
+  background:var(--nv2);
+  border-bottom:1px solid rgba(255,255,255,.06);
+  padding:12px 20px;
+  position:sticky;top:60px;z-index:90;
+}
+.search-inner{max-width:900px;margin:0 auto;}
+.search-wrap{
+  display:flex;align-items:center;gap:10px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;padding:0 14px;
+  transition:border-color .15s;
+}
+.search-wrap:focus-within{border-color:rgba(200,146,26,.5);}
+.search-icon{font-size:16px;opacity:.5;flex-shrink:0;}
+.search-input{
+  flex:1;background:none;border:none;outline:none;
+  font-family:var(--font);font-size:14px;
+  color:#fff;padding:10px 0;
+}
+.search-input::placeholder{color:rgba(255,255,255,.3);}
+.search-clear{
+  background:none;border:none;color:var(--g6);
+  font-size:16px;cursor:pointer;padding:4px;
+  display:none;
+}
+.search-clear.show{display:block;}
+
+/* ── FILTER PILLS ── */
+.filter-bar{
+  max-width:900px;margin:0 auto;
+  padding:10px 20px 0;
+  display:flex;gap:6px;flex-wrap:wrap;
+}
+.filter-pill{
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:20px;padding:5px 12px;
+  font-size:11px;font-weight:700;
+  color:rgba(255,255,255,.5);
+  cursor:pointer;transition:all .15s;
+  letter-spacing:.04em;
+  -webkit-tap-highlight-color:transparent;
+}
+.filter-pill:hover{background:rgba(255,255,255,.1);color:#fff;}
+.filter-pill.active{
+  background:rgba(200,146,26,.2);
+  border-color:rgba(200,146,26,.5);
+  color:var(--glt);
+}
+.filter-pill[data-cat="guide"].active{background:rgba(245,200,66,.15);border-color:rgba(245,200,66,.4);color:var(--c-guide);}
+.filter-pill[data-cat="laws"].active{background:rgba(100,180,255,.15);border-color:rgba(100,180,255,.4);color:var(--c-laws);}
+.filter-pill[data-cat="gameday"].active{background:rgba(46,204,113,.15);border-color:rgba(46,204,113,.4);color:var(--c-gameday);}
+.filter-pill[data-cat="career"].active{background:rgba(230,126,34,.15);border-color:rgba(230,126,34,.4);color:var(--c-career);}
+.filter-pill[data-cat="policy"].active{background:rgba(230,57,70,.15);border-color:rgba(230,57,70,.4);color:var(--c-policy);}
+.filter-pill[data-cat="contacts"].active{background:rgba(179,157,219,.15);border-color:rgba(179,157,219,.4);color:var(--c-contacts);}
+
+/* ── MAIN CONTENT ── */
+.main{max-width:900px;margin:0 auto;padding:16px 20px 80px;}
+
+/* ── SECTION HEADER ── */
+.section-header{
+  display:flex;align-items:center;gap:10px;
+  padding:20px 0 10px;
+}
+.section-header:first-child{padding-top:8px;}
+.section-dot{
+  width:10px;height:10px;border-radius:50%;flex-shrink:0;
+}
+.section-title{
+  font-family:var(--bebas);font-size:14px;
+  letter-spacing:.16em;text-transform:uppercase;
+  color:rgba(255,255,255,.4);
+}
+.section-header::after{
+  content:'';flex:1;height:1px;
+  background:rgba(255,255,255,.06);
+}
+
+/* ── MODULE CARDS ── */
+.modules-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
+}
+@media(min-width:600px){
+  .modules-grid{grid-template-columns:1fr 1fr;}
+}
+
+.mod-card{
+  background:var(--nv2);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:12px;overflow:hidden;
+  cursor:pointer;
+  transition:transform .15s,border-color .2s,background .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.mod-card:hover{
+  transform:translateY(-1px);
+  background:rgba(255,255,255,.04);
+}
+.mod-card:active{transform:scale(.98);}
+.mod-card.hidden{display:none;}
+
+.mod-card-inner{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 16px;
+}
+.mod-icon{
+  width:42px;height:42px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;flex-shrink:0;
+}
+.mod-info{flex:1;min-width:0;}
+.mod-title{
+  font-size:13px;font-weight:700;color:#fff;
+  margin-bottom:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.mod-sub{font-size:10px;color:var(--g6);line-height:1.4;}
+.mod-arrow{
+  font-size:18px;color:rgba(255,255,255,.2);flex-shrink:0;
+  transition:color .15s,transform .15s;
+}
+.mod-card:hover .mod-arrow{color:var(--gold);transform:translateX(2px);}
+
+/* Category accent on left border */
+.mod-card[data-cat="guide"]{border-left:3px solid rgba(245,200,66,.4);}
+.mod-card[data-cat="laws"]{border-left:3px solid rgba(100,180,255,.4);}
+.mod-card[data-cat="gameday"]{border-left:3px solid rgba(46,204,113,.4);}
+.mod-card[data-cat="career"]{border-left:3px solid rgba(230,126,34,.4);}
+.mod-card[data-cat="policy"]{border-left:3px solid rgba(230,57,70,.4);}
+.mod-card[data-cat="contacts"]{border-left:3px solid rgba(179,157,219,.4);}
+
+/* No results */
+.no-results{
+  text-align:center;padding:60px 20px;
+  color:var(--g6);font-size:14px;
+  display:none;
+}
+.no-results.show{display:block;}
+.no-results-icon{font-size:40px;margin-bottom:12px;}
+
+/* ── SLIDE-UP DETAIL PANEL ── */
+.detail-panel{
+  position:fixed;inset:0;z-index:200;
+  pointer-events:none;
+}
+.detail-backdrop{
+  position:absolute;inset:0;
+  background:rgba(0,0,0,.7);
+  opacity:0;transition:opacity .25s;
+}
+.detail-sheet{
+  position:absolute;bottom:0;left:0;right:0;
+  max-height:94dvh;
+  background:var(--nv2);
+  border-radius:20px 20px 0 0;
+  border-top:2px solid rgba(200,146,26,.3);
+  transform:translateY(100%);
+  transition:transform .3s cubic-bezier(.32,.72,0,1);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  max-width:900px;margin:0 auto;
+}
+.detail-panel.open{pointer-events:all;}
+.detail-panel.open .detail-backdrop{opacity:1;}
+.detail-panel.open .detail-sheet{transform:translateY(0);}
+.detail-handle{
+  width:36px;height:4px;
+  background:rgba(255,255,255,.15);
+  border-radius:2px;margin:10px auto 0;
+}
+.detail-header{
+  padding:12px 20px 0;
+  display:flex;align-items:flex-start;
+  justify-content:space-between;gap:12px;
+}
+.detail-close{
+  background:rgba(255,255,255,.08);border:none;
+  border-radius:50%;width:32px;height:32px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;color:var(--g4);cursor:pointer;
+  flex-shrink:0;margin-top:4px;
+  -webkit-tap-highlight-color:transparent;
+  transition:background .15s;
+}
+.detail-close:hover{background:rgba(255,255,255,.15);}
+.detail-eyebrow{
+  font-size:10px;font-weight:700;
+  letter-spacing:.16em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:4px;
+}
+.detail-title{
+  font-family:var(--bebas);font-size:28px;
+  letter-spacing:.04em;color:#fff;line-height:1;
+}
+.detail-subtitle{
+  font-size:11px;color:var(--g4);
+  margin-top:4px;line-height:1.5;
+}
+.detail-body{padding:16px 20px 20px;}
+.detail-section{margin-bottom:22px;}
+.detail-section-title{
+  font-size:10px;font-weight:700;
+  letter-spacing:.16em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:10px;
+  padding-bottom:6px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.detail-text{
+  font-size:13px;color:var(--g4);
+  line-height:1.75;margin-bottom:10px;
+}
+.detail-text strong{color:#fff;font-weight:600;}
+.detail-text a{color:var(--glt);text-decoration:underline;text-decoration-color:rgba(245,200,66,.3);}
+
+/* ── FOOTER ── */
+.site-footer{
+  background:var(--nv2);
+  border-top:1px solid rgba(255,255,255,.06);
+  padding:24px 20px;
+  text-align:center;
+}
+.footer-inner{max-width:900px;margin:0 auto;}
+.footer-logos{
+  display:flex;align-items:center;justify-content:center;
+  gap:16px;margin-bottom:12px;
+}
+.footer-logos img{height:36px;opacity:.6;}
+.footer-text{
+  font-size:11px;color:var(--g6);line-height:1.6;
+}
+.footer-link{color:var(--gold);}
+
+@keyframes slideUp{
+  from{opacity:0;transform:translateY(10px);}
+  to{opacity:1;transform:translateY(0);}
+}
+.mod-card{animation:slideUp .25s ease both;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <a href="index.html#day" style="display:flex;align-items:center;gap:6px;font-weight:700;min-height:44px;color:#fff">&#8249; Your day</a>
+      <div class="header-logos"><img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program"></div>
+      <div class="header-titles">
+        <div class="header-title">Library</div>
+        <div class="header-sub">Colorado Referees &middot; the Laws, the guide, game day</div>
+      </div>
+    </div>
+    <div class="header-badge">&#9679; Works offline</div>
+  </div>
+</header>
+
+<!-- SEARCH -->
+<div class="search-bar">
+  <div class="search-inner">
+    <div class="search-wrap">
+      <span class="search-icon">&#128269;</span>
+      <input class="search-input" id="searchInput" type="search"
+        placeholder="Search the Library" autocomplete="off" spellcheck="false">
+      <button class="search-clear" id="searchClear" onclick="clearSearch()">&#10005;</button>
+    </div>
+  </div>
+  <div class="filter-bar">
+    <div class="filter-pill active" data-cat="all" onclick="setFilter('all')">All Modules</div>
+    <div class="filter-pill" data-cat="guide" onclick="setFilter('guide')">&#128218; CSA Guide</div>
+    <div class="filter-pill" data-cat="laws" onclick="setFilter('laws')">&#9878; Laws</div>
+    <div class="filter-pill" data-cat="gameday" onclick="setFilter('gameday')">&#9917; Game Day</div>
+    <div class="filter-pill" data-cat="career" onclick="setFilter('career')">&#128197; Career</div>
+    <div class="filter-pill" data-cat="policy" onclick="setFilter('policy')">&#128737; Policy</div>
+    <div class="filter-pill" data-cat="contacts" onclick="setFilter('contacts')">&#128222; Contacts</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<main class="main" id="mainContent">
+
+  <div class="no-results" id="noResults">
+    <div class="no-results-icon">&#128269;</div>
+    No modules found. Try a different search or filter.
+  </div>
+
+  <!-- CSA GUIDE -->
+  <div class="section-header" data-section="guide">
+    <div class="section-dot" style="background:var(--c-guide)"></div>
+    <div class="section-title">CSA Guide to Referees 2025/26</div>
+  </div>
+  <div class="modules-grid" id="grid-guide"></div>
+
+  <!-- LAWS -->
+  <div class="section-header" data-section="laws">
+    <div class="section-dot" style="background:var(--c-laws)"></div>
+    <div class="section-title">17 Laws of the Game</div>
+  </div>
+  <div class="modules-grid" id="grid-laws"></div>
+
+  <!-- GAME DAY -->
+  <div class="section-header" data-section="gameday">
+    <div class="section-dot" style="background:var(--c-gameday)"></div>
+    <div class="section-title">Game Day Procedures</div>
+  </div>
+  <div class="modules-grid" id="grid-gameday"></div>
+
+  <!-- CAREER -->
+  <div class="section-header" data-section="career">
+    <div class="section-dot" style="background:var(--c-career)"></div>
+    <div class="section-title">Career Resources</div>
+  </div>
+  <div class="modules-grid" id="grid-career"></div>
+
+  <!-- POLICY -->
+  <div class="section-header" data-section="policy">
+    <div class="section-dot" style="background:var(--c-policy)"></div>
+    <div class="section-title">Policies &amp; Safety</div>
+  </div>
+  <div class="modules-grid" id="grid-policy"></div>
+
+  <!-- CONTACTS -->
+  <div class="section-header" data-section="contacts">
+    <div class="section-dot" style="background:var(--c-contacts)"></div>
+    <div class="section-title">CSA Contacts</div>
+  </div>
+  <div class="modules-grid" id="grid-contacts"></div>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-logos">
+      <img src="assets/csa-mark.png" alt="Colorado Soccer Association">
+      <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program">
+    </div>
+    <div class="footer-text">
+      Colorado Referees Library &middot; Colorado Soccer Association &middot; 2025/26 edition &middot; Built with JAReferee<br>
+      <a href="https://coloradosoccer.org" class="footer-link">ColoradoSoccer.org</a> &middot;
+      Questions: <a href="mailto:refeducation@coloradoreferees.com" class="footer-link">refeducation@coloradoreferees.com</a> &middot; 303.888.6863
+    </div>
+  </div>
+</footer>
+
+<!-- DETAIL PANEL -->
+<div class="detail-panel" id="detailPanel">
+  <div class="detail-backdrop" onclick="closeDetail()"></div>
+  <div class="detail-sheet">
+    <div class="detail-handle"></div>
+    <div class="detail-header">
+      <div>
+        <div class="detail-eyebrow" id="detailEyebrow">-</div>
+        <div class="detail-title" id="detailTitle">-</div>
+        <div class="detail-subtitle" id="detailSubtitle">-</div>
+      </div>
+      <button class="detail-close" onclick="closeDetail()">&#10005;</button>
+    </div>
+    <div class="detail-body" id="detailBody"></div>
+  </div>
+</div>
+
+<script>
+
+/* ────────────────────────────────────────────
+   MODULE DATA
+   ──────────────────────────────────────────── */
+
+function ds(title, html) {
+  return "<div class=\"detail-section\"><div class=\"detail-section-title\">" + title + "</div>" + html + "</div>";
+}
+function dt(t) { return "<p class=\"detail-text\">" + t + "</p>"; }
+function bul(t) { return "<div style=\"display:flex;gap:8px;padding:4px 0;font-size:13px;color:var(--g4)\"><span style=\"color:var(--gold);flex-shrink:0\">&#8226;</span><span>" + t + "</span></div>"; }
+function chk(t) { return "<div style=\"display:flex;gap:8px;padding:5px 0;font-size:13px;color:var(--g4)\"><span style=\"color:var(--grn);flex-shrink:0\">&#10003;</span><span>" + t + "</span></div>"; }
+function stp(n,t) {
+  return "<div style=\"display:flex;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)\">" +
+    "<span style=\"font-family:var(--bebas);font-size:18px;color:var(--gold);width:22px;flex-shrink:0\">" + n + "</span>" +
+    "<span style=\"font-size:13px;color:var(--g4);line-height:1.6\">" + t + "</span></div>";
+}
+function callout(color, icon, text) {
+  return "<div style=\"background:rgba(" + color + ",.1);border:1px solid rgba(" + color + ",.25);border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;gap:10px;align-items:flex-start\">" +
+    "<span style=\"font-size:16px;flex-shrink:0\">" + icon + "</span>" +
+    "<span style=\"font-size:12px;line-height:1.6;color:var(--g4)\">" + text + "</span></div>";
+}
+
+var MODULES = [
+
+  /* ══════════ CSA GUIDE ══════════ */
+  {
+    id:"guide-intro", cat:"guide", icon:"&#128218;",
+    iconBg:"rgba(245,200,66,.12)",
+    title:"CSA Guide: Introduction & Overview",
+    sub:"Welcome, executive summary & highlights",
+    eyebrow:"CSA Guide 2025/26",
+    keywords:"introduction welcome grassroots license colorado",
+    build: function() {
+      return ds("Welcome",
+        dt("Congratulations on earning your U.S. Soccer referee license: welcome to the Colorado referee community! Your license gives you the opportunity to referee games sanctioned and insured by U.S. Soccer and Colorado Soccer Association.") +
+        dt("This guide answers the most frequently asked questions from new referees and parents, and provides the information you need for the leagues, events, and competitions you will work.")) +
+      ds("Important Highlights",
+        chk("<strong>Complete your documents in Assignr.</strong> Once you complete the U.S. Soccer Learning Center, you will receive an automatic Assignr invite. All required documents are completed digitally inside Assignr.") +
+        chk("<strong>Learn Assignr inside and out.</strong> Assignr is your assignment platform, availability calendar, communication hub, and payment system.") +
+        chk("<strong>Report your games.</strong> The game report is the final step in completing your assignment. <strong>No report = no game pay.</strong>") +
+        chk("<strong>Continuing education is essential.</strong> Laws of the Game change annually. The the Colorado Referees Hub, CSA education events, and the Colorado Master Referee Calendar keep you current.") +
+        chk("<strong>Know the RAP policy.</strong> U.S. Soccer Policy 531-9 is in effect across all sanctioned matches in Colorado. Know your rights and how to report.")) +
+      ds("About C.R.E.S.T.",
+        dt("If you completed your license through the C.R.E.S.T. Academy at Renaissance Secondary School or a partner school, welcome: you are part of something special.") +
+        dt("C.R.E.S.T. is Colorado Soccer Association's in-school referee development program. Your free digital reference tool: the <strong>C.R.E.S.T. Referee Resources app</strong>: is available at ColoradoSoccer.org and works offline on any device."));
+    }
+  },
+  {
+    id:"guide-license", cat:"guide", icon:"&#127775;",
+    iconBg:"rgba(245,200,66,.12)",
+    title:"License & Grade Pathway",
+    sub:"Grassroots license, recertification, advancement",
+    eyebrow:"CSA Guide: Section 1",
+    keywords:"license grade regional national grassroots recertify pathway advancement",
+    build: function() {
+      return ds("Grassroots Referee License",
+        dt("The Grassroots course is open to anyone 13 years of age and older. Upon completing both the online and field training components through the U.S. Soccer Learning Center, referees are licensed to work as center referee or assistant referee.") +
+        dt("After completing the course, your registration is processed with U.S. Soccer. You will receive a welcome email confirming your license. Your referee badge will be mailed from the Colorado Referee Program.")) +
+      ds("Maintaining Your License",
+        dt("<strong>Referees must recertify annually.</strong> Recertification information is released each fall and should be completed by December 31 to be ready for games after January 1.") +
+        dt("Your U.S. Soccer license is valid nationwide and transferable if you relocate to another state.")) +
+      ds("Grade Pathway",
+        bul("<strong>Referee</strong>: Entry level, completed initial Grassroots course") +
+        bul("<strong>Regional Referee</strong>: Intermediate, requires additional training and assessments") +
+        bul("<strong>National Referee</strong>: Advanced, requires national-level assessments") +
+        dt("From your very first game: <strong>keep records. Log every game you work.</strong> Your game log verifies payments, provides match reports if requested, and is essential for advancing to the next grade.") +
+        dt("Contact Deanna at refeducation@coloradoreferees.com to begin the assessment process."));
+    }
+  },
+  {
+    id:"guide-parents", cat:"guide", icon:"&#128106;",
+    iconBg:"rgba(100,180,255,.12)",
+    title:"Parents of Youth Referees",
+    sub:"Your role, responsibilities & safety rules",
+    eyebrow:"CSA Guide: Section 2",
+    keywords:"parents guardian minor youth safety assignr setup",
+    build: function() {
+      return ds("Your Role",
+        dt("Your child has successfully completed the U.S. Soccer referee course. Refereeing is a job, and as the parent or guardian of a licensed referee under 18, your involvement is critical.")) +
+      ds("Parent Checklist",
+        chk("Review this guide with your child and keep it for reference") +
+        chk("Help complete Assignr account setup: use a personal email, NOT a school email") +
+        chk("Add your email and contact information in Assignr: required for referees under 18") +
+        chk("Read, understand, and sign all required documents in Assignr") +
+        chk("Coordinate availability: if you are their transportation, you need to be available too") +
+        chk("Stay at the field when your child works. If you cannot attend, ensure they can reach you in an emergency") +
+        chk("Make sure your child has the proper uniform and equipment") +
+        chk("Help your child understand how to report games for payment: No report = No pay") +
+        chk("Encourage mentoring and continuing education events: attend with them when possible") +
+        chk("Consider getting certified yourself")) +
+      ds("Safety Rules for Minor Referees",
+        dt("<strong>Never meet alone with a mentor</strong>: always bring a parent or have the meeting around other people. Leave the field as a team. Plan your ride in advance.") +
+        dt("If a mentor ever asks you to meet alone or in a private location, report it to your assignor or Deanna at CSA immediately: 303.888.6863")) +
+      ds("RAP Protection",
+        dt("Youth referees are protected by U.S. Soccer Policy 531-9. If your child experiences abuse, report immediately: <strong>303.529.7718</strong> or <strong>RAPReporting@coloradoreferees.com</strong>"));
+    }
+  },
+  {
+    id:"guide-success", cat:"guide", icon:"&#11088;",
+    iconBg:"rgba(245,200,66,.12)",
+    title:"Keys to Success",
+    sub:"First impressions, game day mindset, growth",
+    eyebrow:"CSA Guide: Section 3",
+    keywords:"success first impression arrive early pre-game conduct mistakes confidence",
+    build: function() {
+      return ds("Make a Great First Impression",
+        bul("<strong>Dress professionally.</strong> Your uniform tells everyone on that field whether you are prepared and ready.") +
+        bul("<strong>Know the Laws.</strong> Continue reviewing the Laws after your Grassroots course. Use the the Hub, TheIFAB.com, and the U.S. Soccer Resource Center.") +
+        bul("<strong>Arrive early.</strong> Minimum 30 minutes before kickoff: 45-60 minutes preferred.") +
+        bul("<strong>Conduct a proper pre-game.</strong> Talk with your ARs before every game. A 10-minute pre-game prevents a dozen problems during the match.") +
+        bul("<strong>Know the Rules of Competition.</strong> Every league may modify the Laws of the Game. Read the rules before every assignment.")) +
+      ds("What Experienced Referees Wish They Had Known",
+        dt("<strong>Your presence controls the game before a whistle is blown.</strong> Walk onto that field with confidence, make eye contact, and communicate clearly.") +
+        dt("<strong>You will make mistakes.</strong> Every referee does. What matters is how you respond. Stay composed, stay engaged, review your decisions.") +
+        dt("<strong>Build your crew relationship.</strong> The referees working with you are your teammates. Trust them, communicate, back each other up.") +
+        dt("<strong>Talk to your assignor.</strong> Tell them your comfort level, your goals, and any concerns. Assignors can only help you if they know where you are.")) +
+      ds("After the Game",
+        bul("Report immediately: no report = no game pay") +
+        bul("Review the moment: if unsure of a decision, look it up") +
+        bul("Attend education events: posted at ColoradoSoccer.org"));
+    }
+  },
+  {
+    id:"guide-uniform", cat:"guide", icon:"&#128085;",
+    iconBg:"rgba(245,200,66,.12)",
+    title:"Uniform & Equipment",
+    sub:"Approved colors, required gear, where to buy",
+    eyebrow:"CSA Guide: Section 4",
+    keywords:"uniform jersey shorts socks shoes equipment badge cards whistle OSI gear",
+    build: function() {
+      return ds("Approved Referee Uniform",
+        bul("Approved jerseys in <strong>gold, red, black, blue, and green</strong>: all U.S. Soccer official colors. Yellow/gold is typically purchased first.") +
+        bul("<strong>Solid black referee shorts</strong> with pockets. Soccer player shorts and shorts with brand logos are NOT acceptable.") +
+        bul("<strong>Referee socks</strong> as approved by USSF. No Nike, Adidas, or other brand logo socks.") +
+        bul("<strong>Shoes that are primarily black.</strong> White accent or manufacturer logo is acceptable.")) +
+      ds("Required Equipment",
+        chk("U.S. Soccer referee badge") +
+        chk("Whistle(s): use a wrist lanyard") +
+        chk("Set of assistant referee flags") +
+        chk("Watch with stopwatch feature") +
+        chk("Coin for the coin toss") +
+        chk("Red and yellow cards") +
+        chk("Game cards to record the match") +
+        chk("Pen or pencil") +
+        chk("Bag to carry all gear") +
+        chk("Water and snacks: bring your own")) +
+      ds("Where to Get Your Gear",
+        dt("Official Sports International (OSI) is the official supplier of the U.S. Soccer Referee Program.") +
+        callout("200,146,26", "&#128138;", "Colorado OSI Store: <strong>www.colorado-osi.com</strong>") +
+        dt("<strong>Tax tip:</strong> As an independent contractor, uniform and equipment purchases are a cost of doing business. Keep records of all purchases and discuss with your tax preparer."));
+    }
+  },
+  {
+    id:"guide-assignors", cat:"guide", icon:"&#128101;",
+    iconBg:"rgba(245,200,66,.12)",
+    title:"Assignors & Game Assignments",
+    sub:"IC status, assignment rules, 72-hour policy",
+    eyebrow:"CSA Guide: Section 5",
+    keywords:"assignor independent contractor IC assignment 72 hours accept decline trade",
+    build: function() {
+      return ds("Independent Contractor Status",
+        dt("Referees are Independent Contractors (IC). You pay fees to become licensed, purchase your own equipment, set your own availability, work for various assignors, and are responsible for reporting earnings to the IRS.") +
+        callout("230,57,70","&#9888;","<strong>Do not accept games directly from a team coach.</strong> You are not covered by insurance if you do. Only accept from U.S. Soccer Licensed Assignors.")) +
+      ds("Assignment Rules",
+        chk("<strong>Respond within 24 hours.</strong> Assignr will auto-decline after this window. Repeated auto-declines affect your assignment priority.") +
+        chk("<strong>Within 72 hours of kickoff, you own the game.</strong> If you cannot work a game, you are responsible for finding your own replacement of equal grade with assignor approval.") +
+        chk("No trading or swapping without explicit assignor approval.") +
+        chk("<strong>No game shopping.</strong> It is unethical to submit availability to multiple assignors and then pick the best-paying game.") +
+        chk("<strong>No double booking.</strong> Provide availability to one assignor per time block.")) +
+      ds("Game Assignment Guidelines",
+        dt("Assignors schedule referees based on experience, ability, and what is best for the game. Newly certified referees need to <strong>work as center referee first</strong> before progressing to higher levels.") +
+        dt("A standard guideline: the referee will be at least two years older than the age group being officiated.") +
+        dt("Communicate your goals. Tell your assignor your comfort level and where you want to go in your referee career."));
+    }
+  },
+  {
+    id:"guide-assignr", cat:"guide", icon:"&#128197;",
+    iconBg:"rgba(245,200,66,.12)",
+    title:"Assignr Platform Guide",
+    sub:"Account setup, availability, accepting games",
+    eyebrow:"CSA Guide: Section 6",
+    keywords:"assignr platform account setup availability email invite app website",
+    build: function() {
+      return ds("Getting Started",
+        dt("Once you complete the U.S. Soccer Learning Center, an Assignr invite is <strong>automatically sent to your email.</strong> Do not create an account manually: wait for your invite link.") +
+        callout("230,57,70","&#9888;","<strong>Do not use a school email</strong> as your primary email address. Use a personal email you will have long-term.")) +
+      ds("Account Setup Checklist",
+        chk("Click invite link and create account with personal email") +
+        chk("Add parent/guardian email if under 18") +
+        chk("Upload professional profile photo") +
+        chk("Add emergency contact information") +
+        chk("Complete and sign W9 Tax Form") +
+        chk("Sign Independent Contractor Agreement") +
+        chk("Set up payment in Assignr Pay (EFT/ACH or Venmo)") +
+        chk("Set availability and league preferences") +
+        callout("200,146,26","&#9888;","<strong>Documents first.</strong> You will not receive game assignments until all required documents are on file.")) +
+      ds("Setting Availability",
+        dt("Assignr assumes you are <strong>UNAVAILABLE</strong> unless you specifically enter availability.") +
+        bul("Be specific: enter exact dates and time frames") +
+        bul("One assignor per time block to avoid double-booking") +
+        bul("Update immediately when your schedule changes") +
+        bul("<strong>League preferences:</strong> If you are not getting assignments, check for conflicting preferences set.")) +
+      ds("App vs Website",
+        dt("<strong>App:</strong> schedule, accept/decline buttons, game details, messaging, and availability.") +
+        dt("<strong>Website:</strong> W9/banking setup, detailed game reports, and full account settings. Do your initial setup on the website."));
+    }
+  },
+  {
+    id:"guide-reporting", cat:"guide", icon:"&#128203;",
+    iconBg:"rgba(245,200,66,.12)",
+    title:"Game Reporting",
+    sub:"What to report, when, and how",
+    eyebrow:"CSA Guide: Section 8",
+    keywords:"game report report submit assignr 24 hours yellow card red card misconduct",
+    build: function() {
+      return callout("230,57,70","&#9888;","<strong>No game report = NO game pay.</strong> Every referee must submit an after-game report. AR reports must confirm crew, score, and any important details.") +
+      ds("What Goes in a Game Report",
+        bul("<strong>Timely</strong>: submit within 24 hours. Complete it when you get home.") +
+        bul("<strong>Accurate</strong>: facts only, no personal opinions. Include score, yellow cards, red cards, any incidents.") +
+        bul("<strong>Complete</strong>: if a supplemental report is required, file it as a separate incident report.")) +
+      ds("Two Types of Reports",
+        dt("<strong>1. Official Game Report</strong>: required for every game. Includes score, all substitutions, all misconduct, and any incidents.") +
+        dt("<strong>2. Supplemental Report</strong>: required for: red cards, coach or team official dismissals, game abandonments, referee abuse or assault, parent/spectator abuse. <em>When in doubt, file one.</em>")) +
+      ds("Report Writing Rules",
+        bul("Stick to the facts: avoid opinions or assumptions") +
+        bul("Use official LOTG language: 'direct free kick offense', 'unsporting behaviour', 'sent off for excessive force'") +
+        bul("Write the report right after the game while details are fresh") +
+        bul("Review with your crew before submitting") +
+        bul("For referee abuse: write exactly what was said: word for word in quotes. The report is a legal record."));
+    }
+  },
+  {
+    id:"guide-pay", cat:"guide", icon:"&#128181;",
+    iconBg:"rgba(245,200,66,.12)",
+    title:"Referee Pay & Getting Paid",
+    sub:"Rates, Assignr Pay, EFT/ACH, tax tips",
+    eyebrow:"CSA Guide: Sections 9 & 10",
+    keywords:"pay payment assignr EFT ACH venmo tax W9 Dwolla rates",
+    build: function() {
+      return ds("How Pay Works",
+        dt("Payment for games comes from the <strong>leagues and clubs, not from your assignor.</strong> Assignors coordinate your assignments: they are not responsible for your payment.") +
+        callout("230,57,70","&#9888;","<strong>No game report = no pay.</strong> Leagues process payment based on game reports. If your report is late or missing, your payment will be held.")) +
+      ds("Required Documents Before First Payment",
+        chk("W9 Tax Form: completed in Assignr") +
+        chk("Independent Contractor Agreement: completed in Assignr")) +
+      ds("Setting Up Assignr Pay",
+        dt("Log into Assignr.com. Navigate to the Pay section. Set up <strong>Electronic Fund Transfer (EFT/ACH)</strong>: this is free and deposits directly to your bank account. You can also connect Venmo through Assignr.com.") +
+        dt("Referees of any age can set up Assignr Pay: a personal checking account is not required.") +
+        callout("200,146,26","&#128181;","<strong>EFT/ACH is strongly recommended.</strong> Paper checks have a processing fee and payment will be delayed.")) +
+      ds("Pay Timeline",
+        bul("Games are typically submitted to the paying league on a bi-weekly cycle") +
+        bul("Allow 3-5 business days after processing for funds to appear") +
+        callout("100,180,255","&#128273;","<strong>Tax reminder:</strong> As an IC, taxes are NOT withheld from your pay. You are responsible for reporting all earnings. Keep records of all payments."));
+    }
+  },
+  {
+    id:"guide-policies", cat:"guide", icon:"&#128221;",
+    iconBg:"rgba(245,200,66,.12)",
+    title:"General Policies & Expectations",
+    sub:"Scheduling, no-show policy, game day expectations",
+    eyebrow:"CSA Guide: Section 11",
+    keywords:"no-show policy scheduling expectations arrive early check in game day",
+    build: function() {
+      return ds("Game Day Expectations",
+        bul("Arrive at least <strong>30 minutes before your first game</strong> (45-60 minutes preferred)") +
+        bul("All teams must check in with the referees prior to kickoff") +
+        bul("Start the game on time") +
+        bul("Submit game scores and reports within 24 hours")) +
+      ds("No-Show Policy",
+        dt("No-show referees are handled individually and may be removed from the schedule for the remainder of the season. Fines apply. No-shows are reported to CSA, the Colorado Referee Committee, and the appropriate league and club directors.") +
+        callout("230,57,70","&#9888;","<strong>Your reputation is your assignment schedule.</strong> Referees who respond promptly, complete assignments, and report games are recognized and prioritized. The reverse is equally true.")) +
+      ds("Assignment Deadlines",
+        bul("Requested changes to weekend assignments: by <strong>Tuesday at 9:00 PM</strong>") +
+        bul("No cancellations after <strong>Wednesday at 5:00 PM</strong>: after this deadline, you find your own replacement") +
+        bul("Within <strong>72 hours of kickoff</strong>, you own the game"));
+    }
+  },
+  {
+    id:"guide-mentoring", cat:"guide", icon:"&#127775;",
+    iconBg:"rgba(245,200,66,.12)",
+    title:"Mentoring & Continuing Education",
+    sub:"Mentor program, the Hub, education resources",
+    eyebrow:"CSA Guide: Section 12",
+    keywords:"mentor continuing education the Hub learning center events calendar",
+    build: function() {
+      return ds("The Mentor Program",
+        dt("The Colorado Referee Program's Mentor Program exists to increase referee retention, provide support, and enhance officiating at every level. Mentors include FIFA, MLS, and National Referees, and U.S. Soccer Referee Coaches.") +
+        dt("ALL referees and parents are invited and encouraged to attend mentoring and education events.")) +
+      ds("the Colorado Referees Hub",
+        dt("This <strong>Library</strong>, inside your Colorado Referees Hub, is your free pocket reference: it works on any device, completely offline.") +
+        dt("It covers all 17 IFAB Laws of the Game, 11 reference modules including Game Day guides, Assignr walkthroughs, Pre-Game procedures, Penalty Kick procedures, and more.")) +
+      ds("Where to Find Education",
+        bul("<strong>Colorado Master Referee Calendar</strong>: all education events at ColoradoSoccer.org") +
+        bul("<strong>U.S. Soccer Learning Center</strong>: learning.ussoccer.com") +
+        bul("<strong>Assignr messages and emails</strong>: your assignors post updates and event reminders") +
+        bul("Instagram: @CoSoccerRef &middot; @SoccerRefInstrn &middot; @WeAreCOSoccer"));
+    }
+  },
+
+  /* ══════════ LAWS ══════════ */
+  {
+    id:"laws-1-2", cat:"laws", icon:"&#9917;",
+    iconBg:"rgba(100,180,255,.12)",
+    title:"Laws 1 & 2: Field & Ball",
+    sub:"Field dimensions, markings, goal size, ball specs",
+    eyebrow:"IFAB Laws 1-2",
+    keywords:"field dimensions markings penalty area center circle corner ball size weight",
+    build: function() {
+      return ds("Law 1: The Field of Play",
+        dt("<strong>Shape:</strong> Rectangle of natural or artificial grass.") +
+        dt("<strong>Dimensions:</strong> Length 90-120m, Width 45-90m. International: 100-110m x 64-75m.") +
+        dt("<strong>Lines:</strong> The longer lines are <strong>touch lines</strong>. The shorter lines are <strong>goal lines</strong>.") +
+        bul("<strong>Center circle:</strong> 9.15m (10 yards) radius") +
+        bul("<strong>Penalty area:</strong> 16.5m (18 yards) from each goalpost") +
+        bul("<strong>Goal area:</strong> 5.5m (6 yards) from each goalpost") +
+        bul("<strong>Penalty mark:</strong> 11m (12 yards) from goal line") +
+        bul("<strong>Goals:</strong> 7.32m wide x 2.44m tall (8 yards x 8 feet)")) +
+      ds("Law 2: The Ball",
+        bul("Spherical, made of leather or suitable material") +
+        bul("<strong>Size 5:</strong> Circumference 68-70cm, Weight 410-450g (adult)") +
+        bul("<strong>Size 4:</strong> U9-U12 games") +
+        bul("<strong>Size 3:</strong> U6-U8 games") +
+        dt("If the ball becomes defective during play, the game is stopped and restarted with a new ball from where the original ball became defective."));
+    }
+  },
+  {
+    id:"laws-3-4", cat:"laws", icon:"&#128100;",
+    iconBg:"rgba(100,180,255,.12)",
+    title:"Laws 3 & 4: Players & Equipment",
+    sub:"Number of players, substitutions, GK, uniform rules",
+    eyebrow:"IFAB Laws 3-4",
+    keywords:"players number substitutions goalkeeper uniform equipment jewelry shin guards",
+    build: function() {
+      return ds("Law 3: The Players",
+        bul("A match is played by two teams, each with <strong>a maximum of 11 players</strong>, including a goalkeeper.") +
+        bul("A match may not start if either team has fewer than 7 players.") +
+        bul("<strong>Substitutions:</strong> Maximum 5 per team in competitive matches. 3 opportunities to substitute.") +
+        dt("A player who has been sent off must leave the field. Substitutions cannot replace a player who has been sent off.")) +
+      ds("Law 4: Players' Equipment",
+        dt("<strong>Compulsory equipment:</strong> jersey with number, shorts, socks covering shin guards, shin guards, and footwear.") +
+        callout("230,57,70","&#9888;","<strong>Jewelry must be removed.</strong> Tape over earrings is NOT permitted. Players must remove all jewelry before the game.") +
+        bul("Shin guards: must be covered by socks and provide reasonable protection") +
+        bul("Goalkeeper must wear colors distinguishable from both teams and the referee") +
+        bul("Players must not use any equipment that is dangerous to themselves or other players"));
+    }
+  },
+  {
+    id:"laws-5-6-7", cat:"laws", icon:"&#9878;",
+    iconBg:"rgba(100,180,255,.12)",
+    title:"Laws 5, 6 & 7: Officials & Time",
+    sub:"Referee authority, AR duties, match duration",
+    eyebrow:"IFAB Laws 5-6-7",
+    keywords:"referee authority powers assistant referee AR duties time added stoppage halves",
+    build: function() {
+      return ds("Law 5: The Referee",
+        dt("The referee has full authority to enforce the Laws of the Game. The referee's decisions on facts are final.") +
+        bul("May allow play to continue when an offense has occurred if the non-offending team will benefit (advantage)") +
+        bul("May caution or send off players at any time, including during stoppages") +
+        bul("May not change a decision after play has restarted, unless advised by an AR or 4th official") +
+        bul("Retains jurisdiction from entering the field until leaving it after the final whistle")) +
+      ds("Law 6: The Other Match Officials",
+        bul("ARs assist the referee with offside, out of play, substitutions, and other decisions") +
+        bul("ARs can only overrule the referee if the referee requests their input or if they see something the referee missed") +
+        bul("4th official manages substitutions, equipment, and bench behavior")) +
+      ds("Law 7: Duration of Match",
+        bul("Two equal halves of <strong>45 minutes</strong> (may be reduced by agreement)") +
+        bul("<strong>Halftime interval:</strong> maximum 15 minutes") +
+        bul("<strong>Added time</strong> is added for: substitutions, injuries, goal celebrations, disciplinary actions, time-wasting, and VAR") +
+        bul("You CAN add time to added time if further stoppages occur"));
+    }
+  },
+  {
+    id:"laws-8-9", cat:"laws", icon:"&#9917;",
+    iconBg:"rgba(100,180,255,.12)",
+    title:"Laws 8 & 9: Restarts & Ball In Play",
+    sub:"Kick-off, dropped ball, when ball is live or dead",
+    eyebrow:"IFAB Laws 8-9",
+    keywords:"kick-off dropped ball in play out of play dead live restart",
+    build: function() {
+      return ds("Law 8: Start and Restart of Play",
+        dt("<strong>Kick-off procedure:</strong>") +
+        bul("Ball placed on center mark") +
+        bul("All players in own half, defending team outside center circle") +
+        bul("Ball is in play when it is kicked and moves forward") +
+        bul("A goal can be scored directly from kick-off") +
+        dt("<strong>Dropped ball:</strong> used to restart play after a temporary stoppage not covered by another Law. The ball is dropped to one player from the team that last touched it.")) +
+      ds("Law 9: Ball In and Out of Play",
+        dt("The ball is <strong>OUT of play</strong> when it has wholly crossed the goal line or touch line (on the ground or in the air), or when the referee has stopped play.") +
+        dt("The ball is <strong>IN play</strong> at all other times, including when it rebounds off a goalpost, crossbar, or corner flag, or when it rebounds off the referee.") +
+        callout("100,180,255","&#128161;","The ball must <em>wholly</em> cross the line to be out of play. If any part of the ball is still on or above the line, it is still in play."));
+    }
+  },
+  {
+    id:"laws-10-11", cat:"laws", icon:"&#127919;",
+    iconBg:"rgba(100,180,255,.12)",
+    title:"Laws 10 & 11: Goals & Offside",
+    sub:"Determining outcome, offside position, active play",
+    eyebrow:"IFAB Laws 10-11",
+    keywords:"goal offside position active play interfering advantage second to last",
+    build: function() {
+      return ds("Law 10: Determining the Outcome",
+        dt("A goal is scored when the ball <strong>wholly crosses the goal line</strong> between the goalposts and under the crossbar, provided no offense has been committed by the team scoring.") +
+        dt("If the score is level at full time, competition rules determine the outcome: extra time, penalty shootout, etc.")) +
+      ds("Law 11: Offside",
+        dt("A player is in an <strong>offside position</strong> if any part of the head, body, or feet is <em>nearer to the opponents' goal line than both the ball and the second-to-last opponent</em>.") +
+        callout("100,180,255","&#128161;","<strong>Being in an offside position is NOT an offense.</strong> A player is only penalized if they become involved in active play.") +
+        dt("<strong>Involvement in active play means:</strong>") +
+        bul("Interfering with play: touching the ball") +
+        bul("Interfering with an opponent: preventing them from playing the ball") +
+        bul("Gaining an advantage from being in that position") +
+        dt("There is NO offside offense in your own half, directly from a goal kick, throw-in, or corner kick."));
+    }
+  },
+  {
+    id:"laws-12", cat:"laws", icon:"&#128680;",
+    iconBg:"rgba(100,180,255,.12)",
+    title:"Law 12: Fouls & Misconduct",
+    sub:"DFK, IFK, cautions, send-offs, DOGSO, SPA",
+    eyebrow:"IFAB Law 12",
+    keywords:"foul misconduct DFK IFK direct indirect DOGSO SPA yellow red card caution send-off handling",
+    build: function() {
+      return ds("Direct Free Kick Offenses",
+        dt("Awarded for careless, reckless, or excessive force in: kicking, tripping, jumping at, charging, striking, pushing, tackling, holding, spitting, or handling the ball.") +
+        callout("230,126,34","&#9888;","If any of the 10 DFK offenses occur inside the offender's <em>own penalty area</em>, it is a <strong>penalty kick</strong>.")) +
+      ds("Indirect Free Kick Offenses",
+        bul("GK handling after deliberate back-pass from teammate's foot") +
+        bul("GK handling after receiving directly from a throw-in") +
+        bul("GK not releasing the ball within 6 seconds") +
+        bul("Dangerous play") +
+        bul("Impeding an opponent without going for the ball")) +
+      ds("DOGSO & SPA",
+        dt("<strong>DOGSO</strong>: Denying an Obvious Goal-Scoring Opportunity = <strong>red card send-off</strong>") +
+        dt("The 4 Ds: <strong>Distance</strong> to goal, <strong>Direction</strong> of play, number of <strong>Defenders</strong>, <strong>Destiny</strong> of the ball.") +
+        dt("<strong>SPA</strong>: Stopping a Promising Attack = <strong>yellow card caution</strong>")) +
+      ds("Cautions (Yellow Card)",
+        bul("Unsporting behaviour") + bul("Dissent") + bul("Persistent infringement") +
+        bul("Delaying restart") + bul("Encroachment") + bul("Entering/leaving without permission") + bul("Simulation")) +
+      ds("Send-Offs (Red Card)",
+        bul("Serious foul play") + bul("Violent conduct") + bul("Spitting at a person") +
+        bul("DOGSO") + bul("Two cautions in same match") +
+        bul("Offensive, insulting, or abusive language/gestures"));
+    }
+  },
+  {
+    id:"laws-13-17", cat:"laws", icon:"&#128681;",
+    iconBg:"rgba(100,180,255,.12)",
+    title:"Laws 13–17: Restarts",
+    sub:"Free kicks, PKs, throw-ins, goal kicks, corners",
+    eyebrow:"IFAB Laws 13-17",
+    keywords:"free kick penalty kick throw-in goal kick corner kick encroachment wall restart",
+    build: function() {
+      return ds("Law 13: Free Kicks",
+        bul("<strong>Direct Free Kick (DFK):</strong> goal can be scored directly") +
+        bul("<strong>Indirect Free Kick (IFK):</strong> referee must hold arm up until a second player touches the ball") +
+        bul("Defending team must be 9.15m (10 yards) from the ball") +
+        bul("Ball is in play when it is kicked and clearly moves")) +
+      ds("Law 14: Penalty Kick",
+        bul("Ball on penalty mark (11m / 12 yards)") +
+        bul("GK on goal line between posts, facing kicker") +
+        bul("All other players: outside penalty area, outside arc, behind penalty mark") +
+        bul("Ball is in play when kicked and moves forward") +
+        callout("230,57,70","&#9888;","GK moves off line before kick AND kick fails = retake + caution GK. If goal scored despite GK encroachment = allow the goal.")) +
+      ds("Law 15: Throw-In",
+        bul("Both feet on or behind the touch line at point of throw") +
+        bul("Ball released from behind and over the head with both hands") +
+        bul("Goal cannot be scored directly from a throw-in")) +
+      ds("Law 16: Goal Kick",
+        bul("Taken from anywhere in the goal area") +
+        bul("Ball is in play when it is kicked and clearly moves") +
+        bul("Opposing players must be outside the penalty area until ball is in play")) +
+      ds("Law 17: Corner Kick",
+        bul("Ball placed fully within the corner arc nearest to where it crossed the goal line") +
+        bul("Defending team must be 9.15m from the corner arc") +
+        bul("Goal can be scored directly from a corner kick"));
+    }
+  },
+
+  /* ══════════ GAME DAY ══════════ */
+  {
+    id:"gd-firstday", cat:"gameday", icon:"&#11088;",
+    iconBg:"rgba(46,204,113,.12)",
+    title:"Referee Guide to Your First Day",
+    sub:"What to bring, nervousness, mistakes, 4 Moments",
+    eyebrow:"Game Day",
+    keywords:"first day bring whistle nervous mistakes coach 4 moments safesport",
+    build: function() {
+      return ds("What to Bring",
+        dt("<strong>Required:</strong> Uniform (yellow jersey), whistle, watch with stopwatch, red and yellow cards, coin for the toss, pen/pencil, game card. Bring water: you will be running 60-90 minutes.") +
+        callout("100,180,255","&#128161;","<strong>The whistle is the ONLY thing you absolutely must have.</strong> A verbal caution is valid without physical cards. Do NOT cancel a game because you forgot equipment.")) +
+      ds("Before the Whistle",
+        dt("<strong>Nervous?</strong> Completely normal: even for experienced referees. Focus on what you can control: arrive early, know the Laws, be decisive. Stand tall and project authority.") +
+        dt("<strong>You will make mistakes.</strong> Every referee does, every game. Move on immediately. Players respect a referee who recovers and stays composed.") +
+        dt("<strong>If a coach questions a decision:</strong> Stay calm. A brief neutral explanation is fine. Do not argue, do not apologize for correct decisions, and do not change a decision because a coach is loud.")) +
+      ds("The Four Moments of Soccer",
+        dt("U.S. Soccer teaches four moments that define every game. Understanding these helps you <strong>anticipate where play is going</strong> and position correctly BEFORE incidents happen.") +
+        bul("<strong>Attacking</strong>: team has the ball and is trying to score") +
+        bul("<strong>Defending</strong>: team does not have the ball, trying to prevent a goal") +
+        bul("<strong>Winning the Ball</strong>: transition from defending to attacking") +
+        bul("<strong>Losing the Ball</strong>: transition from attacking to defending")) +
+      ds("SafeSport",
+        dt("<strong>Under 18:</strong> Complete Introduction to Safe and Healthy Playing Environments training.") +
+        dt("<strong>18 or older:</strong> SafeSport training is mandatory before your license is valid, plus a background check. Check learning.ussoccer.com."));
+    }
+  },
+  {
+    id:"gd-pregame", cat:"gameday", icon:"&#128336;",
+    iconBg:"rgba(46,204,113,.12)",
+    title:"Pre-Game Procedures",
+    sub:"Field inspection, equipment check, coin toss",
+    eyebrow:"Game Day",
+    keywords:"pre-game arrive field inspection goals nets equipment check coin toss kick-off",
+    build: function() {
+      return ds("Arrival",
+        dt("<strong>Arrive at least 30 minutes before kick-off.</strong> Time to inspect the field, meet your ARs, check equipment, and complete the coin toss without rushing.") +
+        dt("<strong>Field inspection: check for:</strong>") +
+        bul("Goal nets properly secured and attached") +
+        bul("Corner flags in place") +
+        bul("Field markings visible, penalty marks clear") +
+        bul("No dangerous obstructions or hazards") +
+        bul("Goals are securely anchored: check they do not move when pushed")) +
+      ds("Equipment Check",
+        dt("Ask both teams to line up. Check each player has: numbered jersey, shorts, socks covering shin guards, and boots.") +
+        callout("230,57,70","&#9888;","<strong>Remove all jewelry: tape over earrings is NOT permitted.</strong> Check GK has a different color from both teams and officials.") +
+        dt("<strong>Shin guards:</strong> must be covered by socks. If a player has no shin guards, they cannot play.") +
+        dt("<strong>Paperwork:</strong> collect game cards or rosters from both teams before kick-off.")) +
+      ds("Coin Toss",
+        dt("Call both captains to center circle. Flip the coin: the winner chooses <strong>either the end to attack OR takes kick-off.</strong> The other team gets whichever option was not chosen.")) +
+      ds("Kick-Off Requirements",
+        bul("Ball on the center mark") +
+        bul("All players in their own half") +
+        bul("Defending team outside the center circle (9.15m)") +
+        bul("Kicker cannot touch ball again until another player touches it") +
+        bul("A goal CAN be scored directly from kick-off") +
+        callout("100,180,255","&#128161;","<strong>Start your watch when the ball is kicked and moves</strong>: not at your whistle. This matters for added time calculations."));
+    }
+  },
+  {
+    id:"gd-during", cat:"gameday", icon:"&#9917;",
+    iconBg:"rgba(46,204,113,.12)",
+    title:"During the Game",
+    sub:"Positioning, advantage, whistle patterns, 8 signals",
+    eyebrow:"Game Day",
+    keywords:"diagonal advantage whistle patterns signals body language dissent halftime",
+    build: function() {
+      return ds("Positioning",
+        dt("Use the <strong>diagonal system of control (DSC)</strong>: move diagonally to maintain a good angle to play. Your ARs cover the flanks: use them.") +
+        dt("Eye contact before restarts. Acknowledge AR flags promptly.")) +
+      ds("Advantage",
+        dt("Play advantage when: the fouled team has immediate possession in a promising position, the foul was not serious, and playing on benefits them more than stopping. If advantage does not develop within <strong>2-3 seconds</strong>, bring play back.") +
+        callout("100,180,255","&#128161;","You CAN still caution a player after playing advantage: do so at the next stoppage.")) +
+      ds("Four Whistle Patterns",
+        stp(1,"<strong>Substitution</strong>: short single blast to stop play") +
+        stp(2,"<strong>Minor Foul</strong>: single firm blast") +
+        stp(3,"<strong>Severe Foul</strong>: sharp commanding blast, immediate stop") +
+        stp(4,"<strong>End of Game</strong>: long sustained blast") +
+        dt("Use the whistle intentionally: overuse reduces its impact.")) +
+      ds("Eight Key Hand Signals",
+        stp(1,"<strong>Indirect Free Kick</strong>: arm raised vertically, hold until second touch") +
+        stp(2,"<strong>Penalty Kick</strong>: point to penalty mark") +
+        stp(3,"<strong>Direct Free Kick</strong>: point in direction of kick") +
+        stp(4,"<strong>Throw-in</strong>: point in direction of throw") +
+        stp(5,"<strong>Goal Kick</strong>: point toward goal area") +
+        stp(6,"<strong>Corner Kick</strong>: point toward corner arc") +
+        stp(7,"<strong>Advantage 1-arm</strong>: one arm forward (moderate)") +
+        stp(8,"<strong>Advantage 2-arms</strong>: both arms forward (strong)")) +
+      ds("Body Language",
+        dt("Upright posture showing authority. Eye contact when addressing players. Neutral facial expressions. Calm body language to de-escalate before reaching for a card. <strong>Pointing does NOT substitute for a clear signal.</strong>")) +
+      ds("Halftime",
+        bul("<strong>Physical recovery</strong>: rest, hydrate, reapply sunscreen") +
+        bul("<strong>Crew debrief</strong>: key players, positioning adjustments, misconduct notes") +
+        bul("<strong>Strategic adjustments</strong>: stricter or more relaxed foul calling in second half?"));
+    }
+  },
+  {
+    id:"gd-postgame", cat:"gameday", icon:"&#128203;",
+    iconBg:"rgba(46,204,113,.12)",
+    title:"Post-Game Procedures",
+    sub:"Final whistle duties, reports, reflection",
+    eyebrow:"Game Day",
+    keywords:"post-game final whistle report reflection red card RAP supplemental",
+    build: function() {
+      return ds("Immediately After the Final Whistle",
+        dt("Control the end of the game: watch for reactions between players. <strong>You retain jurisdiction until you leave the field.</strong>") +
+        bul("Collect the game ball") +
+        bul("Leave the field together as a crew") +
+        bul("Stay alert to post-game tensions") +
+        bul("Return player passes and rosters after getting required coach signatures")) +
+      ds("Filing Your Game Report",
+        callout("230,57,70","&#9888;","<strong>No game report = NO game pay.</strong> File it the same night you work: details are freshest right away.") +
+        dt("Log into Assignr.com or the app. Find the game, select Game Report. Fill in score, cautions, send-offs, and notes.")) +
+      ds("Supplemental Report Required For",
+        bul("Any red card / send-off") +
+        bul("Coach or team official dismissed from technical area") +
+        bul("Game abandoned for any reason") +
+        bul("Referee abuse or assault") +
+        bul("Parent or spectator abuse toward a match official") +
+        dt("When in doubt, file one: it is better to have the documentation.")) +
+      ds("Reflection",
+        dt("After the report: What worked? What did not work? How can we improve? What were the unique challenges?") +
+        dt("Make reflection a consistent habit: it is how every referee at every level grows."));
+    }
+  },
+  {
+    id:"gd-pocketguide", cat:"gameday", icon:"&#128196;",
+    iconBg:"rgba(46,204,113,.12)",
+    title:"Game Day Pocket Guide",
+    sub:"Complete bag checklist + heading rule + self-assessment",
+    eyebrow:"Game Day",
+    keywords:"bag checklist referee bag whistle spare equipment heading rule concussion self-assessment",
+    build: function() {
+      return ds("Referee Bag Checklist",
+        chk("Uniform: all colors (yellow, red, black), shorts, socks, shoes") +
+        chk("Whistle: bring a spare. No whistle = no game.") +
+        chk("Yellow card and red card: bring spares") +
+        chk("Watch with stopwatch: bring a spare") +
+        chk("Referee notebook and pen or pencil") +
+        chk("Coin for the toss") +
+        chk("Water and snack, towel, sunscreen")) +
+      ds("U.S. Soccer Heading Rule",
+        callout("230,126,34","&#9888;","<strong>No heading for players under age 11 (U6-U10).</strong> If a player under 11 heads the ball, the restart is an IFK for the opposing team from the spot of the header. If the header occurs inside the goal area, the IFK is taken from the goal area line parallel to the goal line at the nearest point.")) +
+      ds("Self-Assessment After Every Game",
+        dt("Write down one thing you did well and one thing to improve. This habit separates referees who grow quickly from those who stagnate.") +
+        dt("Consider keeping a referee journal: patterns in your notes will guide your development."));
+    }
+  },
+  {
+    id:"gd-agegroups", cat:"gameday", icon:"&#128202;",
+    iconBg:"rgba(46,204,113,.12)",
+    title:"Age Group Standards Chart",
+    sub:"U6-U8 through U13+: format, ball, field, time",
+    eyebrow:"Game Day",
+    keywords:"age group U6 U8 U9 U10 U11 U12 U13 format ball size field time goalkeeper offside",
+    build: function() {
+      var rows = [
+        ["U6 to U8","4v4","Size 3","4 x 10 min","25-35 x 15-25 yds","4 x 6 ft","No","No"],
+        ["U9 to U10","7v7","Size 4","2 x 25 min","55-65 x 35-45 yds","6.5 x 18.5 ft","Yes","Yes"],
+        ["U11 to U12","9v9","Size 4","2 x 30 min","70-80 x 45-55 yds","7 x 21 ft","Yes","Yes"],
+        ["U13+","11v11","Size 5","Check local rules","Check local rules","8 x 24 ft","Yes","Yes"]
+      ];
+      var hds = ["Age","Format","Ball","Duration","Field","Goal","GK","Offside"];
+      var tbl = "<div style=\"overflow-x:auto\"><table style=\"width:100%;border-collapse:collapse;font-size:12px\">" +
+        "<thead><tr style=\"background:rgba(46,204,113,.12)\">" +
+        hds.map(function(h){ return "<th style=\"padding:7px 10px;text-align:left;color:var(--grn);font-weight:700;white-space:nowrap\">" + h + "</th>"; }).join("") +
+        "</tr></thead><tbody>";
+      rows.forEach(function(row,i) {
+        tbl += "<tr style=\"background:" + (i%2===0?"rgba(255,255,255,.03)":"transparent") + "\">";
+        row.forEach(function(cell){ tbl += "<td style=\"padding:7px 10px;color:var(--g4);border-bottom:1px solid rgba(255,255,255,.05);white-space:nowrap\">" + cell + "</td>"; });
+        tbl += "</tr>";
+      });
+      tbl += "</tbody></table></div>";
+      return ds("Standards by Age Group", tbl) +
+        ds("Key Notes",
+          callout("230,57,70","&#9888;","<strong>No heading for players under 11 (U6-U10).</strong> Restart is an IFK for the opposing team.") +
+          bul("<strong>Iron-man games</strong> at 7v7 (U9-U10): you are the only official. Bonus pay $15-20. Accept them.") +
+          bul("Always verify with the specific competition rules: local rules may vary."));
+    }
+  },
+  {
+    id:"gd-pk", cat:"gameday", icon:"&#127919;",
+    iconBg:"rgba(46,204,113,.12)",
+    title:"Penalty Kick Procedure",
+    sub:"Step-by-step PK, shootouts, encroachment rules",
+    eyebrow:"Game Day",
+    keywords:"penalty kick PK procedure GK goalkeeper encroachment retake feint shootout",
+    build: function() {
+      return ds("Before the Kick",
+        bul("Ball on penalty mark (11m / 12 yards). Confirm it is correctly placed.") +
+        bul("Kicker identified. Can approach from any direction. <strong>Cannot feint once the run-up toward the ball has started</strong>: only a feint before reaching the ball is permitted.") +
+        bul("All other players: inside field, outside penalty area, outside penalty arc, behind penalty mark.") +
+        bul("GK on goal line between posts, facing kicker. May move sideways, not forward.")) +
+      ds("Taking the Kick",
+        stp(1,"Confirm kicker identity to AR") +
+        stp(2,"Confirm all players in position") +
+        stp(3,"Eye contact with kicker") +
+        stp(4,"Whistle and point to penalty mark") +
+        stp(5,"Ball must move FORWARD: backward movement = not a valid kick, order retake")) +
+      ds("Encroachment Rules",
+        dt("<strong>GK moves forward before kick, kick fails:</strong> Retake + caution GK. Goal scored: allow it.") +
+        dt("<strong>Attacking player encroaches:</strong> Retake regardless of outcome.") +
+        dt("<strong>Defending player encroaches, ball goes in:</strong> Goal stands. Ball does not go in: Retake.") +
+        dt("<strong>Both encroach:</strong> Retake.")) +
+      ds("Penalty Shootout",
+        bul("Teams take alternating kicks. Note order and which players have kicked.") +
+        bul("GK injured with no substitutes? Replacement must come from an outfield player on the field.") +
+        bul("Ball rebounds to kicker after save? Kick is over: kicker may NOT play it again."));
+    }
+  },
+
+  /* ══════════ CAREER ══════════ */
+  {
+    id:"career-getgames", cat:"career", icon:"&#127950;",
+    iconBg:"rgba(230,126,34,.12)",
+    title:"How Do I Get Games?",
+    sub:"Assignors, availability, AR vs CR, iron-man",
+    eyebrow:"Career Resources",
+    keywords:"get games assignor availability AR CR iron-man moving up",
+    build: function() {
+      return ds("What Assignors Look For",
+        dt("Assignors assign referees they can rely on. Trust is built game by game.") +
+        bul("Be broadly available, especially weekends and evenings") +
+        bul("Respond to assignments immediately") +
+        bul("Accept both CR and AR roles") +
+        bul("Never cancel last-minute") +
+        bul("File game reports on time") +
+        dt("<strong>Should I accept AR assignments?</strong> Accept everything, especially at first. Working as an AR at a higher level is better experience than being CR at a lower level.")) +
+      ds("Maximizing Availability",
+        dt("<strong>How long until I get games?</strong> Most new referees get their first game within 2-3 weeks of activating Assignr and setting availability. If waiting more than 3 weeks, contact your assignor: your settings may need adjusting.") +
+        dt("<strong>What age groups?</strong> Start with 7v7 (U9-U10) and 9v9 (U11-U12). Work CR at these levels to build confidence before moving to 11v11.") +
+        dt("<strong>Preferences:</strong> Once you have 10-20 games it is reasonable to share preferences. New referees who immediately list restrictions are less likely to get games.")) +
+      ds("Iron-Man Games",
+        dt("<strong>What is an iron-man?</strong> You are the only official: no ARs assigned. Bonus pay of $15-20. Great experience and assignors love referees who take them.") +
+        dt("If you arrive and there is no other official: proceed as iron-man if the teams agree. Call 303.529.7718 if unsure. Never abandon a game without calling your assignor first."));
+    }
+  },
+  {
+    id:"career-upgrade", cat:"career", icon:"&#128200;",
+    iconBg:"rgba(230,126,34,.12)",
+    title:"How Do I Upgrade My Grade?",
+    sub:"Referee to Regional to National: process & contact",
+    eyebrow:"Career Resources",
+    keywords:"upgrade grade regional national assessment Deanna pathway",
+    build: function() {
+      return ds("Grade Overview",
+        bul("<strong>Referee</strong>: Entry level, completed initial Grassroots course") +
+        bul("<strong>Regional Referee</strong>: Intermediate, additional training and assessments required") +
+        bul("<strong>National Referee</strong>: Advanced, national-level assessments required") +
+        dt("Each grade unlocks higher-level games and better pay. Most active referees can upgrade to Regional in 1-2 seasons.")) +
+      ds("How to Get Assessed",
+        callout("200,146,26","&#128105;","Contact <strong>Deanna Duncan-Allen</strong> at <strong>refeducation@coloradoreferees.com</strong> or <strong>303.888.6863</strong> to express your interest. She will explain requirements, connect you with an assessor, and guide the process.") +
+        dt("<strong>Do not wait to be asked</strong>: reach out proactively.")) +
+      ds("What Happens During Assessment",
+        dt("An assessor watches you referee a game (usually without you knowing exactly when). They evaluate positioning, decision-making, game management, and fitness. After the game they give you a written report.")) +
+      ds("After Upgrading to Regional",
+        dt("You become eligible for Front Range League, higher-level tournament games, elite academy games, and premium pay rates.") +
+        dt("<strong>The pathway beyond Regional:</strong> National Referee, then Referee Instructor (you teach new referees), then Referee Assessor (you evaluate others for upgrades). Talk to the CRA about the national development pathway."));
+    }
+  },
+  {
+    id:"career-assignr-pay", cat:"career", icon:"&#128181;",
+    iconBg:"rgba(230,126,34,.12)",
+    title:"Getting Paid: Assignr Pay",
+    sub:"EFT/ACH, Venmo, Dwolla, pay timeline",
+    eyebrow:"Career Resources",
+    keywords:"getting paid payment Assignr pay EFT ACH Venmo Dwolla bank account timeline",
+    build: function() {
+      return ds("How Pay Works",
+        dt("Payment comes from the <strong>leagues and clubs</strong>: not your assignor. Documents must be on file and game reports submitted before payment is processed.") +
+        callout("230,57,70","&#9888;","<strong>No game report = NO game pay.</strong> File the report the same night you work.")) +
+      ds("Setting Up Payment",
+        dt("Log into Assignr.com (website). Go to Account Settings, then Payment. You will be connected to <strong>Dwolla</strong>: enter your bank routing and account numbers.") +
+        dt("<strong>Dwolla</strong> is a legitimate, regulated payment processor. Your banking info is stored by Dwolla, not by Assignr or CSA.") +
+        dt("You can also connect <strong>Venmo</strong> through Assignr.com. Referees of any age can set up Assignr Pay: no personal checking account required.")) +
+      ds("Pay Timeline",
+        bul("Games submitted to paying league on a bi-weekly cycle") +
+        bul("Allow 3-5 business days after processing for funds to appear") +
+        bul("Tournaments typically pay fastest: usually shortly after tournament ends") +
+        callout("100,180,255","&#128273;","<strong>Tax reminder:</strong> As an IC, taxes are NOT withheld. Keep records of all earnings. Uniform and equipment are deductible business expenses."));
+    }
+  },
+
+  /* ══════════ POLICY ══════════ */
+  {
+    id:"policy-rap", cat:"policy", icon:"&#128737;",
+    iconBg:"rgba(230,57,70,.12)",
+    title:"RAP: Referee Abuse Prevention",
+    sub:"Policy 531-9: Respect The Call: Penalty Matrix",
+    eyebrow:"Policy",
+    keywords:"RAP referee abuse prevention policy 531-9 respect the call penalty matrix levels report",
+    build: function() {
+      var levels = [
+        ["Level 1","Non-Physical","Offensive, insulting, belittling, taunting language","2-game suspension minimum"],
+        ["Level 2","Non-Physical","Harassment, intimidation, threats, retaliation","4-game suspension minimum"],
+        ["Level 3","Non-Physical","Aggression, physical threats, cyberbullying, doxing","6 games + 6-12 month suspension"],
+        ["Level 4","Physical","Any physical contact, assault, physical violence","Permanent ban + possible criminal charges"]
+      ];
+      return ds("The Policy",
+        dt("U.S. Soccer Policy 531-9: <strong>Respect The Call</strong>: is in effect across ALL sanctioned games in Colorado. It covers coaches, players, spectators, and administrators.") +
+        callout("230,57,70","&#9888;","<strong>90%</strong> of referees report abuse has increased. <strong>60%</strong> do not recertify because of harassment. CSA stands behind you.")) +
+      ds("Abuse Levels and Mandatory Sanctions",
+        levels.map(function(row) {
+          return "<div style=\"border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:12px 14px;margin-bottom:8px\">" +
+            "<div style=\"display:flex;justify-content:space-between;margin-bottom:4px\">" +
+            "<span style=\"font-size:11px;font-weight:700;color:var(--red)\">" + row[0] + "</span>" +
+            "<span style=\"font-size:10px;color:var(--g6)\">" + row[1] + "</span></div>" +
+            "<div style=\"font-size:13px;color:var(--g4);margin-bottom:4px\">" + row[2] + "</div>" +
+            "<div style=\"font-size:11px;font-weight:700;color:var(--gold)\">" + row[3] + "</div></div>";
+        }).join("")) +
+      ds("Penalty Multipliers",
+        bul("<strong>Second offense</strong> = double the minimum punishment") +
+        bul("<strong>Third offense</strong> = lifetime ban") +
+        bul("<strong>Any offense against a minor referee</strong> = TRIPLE punishment automatically")) +
+      ds("How to Report",
+        dt("<strong>During the game:</strong> handle per the Laws (caution or send-off). After the game, complete your after-game report and check the RAP box.") +
+        dt("<strong>After the game:</strong> submit game report AND supplemental incident report in Assignr within 24 hours.") +
+        callout("230,57,70","&#128222;","Emergency: <strong>303.529.7718</strong> (text/voice)<br>RAP Reporting: <strong>RAPReporting@coloradoreferees.com</strong>"));
+    }
+  },
+  {
+    id:"policy-ic", cat:"policy", icon:"&#128221;",
+    iconBg:"rgba(230,57,70,.12)",
+    title:"Independent Contractor Agreement",
+    sub:"IC status, what it means, your responsibilities",
+    eyebrow:"Policy",
+    keywords:"independent contractor IC agreement status taxes insurance liability",
+    build: function() {
+      return ds("What IC Status Means",
+        bul("You are NOT an employee of CSA, any club, league, or association") +
+        bul("You pay fees to become licensed") +
+        bul("You purchase and use your own equipment") +
+        bul("You set your own availability") +
+        bul("You work for various assignors and leagues of your choice") +
+        bul("You are responsible for reporting your earnings to the IRS")) +
+      ds("Your Responsibilities Under the IC Agreement",
+        bul("Complete and sign all required documents in Assignr (W9, IC Agreement)") +
+        bul("Use your own equipment when refereeing") +
+        bul("Payment is the sole responsibility of the league or club: not the assignor") +
+        bul("CSA will NOT withhold FICA, state or federal income taxes, or unemployment contributions") +
+        bul("You are responsible for all expenses: license fees, travel, equipment") +
+        bul("You grant CSA the right to use photographs and video from CSA events for training and promotion")) +
+      ds("Insurance",
+        dt("U.S. Soccer licensed referees carry <strong>liability insurance through U.S. Soccer</strong> as long as registration is current.") +
+        dt("Additional officials liability insurance is available through the <strong>National Association of Sports Officials</strong> at naso.org.") +
+        callout("230,57,70","&#9888;","<strong>Do not accept games directly from a team coach.</strong> You are NOT covered by insurance if you do. Only accept from U.S. Soccer Licensed Assignors."));
+    }
+  },
+
+  /* ══════════ CONTACTS ══════════ */
+  {
+    id:"contacts-main", cat:"contacts", icon:"&#128222;",
+    iconBg:"rgba(179,157,219,.12)",
+    title:"CSA Contact Directory",
+    sub:"All key contacts, hotlines & resources",
+    eyebrow:"CSA Contacts",
+    keywords:"contacts Deanna emergency hotline mentor RAP OSI uniform phone email",
+    build: function() {
+      var contacts = [
+        ["&#128105;","Deanna Duncan-Allen","Director of Referee Operations","303.888.6863","refeducation@coloradoreferees.com"],
+        ["&#128680;","Referee Emergency Hotline","Field emergencies: text or voice","303.529.7718",""],
+        ["&#128172;","Ask A Mentor Line","Referee questions: text only","720.513.2585",""],
+        ["&#128737;","RAP Reporting","Referee Abuse Prevention","","RAPReporting@coloradoreferees.com"],
+        ["&#128247;","Krissia Vasquez","Media Contact","","kvasquez@coloradosoccer.org"],
+        ["&#128137;","OSI Uniform Store","Official U.S. Soccer gear","","www.colorado-osi.com"]
+      ];
+      return ds("Key Contacts",
+        contacts.map(function(c) {
+          return "<div style=\"display:flex;gap:14px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.05);align-items:flex-start\">" +
+            "<div style=\"font-size:22px;width:32px;text-align:center;flex-shrink:0;margin-top:2px\">" + c[0] + "</div>" +
+            "<div><div style=\"font-size:14px;font-weight:700;color:#fff;margin-bottom:2px\">" + c[1] + "</div>" +
+            "<div style=\"font-size:11px;color:var(--g6);margin-bottom:4px\">" + c[2] + "</div>" +
+            (c[3] ? "<div style=\"font-size:12px;color:var(--gold)\">" + c[3] + "</div>" : "") +
+            (c[4] ? "<div style=\"font-size:12px;color:var(--gold)\">" + c[4] + "</div>" : "") +
+            "</div></div>";
+        }).join("")) +
+      ds("Essential Websites",
+        bul("<strong>ColoradoSoccer.org</strong>: CSA home, referee section, education calendar, the Hub") +
+        bul("<strong>TheIFAB.com</strong>: Current Laws of the Game") +
+        bul("<strong>learning.ussoccer.com</strong>: U.S. Soccer Learning Center") +
+        bul("<strong>ussoccer.com/referees</strong>: U.S. Soccer Referee Resource Center") +
+        bul("<strong>Assignr.com</strong>: Assignment platform, availability, payment") +
+        bul("<strong>naso.org</strong>: Additional liability insurance for officials") +
+        bul("<strong>ussoccer.com/rap</strong>: RAP Policy 531-9 full text"));
+    }
+  }
+];
+
+/* ────────────────────────────────────────────
+   BUILD CARDS
+   ──────────────────────────────────────────── */
+function buildCards() {
+  var grids = {
+    guide:    document.getElementById("grid-guide"),
+    laws:     document.getElementById("grid-laws"),
+    gameday:  document.getElementById("grid-gameday"),
+    career:   document.getElementById("grid-career"),
+    policy:   document.getElementById("grid-policy"),
+    contacts: document.getElementById("grid-contacts")
+  };
+
+  MODULES.forEach(function(mod, idx) {
+    var card = document.createElement("div");
+    card.className = "mod-card";
+    card.setAttribute("data-cat", mod.cat);
+    card.setAttribute("data-id", mod.id);
+    card.setAttribute("data-keywords", (mod.title + " " + mod.sub + " " + (mod.keywords || "")).toLowerCase());
+    card.style.animationDelay = (idx * 0.02) + "s";
+    card.innerHTML =
+      "<div class=\"mod-card-inner\">" +
+        "<div class=\"mod-icon\" style=\"background:" + mod.iconBg + "\">" + mod.icon + "</div>" +
+        "<div class=\"mod-info\">" +
+          "<div class=\"mod-title\">" + mod.title + "</div>" +
+          "<div class=\"mod-sub\">" + mod.sub + "</div>" +
+        "</div>" +
+        "<div class=\"mod-arrow\">&#8250;</div>" +
+      "</div>";
+    card.addEventListener("click", function() { openModule(mod); });
+    if (grids[mod.cat]) grids[mod.cat].appendChild(card);
+  });
+}
+
+/* ────────────────────────────────────────────
+   DETAIL PANEL
+   ──────────────────────────────────────────── */
+function openModule(mod) {
+  document.getElementById("detailEyebrow").textContent = mod.eyebrow;
+  document.getElementById("detailTitle").textContent = mod.title;
+  document.getElementById("detailSubtitle").textContent = mod.sub;
+  document.getElementById("detailBody").innerHTML = mod.build();
+  document.getElementById("detailPanel").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function closeDetail() {
+  document.getElementById("detailPanel").classList.remove("open");
+  document.body.style.overflow = "";
+}
+
+/* ────────────────────────────────────────────
+   SEARCH & FILTER
+   ──────────────────────────────────────────── */
+var currentFilter = "all";
+
+function setFilter(cat) {
+  currentFilter = cat;
+  document.querySelectorAll(".filter-pill").forEach(function(p) {
+    p.classList.toggle("active", p.getAttribute("data-cat") === cat);
+  });
+  applySearchAndFilter();
+}
+
+document.getElementById("searchInput").addEventListener("input", function() {
+  var val = this.value.trim();
+  document.getElementById("searchClear").classList.toggle("show", val.length > 0);
+  applySearchAndFilter();
+});
+
+function clearSearch() {
+  document.getElementById("searchInput").value = "";
+  document.getElementById("searchClear").classList.remove("show");
+  applySearchAndFilter();
+}
+
+function applySearchAndFilter() {
+  var query = document.getElementById("searchInput").value.toLowerCase().trim();
+  var cat = currentFilter;
+  var visibleCount = 0;
+
+  document.querySelectorAll(".mod-card").forEach(function(card) {
+    var cardCat = card.getAttribute("data-cat");
+    var keywords = card.getAttribute("data-keywords");
+    var matchesCat = cat === "all" || cardCat === cat;
+    var matchesSearch = query === "" || keywords.indexOf(query) !== -1;
+    var show = matchesCat && matchesSearch;
+    card.classList.toggle("hidden", !show);
+    if (show) visibleCount++;
+  });
+
+  // Show/hide section headers
+  var sections = ["guide","laws","gameday","career","policy","contacts"];
+  sections.forEach(function(s) {
+    var header = document.querySelector(".section-header[data-section=\"" + s + "\"]");
+    var grid = document.getElementById("grid-" + s);
+    var anyVisible = grid && grid.querySelector(".mod-card:not(.hidden)");
+    var showSection = (cat === "all" || cat === s) && anyVisible;
+    if (header) header.style.display = showSection ? "" : "none";
+    if (grid) grid.style.display = showSection ? "" : "none";
+  });
+
+  document.getElementById("noResults").classList.toggle("show", visibleCount === 0);
+}
+
+/* ────────────────────────────────────────────
+   INIT
+   ──────────────────────────────────────────── */
+buildCards();
+</script>
+</body>
+</html>
+

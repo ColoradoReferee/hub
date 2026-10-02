@@ -11,8 +11,8 @@ window.HUB = {
   backend: 'https://script.google.com/macros/s/AKfycbxQXvVq-gtGfUvgXF3NJXkFU_4aVlqFclU0bF0B0dQWbpjb42tstU7UnbKLf5DFP3PY/exec',
   // The old hub, for the pages not rebuilt yet (maps).
   oldHub: 'https://jareferee.com/ref/',
-  // The Reference Library.
-  library: 'https://coloradoreferee.github.io/CREST_Reference/',
+  // The Library, now inside the Hub.
+  library: 'library.html',
   hotline: '3035297718',
   hotlineShown: '303-529-7718',
   marks: { csa: 'assets/csa-mark.png', program: 'assets/co-referee-program.png', ja: 'assets/jareferee-mark.png' }
