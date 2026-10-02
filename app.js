@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.02-k';
+  var VERSION = '2026.10.02-l';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -79,9 +79,9 @@
     var ev = eventFor(g);
     return ev && ev.rules_url ? ev.rules_url : null;
   }
-  var BUSY = 0;
+  var BUSY = 0, LAST_ERROR = '';
   function busy(on) { BUSY += on ? 1 : -1; if (BUSY < 0) BUSY = 0; var b = $('busy'); if (b) b.style.display = BUSY === 0 ? 'none' : 'flex'; }
-  async function load(p) { busy(true); try { return await p; } finally { busy(false); } }
+  async function load(p) { busy(true); LOADING = true; try { return await p; } finally { busy(false); LOADING = false; } }
   async function loadDay() { return load(loadDay_()); }
   async function loadOps() { return load(loadOps_()); }
   async function loadCenter() { return load(loadCenter_()); }
@@ -101,7 +101,7 @@
     var out = [], page = 0, size = 1000;
     for (;;) {
       var r = await build().range(page * size, page * size + size - 1);
-      if (r.error) return { data: out, error: r.error };
+      if (r.error) { LAST_ERROR = r.error.message || String(r.error); return { data: out, error: r.error }; }
       out = out.concat(r.data || []);
       if (!r.data || r.data.length < size || page > 20) return { data: out, error: null };
       page++;
@@ -653,6 +653,8 @@
   async function loadOps_() {
     if (!OPS.date) OPS.date = todayStr();
     var g = await fetchAll(function () { return sb.from('games').select('game_id,kickoff,field,age_group,competition,cr,ar1,ar2,fourth,venue,status,game_num,hq_role,hq_staff,home,away').eq('date', OPS.date).not('status', 'in', '(C,X,canceled_no_pay)').order('venue').order('kickoff'); });
+    if (g.error) { OPS.error = g.error.message || String(g.error); return; }   // keep what we have, say why
+    OPS.error = '';
     OPS.games = g.data || [];
     var ci = await fetchAll(function () { return sb.from('checkins').select('ref_name,game_id,created_at').eq('date', OPS.date).order('created_at'); });
     OPS.checkins = ci.data || [];
@@ -729,7 +731,7 @@
       var vlist = Object.keys(venues).sort().map(function (k) { return venues[k]; });
       var totIn = 0, totSlots = 0; vlist.forEach(function (v) { totIn += v.in; totSlots += v.slots; });
       var open = OPS.help.filter(function (h) { return h.status === 'open'; }).length;
-      body = '<div class="datebar"><button class="iconbtn" data-day="-1" aria-label="Previous day">&#8249;</button><div class="d">' + esc(dayLong(OPS.date)) + '</div><button class="iconbtn" data-day="1" aria-label="Next day">&#8250;</button></div>' +
+      body = (OPS.error ? '<div class="msg bad" style="margin:10px 20px 0">' + esc(t('loadFailed')) + ' ' + esc(OPS.error) + '</div>' : '') + '<div class="datebar"><button class="iconbtn" data-day="-1" aria-label="Previous day">&#8249;</button><div class="d">' + esc(dayLong(OPS.date)) + '</div><button class="iconbtn" data-day="1" aria-label="Next day">&#8250;</button></div>' +
         '<div class="stats" style="grid-template-columns:repeat(4,1fr)"><div class="stat"><b>' + vlist.length + '</b><i>' + esc(t('stVenues')) + '</i></div><div class="stat"><b>' + OPS.games.length + '</b><i>' + esc(t('stGames')) + '</i></div><div class="stat green"><b>' + totIn + '</b><i>' + esc(t('stCheckedIn')) + ' / ' + totSlots + '</i></div><div class="stat' + (open ? ' red' : '') + '"><b>' + open + '</b><i>' + esc(t('stHelpOpen')) + '</i></div></div>';
       if (!vlist.length) body += '<div class="card"><div class="hint">' + esc(t('noGamesDay')) + '</div></div>';
       else if (!OPS.venue && vlist.length > 8) {
@@ -1353,9 +1355,11 @@
       LIVE.channel.subscribe();
     } catch (e) { LIVE.channel = null; }
   }
+  var LOADING = false;
   function liveBump() {
     clearTimeout(LIVE.timer);
     LIVE.timer = setTimeout(function () {
+      if (LOADING) { liveBump(); return; }
       var h = location.hash;
       if (h === '#ops') loadOps().then(renderOps);
       else if (h === '#center') loadCenter().then(renderCenter);
@@ -1399,7 +1403,7 @@
     await loadDay();
     route();
     liveStart();
-    setInterval(function () { if (!S.me) return; if (location.hash === '#ops' && OPS.tab === 'board') loadOps().then(renderOps); else if (location.hash.indexOf('game') < 0 && location.hash.indexOf('#') !== 0 || location.hash === '#day' || location.hash === '') renderDay(); }, 60000);
+    setInterval(function () { if (!S.me || LOADING) return; if (location.hash === '#ops' && OPS.tab === 'board') loadOps().then(renderOps); else if (location.hash.indexOf('game') < 0 && location.hash.indexOf('#') !== 0 || location.hash === '#day' || location.hash === '') renderDay(); }, 60000);
   }
 
   // ── Boot ─────────────────────────────────────────────────────────
