@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.03-b';
+  var VERSION = '2026.10.03-d';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -131,6 +131,7 @@
     S.bulletins = b.data || [];
     var sc = await sb.from('scores').select('game_id,home_score,away_score,status,entered_by,created_at').eq('date', today);
     S.scores = {}; (sc.data || []).forEach(function (r) { S.scores[String(r.game_id)] = r; });
+    await loadEvalRequests();
     var cv = await sb.rpc('coached_venues', { p_date: today });
     S.coachedVenues = (cv.data || []).map(function (r) { return typeof r === 'string' ? r : r.coached_venues; });
   }
@@ -171,6 +172,8 @@
     $('noteBox').innerHTML = note ? '<div class="note"><div class="who">' + esc(note.observer || '') + (note.rater_role ? ', ' + esc(note.rater_role) : '') + (note.date ? ', ' + esc(t('noteFrom')) + ' ' + esc(dayLong(note.date)) : '') + '</div><div class="text">' + esc(note.final_note || note.cleaned_note || '') + '</div><a href="#notes">' + esc(t('allNotes')) + '</a></div>'
       : '<div class="note"><div class="text hint">' + esc(t('noNotes')) + '</div></div>';
     var coachedHere = S.games.some(function (x) { return (S.coachedVenues || []).indexOf(x.venue) >= 0; });
+    var myEval = (ER.mine || []).filter(function (r) { return r.ref_person_id === S.me.person_id && r.status === 'assigned' && r.game_date >= todayStr(); })[0];
+    $('evalLine').innerHTML = myEval ? '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('evalReqTitle')) + '</b><div>' + esc(dayLong(myEval.game_date)) + ', ' + esc(myEval.venue || '') + '. ' + esc(t('evalPurpose.' + myEval.purpose)) + '. ' + esc(t('evalStatus.assigned')) + '</div></div>' : '';
     $('bulletins').innerHTML = (coachedHere ? '<div class="bulletin"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="9" stroke="currentColor" stroke-width="2"></circle><path d="M7 11.5l3 3 5-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><div class="text">' + esc(t('coachHereToday')) + ' <a href="#" id="badgeLink">' + esc(t('lanyard')) + '</a><div id="badgeBox" hidden style="margin-top:8px"><img src="assets/badge.png" alt="" style="width:130px;border-radius:8px"><div class="hint">' + esc(t('badgeCaption')) + '</div></div></div></div>' : '') + S.bulletins.slice(0, 2).map(function (b) {
       return '<div class="bulletin"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="9" stroke="currentColor" stroke-width="2"></circle><path d="M11 6v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><circle cx="11" cy="15.5" r="1.2" fill="currentColor"></circle></svg><div class="text">' + (b.title ? '<b>' + esc(b.title) + '</b> ' : '') + esc(b.body || '') + ' <span>' + esc(t('fromState')) + '.</span></div></div>';
     }).join('');
@@ -254,6 +257,8 @@
     var mine = await sb.from('coach_assignments').select('venue,block,fields,note').eq('date', today);
     S.coach.mine = mine.data || [];
     if (S.coach.mine.length && !S.coach.venue) S.coach.venue = S.coach.mine[0].venue;
+    var ea = await sb.from('eval_requests').select('id,game_id,game_date,venue,purpose,status,ref_name').eq('coach_person_id', S.me.person_id).eq('status', 'assigned').gte('game_date', today).order('game_date');
+    S.coach.evals = ea.data || [];
     // Days ahead with games, for saying when I am free.
     var ahead = await fetchAll(function () { return sb.from('games').select('date').gte('date', today).lte('date', shiftDate(today, 10)).not('status', 'in', '(C,X,canceled_no_pay)').order('date'); });
     var days = {}; (ahead.data || []).forEach(function (x) { days[x.date] = 1; }); S.coach.days = Object.keys(days).sort();
@@ -302,6 +307,8 @@
         Object.keys(refs).forEach(function (k) { total++; if (S.coach.notes.some(function (n) { return key(n.ref_name) === k && n.date === todayStr(); })) done++; });
         return '<div>' + esc(t(m.block === 'am' ? 'blockAm' : m.block === 'pm' ? 'blockPm' : 'blockAll')) + ', ' + esc(m.venue) + ((m.fields || []).length ? ', ' + esc(m.fields.map(fieldShort).join(', ')) : '') + (m.note ? '. ' + esc(m.note) : '') + '<br><span class="hint">' + esc(t('blockJob')) + ' ' + esc(t('debriefed').replace('{d}', done).replace('{n}', total)) + '</span></div>';
       }).join('') + '</div>' : '';
+    var evalsCard = (S.coach.evals || []).length ? '<div class="card" style="border-color:var(--red);gap:6px"><b>' + esc(t('evalAssignedTitle')) + '</b>' + S.coach.evals.map(function (r) { return '<div>' + refLink(r.ref_name) + ', ' + esc(dayLong(r.game_date)) + ', ' + esc(r.venue || '') + '. ' + esc(t('evalPurpose.' + r.purpose)) + ' <a class="refname" href="#coach/game/' + esc(r.game_id) + '">' + esc(t('details')) + '</a></div>'; }).join('') + '<div class="hint">' + esc(t('evalAssignedHint')) + '</div></div>' : '';
+    expected = evalsCard + expected;
     var availability = (S.coach.days || []).length ? '<div class="card" style="gap:6px"><div class="hint" style="font-weight:700">' + esc(t('whenFree')) + '</div>' + S.coach.days.map(function (d) {
         return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0"><span style="min-width:0">' + esc(dayLong(d)) + '</span><span class="chips" style="flex-shrink:0"><button class="chip-btn' + (S.coach.avail[d + 'am'] ? ' on' : '') + '" data-av="' + d + '|am">' + esc(t('blockAm')) + '</button><button class="chip-btn' + (S.coach.avail[d + 'pm'] ? ' on' : '') + '" data-av="' + d + '|pm">' + esc(t('blockPm')) + '</button></span></div>';
       }).join('') + '<div class="msg" id="avMsg" hidden></div></div>' : '';
@@ -346,7 +353,7 @@
       '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(g.venue || '') + ', ' + esc(dayLong(g.date)) + '</div>' +
       '<div style="display:flex;justify-content:space-between;align-items:baseline"><div class="disp" style="font-size:48px">' + esc(clock(g.kickoff)) + '</div><div class="disp" style="font-size:48px;color:var(--count)">' + esc(fieldShort(g.field)) + '</div></div>' +
       '<div>' + esc(g.age_group || '') + (g.competition ? ', ' + esc(g.competition) : '') + '. ' + esc(g.home || '') + ' v ' + esc(g.away || '') + '</div></div>' +
-      (iCan('evaluations') ? '<div class="pad" style="padding-top:12px"><a class="rowbtn" style="margin:0;width:100%" href="evaluator.html?gameId=' + esc(g.game_id) + '"><span><span class="t">' + esc(t('evaluatorOpen')) + '</span><br><span class="s">' + esc(t('evaluatorHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a></div>' : '') +
+      ((S.coach.evals || []).some(function (r) { return String(r.game_id) === String(g.game_id); }) ? '<div class="pad" style="padding-top:12px"><a class="rowbtn" style="margin:0;width:100%;border-color:var(--red)" href="evaluator.html?gameId=' + esc(g.game_id) + '"><span><span class="t">' + esc(t('evaluatorOpen')) + '</span><br><span class="s">' + esc(t('evaluatorHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a></div>' : '') +
       '<div class="disp h2">' + esc(t('crewPick')) + '</div>' +
       crew.map(function (k) { return '<div class="crewbtn' + (S.coach.ref === k ? ' on' : '') + '" role="button" tabindex="0" data-crew="' + k + '"><span><span class="t">' + esc(g[k]) + ' <a class="refname" href="#ref/' + encodeURIComponent(g[k]) + '" style="font-size:13px;font-weight:400" onclick="event.stopPropagation()">' + esc(t('refCardTitle')) + '</a></span><br><span class="s">' + esc(t('role.' + k)) + '. ' + seenLine(g[k]) + '</span></span>' + (S.coach.ref === k ? '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="10" fill="var(--navy)"></circle><path d="M6.5 11.5l3 3 6-6.5" stroke="var(--surface)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>' : '') + '</div>'; }).join('') +
       (S.coach.ref ? priorNotesHtml(g[S.coach.ref]) + '<div class="card" id="noteCard" style="gap:12px"><label for="noteText" style="font-weight:700">' + esc(t('noteLabel')) + '</label><textarea id="noteText" placeholder="' + esc(t('notePlaceholder')) + '"></textarea>' +
@@ -499,8 +506,14 @@
     CC.avail = {}; (av.data || []).forEach(function (x) { (CC.avail[String(x.person_id)] = CC.avail[String(x.person_id)] || {})[x.block] = 1; });
     CC.pickFields = CC.pickFields || [];
   }
+  async function loadEvals_() {
+    if (!CC.coaches.length) { var c = await sb.from('coaches').select('person_id,first_name,last_name,coaching_title').order('last_name'); CC.coaches = c.data || []; }
+    var r = await sb.from('eval_requests').select('id,game_id,game_date,venue,purpose,status,coach_person_id,ref_name,ref_person_id,note').in('status', ['requested', 'assigned']).order('game_date');
+    CC.evalReqs = r.data || [];
+  }
+  async function loadEvals() { return load(loadEvals_()); }
   function renderCenter() {
-    var tabs = ['coverage', 'schedule', 'coaches', 'ai', 'queue'];
+    var tabs = ['coverage', 'evals', 'schedule', 'coaches', 'ai', 'queue'];
     var head = '<div class="tabs">' + tabs.map(function (k) { return '<button class="chip-btn' + (CC.tab === k ? ' on' : '') + '" data-tab="' + k + '">' + esc(t('tab' + k.charAt(0).toUpperCase() + k.slice(1))) + '</button>'; }).join('') + '</div>';
     var body = '';
     if (CC.tab === 'coverage') {
@@ -510,8 +523,24 @@
       body = '<div class="stats"><div class="stat"><b>' + worked + '</b><i>' + esc(t('stWorked')) + '</i></div><div class="stat green"><b>' + seen + '</b><i>' + esc(t('stSeen')) + '</i></div><div class="stat red"><b>' + never + '</b><i>' + esc(t('stNever')) + '</i></div></div>' +
         '<div class="pad" style="padding-top:12px"><div class="hint">' + esc(t('stRead')) + ': ' + read + ' / ' + rel + '</div><div class="bar"><i style="width:' + (rel ? Math.round(100 * read / rel) : 0) + '%"></i></div></div>' +
         '<div class="disp h2">' + esc(t('neverSeenTitle')) + '</div><div class="pad">' + list.map(function (r) {
-          return '<div class="rowline"><div><b>' + refLink(r.name) + '</b><br><span class="hint">' + esc(t('lastGame')) + ' ' + esc(r.last_game ? dayLong(r.last_game) : '') + '</span></div><div class="n">' + r.games + '</div></div>';
+          return '<div class="rowline"><div><b>' + refLink(r.name) + '</b><br><span class="hint">' + esc(t('lastGame')) + ' ' + esc(r.last_game ? dayLong(r.last_game) : '') + (r.next_game ? '. <b>' + esc(t('refNext')) + '</b> ' + esc(dayLong(r.next_game)) + ', ' + esc(r.next_venue || '') : '') + '</span></div><div class="n">' + r.games + '</div></div>';
         }).join('') + '</div>';
+    } else if (CC.tab === 'evals') {
+      var reqs = CC.evalReqs || [];
+      var byId = {}; CC.coaches.forEach(function (c) { byId[String(c.person_id)] = c; });
+      var open = reqs.filter(function (r) { return r.status === 'requested'; }), assigned = reqs.filter(function (r) { return r.status === 'assigned'; });
+      var card = function (r) {
+        var c = byId[String(r.coach_person_id)];
+        var picking = CC.evalPick === r.id;
+        var eligible = CC.coaches.filter(function (x) { return r.purpose !== 'upgrade_national' || /national|fifa/i.test(x.coaching_title || ''); });
+        var q = (CC.evalQ || '').toLowerCase();
+        return '<div class="card" style="gap:8px;border-color:' + (r.status === 'requested' ? 'var(--gold)' : 'var(--line)') + '"><div><b>' + refLink(r.ref_name) + '</b> <span class="hint">' + esc(t('evalPurpose.' + r.purpose)) + '</span><br><span class="hint">' + esc(dayLong(r.game_date)) + ', ' + esc(r.venue || '') + (r.note ? '. ' + esc(r.note) : '') + '</span></div>' +
+          (c ? '<div>' + esc(t('evalCoach')) + ' <b>' + esc(c.first_name + ' ' + c.last_name) + '</b> <span class="hint">' + esc(c.coaching_title || '') + '</span></div>' : '') +
+          (r.status === 'requested' ? (picking ? '<input id="evalQ" placeholder="' + esc(t('coachSearch')) + '" value="' + esc(CC.evalQ || '') + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><div class="chips">' + eligible.filter(function (x) { return !q || (x.first_name + ' ' + x.last_name).toLowerCase().indexOf(q) >= 0; }).slice(0, 12).map(function (x) { return '<button class="chip-btn" data-evalassign="' + x.person_id + '" data-req="' + r.id + '">' + esc(x.first_name + ' ' + x.last_name) + ' <small>' + esc(x.coaching_title || '') + '</small></button>'; }).join('') + '</div>' + (r.purpose === 'upgrade_national' ? '<div class="hint">' + esc(t('evalNationalOnly')) + '</div>' : '') : '<div class="actions" style="padding:0"><button class="btn go small" data-evalpick="' + r.id + '">' + esc(t('evalAssign')) + '</button><button class="btn outline small" data-evaldecline="' + r.id + '">' + esc(t('evalDecline')) + '</button></div>') : '') +
+          (r.status === 'assigned' ? '<button class="btn outline small" data-evaldone="' + r.id + '">' + esc(t('evalMarkDone')) + '</button>' : '') + '</div>';
+      };
+      body = '<div class="pad lead" style="padding-top:12px">' + esc(t('evalsLead')) + '</div><div class="disp h2">' + esc(t('evalsOpen')) + ' ' + open.length + '</div>' + (open.length ? open.map(card).join('') : '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>') +
+        '<div class="disp h2">' + esc(t('evalsAssigned')) + ' ' + assigned.length + '</div>' + (assigned.length ? assigned.map(card).join('') : '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>');
     } else if (CC.tab === 'schedule') {
       var todayAss = CC.assigns.filter(function (a) { return a.date === CC.sdate; });
       var avCount = Object.keys(CC.avail || {}).filter(function (k) { return CC.avail[k][CC.block]; }).length;
@@ -543,7 +572,12 @@
       body = '<div class="stats" style="grid-template-columns:1fr 1fr"><div class="stat' + (w ? ' red' : '') + '"><b>' + w + '</b><i>' + esc(t('queueWaiting')) + '</i></div><div class="stat' + (cl ? ' green' : '') + '"><b>' + cl + '</b><i>' + esc(t('queueCleaned')) + '</i></div></div><div class="pad" style="padding-top:12px"><a class="btn go" href="#review">' + esc(t('openReview')) + '</a></div>';
     }
     $('centerBody').innerHTML = head + body;
-    $('centerBody').querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { CC.tab = b.getAttribute('data-tab'); if (CC.tab === 'queue' && !REV.notes.length) loadReview().then(renderCenter); else if (CC.tab === 'schedule') loadSchedule().then(renderCenter); else renderCenter(); }; });
+    $('centerBody').querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { CC.tab = b.getAttribute('data-tab'); if (CC.tab === 'queue' && !REV.notes.length) loadReview().then(renderCenter); else if (CC.tab === 'schedule') loadSchedule().then(renderCenter); else if (CC.tab === 'evals') loadEvals().then(renderCenter); else renderCenter(); }; });
+    $('centerBody').querySelectorAll('[data-evalpick]').forEach(function (b) { b.onclick = function () { CC.evalPick = parseInt(b.getAttribute('data-evalpick'), 10); CC.evalQ = ''; renderCenter(); }; });
+    var eq = $('evalQ'); if (eq) { eq.oninput = function () { CC.evalQ = eq.value; renderCenter(); var x = $('evalQ'); if (x) { x.focus(); x.setSelectionRange(x.value.length, x.value.length); } }; }
+    $('centerBody').querySelectorAll('[data-evalassign]').forEach(function (b) { b.onclick = async function () { b.disabled = true; var coach = parseInt(b.getAttribute('data-evalassign'), 10), id = parseInt(b.getAttribute('data-req'), 10); var r = CC.evalReqs.filter(function (x) { return x.id === id; })[0]; var ok = await sb.rpc('may_evaluate', { p_coach: coach, p_purpose: r.purpose }); if (!ok.data) { b.disabled = false; return; } await sb.from('eval_requests').update({ status: 'assigned', coach_person_id: coach, assigned_by: S.me.person_id, assigned_at: new Date().toISOString() }).eq('id', id); CC.evalPick = null; await loadEvals(); renderCenter(); }; });
+    $('centerBody').querySelectorAll('[data-evaldecline]').forEach(function (b) { b.onclick = async function () { b.disabled = true; await sb.from('eval_requests').update({ status: 'declined' }).eq('id', parseInt(b.getAttribute('data-evaldecline'), 10)); await loadEvals(); renderCenter(); }; });
+    $('centerBody').querySelectorAll('[data-evaldone]').forEach(function (b) { b.onclick = async function () { b.disabled = true; await sb.from('eval_requests').update({ status: 'done' }).eq('id', parseInt(b.getAttribute('data-evaldone'), 10)); await loadEvals(); renderCenter(); }; });
     $('centerBody').querySelectorAll('[data-sday]').forEach(function (b) { b.onclick = function () { CC.sdate = shiftDate(CC.sdate, parseInt(b.getAttribute('data-sday'), 10)); CC.pick = null; loadSchedule().then(renderCenter); }; });
     $('centerBody').querySelectorAll('[data-svenue]').forEach(function (b) { b.onclick = function () { CC.pick = b.getAttribute('data-svenue'); CC.pickFields = []; renderCenter(); }; });
     $('centerBody').querySelectorAll('[data-sblock]').forEach(function (b) { b.onclick = function () { CC.block = b.getAttribute('data-sblock'); renderCenter(); }; });
@@ -606,6 +640,12 @@
     OPS.help = h.data || [];
     var b = await sb.from('announcements').select('id,src_key,created_at,start_date,end_date,venue,event_id,title,body,severity,active,posted_by').order('created_at', { ascending: false }).limit(40);
     OPS.bulletins = b.data || [];
+    var namesHere = {}; OPS.games.forEach(function (g) { ['cr', 'ar1', 'ar2', 'fourth'].forEach(function (k) { if (g[k]) namesHere[g[k]] = 1; }); });
+    var nl = Object.keys(namesHere); OPS.seen = {};
+    for (var i = 0; i < nl.length; i += 200) {
+      var sn = await sb.from('observations').select('ref_name').in('ref_name', nl.slice(i, i + 200)).in('cleanup_status', ['approved', 'edited']).limit(1000);
+      (sn.data || []).forEach(function (o) { OPS.seen[key(o.ref_name)] = 1; });
+    }
     var al = await sb.from('alerts').select('id,kind,game_id,ref_name,position,game_date,venue,field,kickoff,age_group,detail,status,seen_by').gte('game_date', todayStr()).order('game_date').order('kickoff').limit(300);
     OPS.alerts = al.data || [];
   }
@@ -646,7 +686,7 @@
         var dots = crew.map(function (x) { var n = g[x]; var tbd = /^(tbd|open|none)$/i.test(n); return '<span class="dot' + (tbd ? ' none' : ins[key(n)] ? ' in' : '') + '"></span>'; }).join('');
         var body = !open ? '' : '<div style="border-top:1px solid var(--line);margin-top:6px;padding-top:8px;display:flex;flex-direction:column;gap:6px">' +
           '<div class="hint">' + esc(g.age_group || '') + (g.game_num ? ', ' + esc(g.game_num) : '') + (g.home ? '. ' + esc(g.home) + ' v ' + esc(g.away || '') : '') + '</div>' +
-          crew.map(function (x) { var n = g[x], at = ins[key(n)]; return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b>' + refLink(n) + '</b> <span class="hint">' + esc(t('role.' + x)) + '</span></span>' + (at ? '<span class="state in">' + esc(clock(at)) + '</span>' : (iCan('scheduling') || iCan('command_center') ? '<button class="btn outline small" data-checkin="' + esc(n) + '" data-gid="' + esc(g.game_id) + '">' + esc(t('staffCheckin')) + '</button>' : '<span class="state out">' + esc(t('notIn')) + '</span>')) + '</div>'; }).join('') +
+          crew.map(function (x) { var n = g[x], at = ins[key(n)]; return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b' + (OPS.seen && !OPS.seen[key(n)] && !/^(tbd|open|none)$/i.test(n) ? ' style="color:var(--red)"' : '') + '>' + refLink(n) + '</b> <span class="hint">' + esc(t('role.' + x)) + '</span></span>' + (at ? '<span class="state in">' + esc(clock(at)) + '</span>' : (iCan('scheduling') || iCan('command_center') ? '<button class="btn outline small" data-checkin="' + esc(n) + '" data-gid="' + esc(g.game_id) + '">' + esc(t('staffCheckin')) + '</button>' : '<span class="state out">' + esc(t('notIn')) + '</span>')) + '</div>'; }).join('') +
           (iCan('scheduling') ? '<button class="btn outline small" data-switch="' + esc(g.game_id) + '">' + esc(t('change')) + '</button>' : '') + '</div>';
         return '<div class="fcard' + (st === 'live' ? ' live' : '') + (open ? ' open' : '') + '" data-fcard="' + esc(g.game_id) + '"><div class="fname">' + esc(g.field || '') + '</div><div class="dots">' + dots + '</div><div class="fstate' + (st === 'live' ? ' live' : '') + '">' + esc(t('state_' + st)) + '</div>' + body + '</div>';
       }).join('') + '</div>';
@@ -713,8 +753,8 @@
     } else if (OPS.tab === 'retain') {
       var never = CC.cov.filter(function (r) { return r.notes === 0 && r.games >= 3; }).slice(0, 40);
       var cut = iso(new Date(Date.now() - 30 * 86400000));
-      var quiet = CC.cov.filter(function (r) { return r.last_game && r.last_game < cut; }).sort(function (a, b) { return b.games - a.games; }).slice(0, 40);
-      var rows = function (list) { return list.length ? list.map(function (r) { return '<div class="rowline"><div><b>' + refLink(r.name) + '</b><br><span class="hint">' + esc(t('lastGame')) + ' ' + esc(r.last_game ? dayLong(r.last_game) : '') + '</span></div><div class="n">' + r.games + '</div></div>'; }).join('') : '<div class="hint">' + esc(t('noneHere')) + '</div>'; };
+      var quiet = CC.cov.filter(function (r) { return r.last_game && r.last_game < cut && !r.next_game; }).sort(function (a, b) { return b.games - a.games; }).slice(0, 40);
+      var rows = function (list) { return list.length ? list.map(function (r) { return '<div class="rowline"><div><b>' + refLink(r.name) + '</b><br><span class="hint">' + esc(t('lastGame')) + ' ' + esc(r.last_game ? dayLong(r.last_game) : '') + (r.next_game ? '. <b>' + esc(t('refNext')) + '</b> ' + esc(dayLong(r.next_game)) + ', ' + esc(r.next_venue || '') : '') + '</span></div><div class="n">' + r.games + '</div></div>'; }).join('') : '<div class="hint">' + esc(t('noneHere')) + '</div>'; };
       body = '<div class="pad lead" style="padding-top:12px">' + esc(t('retainLead')) + '</div><div class="disp h2">' + esc(t('retainNever')) + '</div><div class="pad">' + rows(never) + '</div><div class="disp h2">' + esc(t('retainQuiet')) + '</div><div class="pad">' + rows(quiet) + '</div>';
     } else {
       var today = todayStr();
@@ -828,7 +868,7 @@
     $('peopleResults').innerHTML = PP.q.length < 2 ? '' : (PP.results.length ? '<div class="list">' + PP.results.map(function (p) {
       return '<a class="item" href="#" data-person="' + p.id + '"><div><b>' + esc(p.first_name + ' ' + p.last_name) + '</b><br><span class="hint">' + esc(p.city || '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
     }).join('') + '</div>' : '<div class="card"><div class="hint">' + esc(t('noMatch')) + '</div></div>');
-    $('peopleResults').querySelectorAll('[data-person]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); openPerson(a.getAttribute('data-person')); }; });
+    $('peopleResults').querySelectorAll('[data-person]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); if (LINK.pick) { linkTo(parseInt(a.getAttribute('data-person'), 10), null); PP.q = ''; $('peopleQ').value = ''; return; } openPerson(a.getAttribute('data-person')); }; });
   }
   function renderPerson() {
     var p = PP.person; if (!p) { $('personCard').innerHTML = ''; return; }
@@ -946,7 +986,7 @@
   function canEod() { return iCan('coaching') || iCan('scheduling') || iCan('command_center'); }
   async function loadEod_() {
     var today = todayStr();
-    var mine = await sb.from('eod_reports').select('id,date,venue,staff_name,role,time_in,time_out,hours,games_covered,incidents,notes').order('date', { ascending: false }).limit(60);
+    var mine = await fetchAll(function () { return sb.from('eod_reports').select('id,date,venue,staff_name,role,time_in,time_out,hours,games_covered,incidents,notes').order('date', { ascending: false }).order('staff_name'); });
     var keys = S.me.nameKeys || [];
     EOD.all = mine.data || [];
     EOD.mine = EOD.all.filter(function (r) { return keys.indexOf(key(r.staff_name)) >= 0; });
@@ -955,6 +995,19 @@
     if (!EOD.role) EOD.role = iCan('command_center') || iCan('scheduling') ? 'sc' : 'coach';
   }
   async function loadEod() { return load(loadEod_()); }
+  function eodArchive(row) {
+    var venues = {}; EOD.all.forEach(function (r) { if (r.venue) venues[r.venue] = 1; });
+    var vlist = Object.keys(venues).sort();
+    var rows = EOD.all.filter(function (r) { return !EOD.vfilter || r.venue === EOD.vfilter; });
+    var days = {}, order = [];
+    rows.forEach(function (r) { var d = r.date || ''; if (!days[d]) { days[d] = []; order.push(d); } days[d].push(r); });
+    return '<div class="pad" style="padding-top:8px"><select id="eodVenueFilter" style="font:inherit;width:100%;padding:10px;border:2px solid var(--navy);border-radius:8px;background:var(--surface);color:var(--ink)"><option value="">' + esc(t('allVenuesPick')) + '</option>' + vlist.map(function (v) { return '<option value="' + esc(v) + '"' + (EOD.vfilter === v ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('') + '</select></div>' +
+      (order.length ? order.map(function (d) {
+        var list = days[d], hours = 0; list.forEach(function (r) { hours += Number(r.hours || 0); });
+        var open = EOD.open === d;
+        return '<div class="pad"><button class="rowbtn" style="margin:8px 0 0;width:100%" data-eodday="' + esc(d) + '"><span><span class="t">' + esc(dayLong(d)) + '</span><br><span class="s">' + list.length + ' ' + esc(t(list.length === 1 ? 'eodReportOne' : 'eodReportMany')) + ', ' + hours.toFixed(1) + ' ' + esc(t('eodHours')) + '</span></span><span class="disp" style="font-size:22px">' + (open ? '\u2212' : '+') + '</span></button>' + (open ? list.map(row).join('') : '') + '</div>';
+      }).join('') : '<div class="pad hint">' + esc(t('eodNone')) + '</div>');
+  }
   function hhmm(v) { return v ? String(v).slice(0, 5) : ''; }
   function renderEod() {
     var today = todayStr(), roles = ['sc', 'sm', 'coach', 'mentor', 'other'];
@@ -969,7 +1022,9 @@
       '<label class="hint" style="font-weight:700" for="eodNotes">' + esc(t('eodNotes')) + '</label><textarea id="eodNotes" placeholder="' + esc(t('eodNotesPlaceholder')) + '" style="min-height:100px"></textarea>' +
       '<button class="btn primary" id="eodFile">' + esc(t('eodFile')) + '</button><div class="msg" id="eodMsg" hidden></div></div>' +
       '<div class="disp h2">' + esc(t('eodMine')) + '</div><div class="pad">' + (EOD.mine.length ? EOD.mine.slice(0, 10).map(row).join('') : '<div class="hint">' + esc(t('eodNone')) + '</div>') + '</div>' +
-      (iCan('command_center') ? '<div class="disp h2">' + esc(t('eodAll')) + '</div><div class="pad">' + (EOD.all.length ? EOD.all.slice(0, 40).map(row).join('') : '<div class="hint">' + esc(t('eodNone')) + '</div>') + '</div>' : '');
+      (iCan('command_center') ? '<div class="disp h2">' + esc(t('eodAll')) + '</div>' + eodArchive(row) : '');
+    var vf = $('eodVenueFilter'); if (vf) vf.onchange = function () { EOD.vfilter = vf.value; EOD.date = $('eodDate').value; renderEod(); };
+    $('eodBody').querySelectorAll('[data-eodday]').forEach(function (b) { b.onclick = function () { var d = b.getAttribute('data-eodday'); EOD.open = EOD.open === d ? null : d; EOD.date = $('eodDate').value; renderEod(); }; });
     $('eodBody').querySelectorAll('[data-role]').forEach(function (b) { b.onclick = function () { EOD.role = b.getAttribute('data-role'); EOD.date = $('eodDate').value; renderEod(); }; });
     $('eodFile').onclick = async function () {
       var tin = $('eodIn').value, tout = $('eodOut').value;
@@ -1008,7 +1063,8 @@
       '<div class="disp h2">' + esc(t('refSeason')) + '</div>' +
       '<div class="stats">' + stat(c.games, t('refGames')) + stat(c.as_center, t('refCenter')) + stat(c.evaluations, t('refEvals')) + '</div>' +
       '<div class="stats">' + stat(c.notes, t('refSeen'), c.notes ? 'green' : 'red') + stat(c.released, t('refReleased')) + stat(c.coaches, t('refCoaches')) + '</div>' +
-      '<div class="pad hint" style="padding-top:8px">' + (c.first_game ? esc(t('refFirst')) + ' ' + esc(dayLong(c.first_game)) + ', ' : '') + (c.last_game ? esc(t('refLast')) + ' ' + esc(dayLong(c.last_game)) : '') + (c.last_seen ? '. ' + esc(t('lastGame') === 'last game' ? 'Last seen' : 'Visto por última vez') + ' ' + esc(dayLong(c.last_seen)) : '') + '</div>' +
+      '<div class="pad hint" style="padding-top:8px">' + (c.first_game ? esc(t('refFirst')) + ' ' + esc(dayLong(c.first_game)) + ', ' : '') + (c.last_game ? esc(t('refLast')) + ' ' + esc(dayLong(c.last_game)) : '') + (c.last_seen ? '. ' + esc(t('refLastSeen')) + ' ' + esc(dayLong(c.last_seen)) : '') + '</div>' +
+      (c.next_game ? '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('refNext')) + '</b><div>' + esc(dayLong(c.next_game)) + ', ' + esc(clock(c.next_kickoff)) + ', ' + esc(c.next_venue || '') + (c.next_field ? ', ' + esc(c.next_field) : '') + '</div><div class="hint">' + esc(t('refNextHint')) + '</div></div>' : '') +
       '<div class="disp h2">' + esc(t('refNotes')) + '</div>' + ((notes.data || []).length ? (notes.data || []).map(function (n) {
         return '<div class="note"><div class="who">' + esc(n.observer || '') + (n.rater_role ? ', ' + esc(n.rater_role) : '') + ', ' + esc(dayLong(n.date)) + (n.field ? ', ' + esc(n.field) : '') + (n.area ? ', ' + esc(t('areas.' + n.area)) : '') + '</div><div class="text">' + esc(n.final_note || n.cleaned_note || '') + '</div></div>';
       }).join('') : '<div class="card"><div class="hint">' + esc(t('refNoNotes')) + '</div></div>');
@@ -1031,6 +1087,31 @@
     $('peopleResults').querySelectorAll('[data-open-person]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); var id = a.getAttribute('data-open-person'); var p = STAFF.rows.filter(function (x) { return String(x.id) === id; })[0]; if (p) { PP.results = [p]; openPerson(id); } }; });
   }
 
+  // ── Names to link ────────────────────────────────────────────────
+  var LINK = { rows: null, pick: null, suggest: [] };
+  async function renderLinks() {
+    if (!LINK.rows) { busy(true); var r = await sb.rpc('unlinked_names'); busy(false); LINK.rows = r.data || []; }
+    $('personCard').innerHTML = '';
+    var rows = LINK.rows.slice(0, 60);
+    $('peopleResults').innerHTML = '<div class="pad" style="padding-top:12px"><div class="disp" style="font-size:30px">' + esc(t('linkTitle')) + ' ' + LINK.rows.length + '</div><div class="hint">' + esc(t('linkLead')) + '</div></div>' +
+      (rows.length ? '<div class="pad">' + rows.map(function (n) {
+        var open = LINK.pick && LINK.pick.name_key === n.name_key;
+        return '<div class="rowline" style="flex-direction:column;align-items:stretch;gap:6px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><a class="refname" href="#" data-link="' + esc(n.name_key) + '"><b>' + esc(n.name) + '</b></a><span class="hint">' + n.games + ' ' + esc(t('linkGames')) + ', ' + esc(n.last_game ? dayLong(n.last_game) : '') + '</span></div><div class="hint">' + esc(n.venues || '') + '</div>' +
+          (open ? '<div class="hint" style="font-weight:700">' + esc(t('linkPick')) + '</div><div class="chips">' + (LINK.suggest.length ? LINK.suggest.map(function (p) { return '<button class="chip-btn" data-linkto="' + p.id + '">' + esc(p.first_name + ' ' + p.last_name) + (p.city ? ' <small>' + esc(p.city) + '</small>' : '') + '</button>'; }).join('') : '<span class="hint">' + esc(t('linkNoSuggest')) + '</span>') + '</div><div class="hint">' + esc(t('linkOther')) + '</div><div class="msg" id="linkMsg" hidden></div>' : '') + '</div>';
+      }).join('') + '</div>' : '<div class="card"><div class="hint">' + esc(t('linkNone')) + '</div></div>');
+    $('peopleResults').querySelectorAll('[data-link]').forEach(function (a) { a.onclick = async function (e) { e.preventDefault(); var k = a.getAttribute('data-link'); var n = LINK.rows.filter(function (x) { return x.name_key === k; })[0]; LINK.pick = n; busy(true); var s = await sb.rpc('suggest_people', { p_name: n.name }); busy(false); LINK.suggest = s.data || []; renderLinks(); }; });
+    $('peopleResults').querySelectorAll('[data-linkto]').forEach(function (b) { b.onclick = function () { linkTo(parseInt(b.getAttribute('data-linkto'), 10), b); }; });
+  }
+  async function linkTo(personId, b) {
+    if (!LINK.pick) return;
+    if (b) b.disabled = true;
+    var r = await sb.rpc('link_name', { p_name: LINK.pick.name, p_person: personId });
+    if (r.error) { var m = $('linkMsg'); if (m) { m.hidden = false; m.className = 'msg bad'; m.textContent = r.error.message; } if (b) b.disabled = false; return; }
+    LINK.rows = LINK.rows.filter(function (x) { return x.name_key !== LINK.pick.name_key; });
+    LINK.pick = null; LINK.suggest = [];
+    renderLinks();
+  }
+
   // ── Game card ────────────────────────────────────────────────────
   function renderGame(id) {
     var g = S.games.filter(function (x) { return String(x.game_id) === String(id); })[0];
@@ -1049,6 +1130,7 @@
       '<div class="sep"><span class="hint">' + esc(t('crew')) + ':</span> ' + (crew.length > 1 ? crew.join(', ') : esc(myNameOn(g)) + ', ' + esc(t('role.' + role)) + '. ' + esc(t('alone'))) + '</div>' +
       (ev && ev.blurb ? '<div class="sep">' + esc(ev.blurb) + '</div>' : '') + '</div>' +
       '<div style="margin:14px 20px 0;display:grid;grid-template-columns:1fr 1fr;gap:10px">' + (r ? '<a class="btn outline" href="' + esc(r) + '">' + esc(t('rules')) + '</a>' : '<div class="hint" style="align-self:center">' + esc(t('rulesNotPosted')) + '</div>') + '<a class="btn outline" href="' + esc(C.oldHub) + 'index.html">' + esc(t('map')) + '</a></div>' +
+      evalRequestHtml(g) +
       '<div class="disp h2">' + esc(t('afterGame')) + '</div>' +
       (g.score_url ? '<a class="rowbtn" href="' + esc(g.score_url) + '" target="_blank" rel="noopener"><span><span class="t">' + esc(t('gsaOpen')) + '</span><br><span class="s">' + esc(t('gsaHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '') +
       scoreHtml(g) +
@@ -1056,6 +1138,29 @@
       '<div class="hint" style="margin:8px 24px 0">' + esc(t('incidentNote')) + '</div>';
     wireCheckin(g, $('gameBody'));
     wireScore(g);
+    wireEvalRequest(g);
+  }
+  // ── Formal evaluation: the referee asks, the SDRD assigns a coach ──
+  var ER = { mine: [], purpose: null };
+  function evalRequestHtml(g) {
+    if (new Date(g.kickoff).getTime() < Date.now()) return '';
+    var req = (ER.mine || []).filter(function (r) { return String(r.game_id) === String(g.game_id); })[0];
+    if (req) return '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('evalReqTitle')) + '</b><div>' + esc(t('evalPurpose.' + req.purpose)) + '. ' + esc(t('evalStatus.' + req.status)) + '</div></div>';
+    return '<div class="card" style="gap:8px" id="evalReqCard"><b>' + esc(t('evalReqTitle')) + '</b><div class="hint">' + esc(t('evalReqLead')) + '</div><div class="chips">' + ['maintenance', 'upgrade_regional', 'upgrade_national'].map(function (p) { return '<button class="chip-btn' + (ER.purpose === p ? ' on' : '') + '" data-purpose="' + p + '">' + esc(t('evalPurpose.' + p)) + '</button>'; }).join('') + '</div><button class="btn outline" id="evalReqSend"' + (ER.purpose ? '' : ' disabled') + '>' + esc(t('evalReqSend')) + '</button><div class="msg" id="evalReqMsg" hidden></div></div>';
+  }
+  function wireEvalRequest(g) {
+    $('gameBody').querySelectorAll('[data-purpose]').forEach(function (b) { b.onclick = function () { ER.purpose = b.getAttribute('data-purpose'); renderGame(g.game_id); }; });
+    var send = $('evalReqSend');
+    if (send) send.onclick = async function () {
+      send.disabled = true;
+      var r = await sb.from('eval_requests').insert({ org_id: S.me.org_id, ref_person_id: S.me.person_id, ref_name: myNameOn(g), purpose: ER.purpose, game_id: g.game_id, game_date: g.date, venue: g.venue });
+      if (r.error) { send.disabled = false; say('evalReqMsg', r.error.message, 'bad'); return; }
+      ER.purpose = null; await loadEvalRequests(); renderGame(g.game_id);
+    };
+  }
+  async function loadEvalRequests() {
+    var r = await sb.from('eval_requests').select('id,game_id,game_date,venue,purpose,status,coach_person_id,ref_name,ref_person_id,note,created_at').order('game_date');
+    ER.mine = r.data || [];
   }
 
   // ── Notes ────────────────────────────────────────────────────────
@@ -1259,6 +1364,7 @@
     $('peopleQ').oninput = function () { var q = $('peopleQ').value.trim(); clearTimeout(PP.timer); PP.timer = setTimeout(function () { searchPeople(q); }, 300); };
     $('peopleQ').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); } };
     $('staffBtn').onclick = function () { renderStaff(); };
+    $('linkBtn').onclick = function () { LINK.rows = null; LINK.pick = null; renderLinks(); };
     $('peopleGo').onclick = function () { clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); };
     $('signOut').onclick = async function (e) { e.preventDefault(); if (LIVE.channel) { try { sb.removeChannel(LIVE.channel); } catch (er) {} LIVE.channel = null; } await sb.auth.signOut(); S.me = null; location.hash = ''; show('s-signin'); };
     applyWords();
