@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.02-j';
+  var VERSION = '2026.10.02-k';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -401,7 +401,7 @@
   }
 
   // ── Review (Scheduling): clean, read both, approve ───────────────
-  var REV = { filter: 'cleaned', notes: [], busy: false };
+  var REV = { filter: 'cleaned', notes: [], busy: false, editing: null };
   async function token() { var r = await sb.auth.getSession(); return r.data && r.data.session ? r.data.session.access_token : ''; }
   async function post(body) {
     body.token = await token();
@@ -442,12 +442,23 @@
         (st === 'approved' ? '<span class="pill ok">' + esc(t('approved')) + (n.reviewedBy ? ' ' + esc(t('approvedBy')) + ' ' + esc(n.reviewedBy) : '') + '</span>' : '') + '</div>' +
         (n.flagged ? '<div class="hint" style="color:var(--red);font-weight:700">' + esc(t('flaggedNote')) + '</div>' : '') +
         '<div class="side three"><div class="col"><b>' + esc(t('rawLabel')) + '</b>' + esc(n.notesPublic || '') + '</div><div class="col"><b>' + esc(t('aiLabel')) + '</b>' + (n.cleanedNote ? esc(n.cleanedNote) : '<span class="hint">' + esc(t('notCleaned')) + '</span>') + '</div><div class="col"><b>' + esc(t('releasedLabel')) + '</b>' + (st === 'approved' ? esc(n.finalNote || n.cleanedNote || '') : '<span class="hint">' + esc(t('notReleased')) + '</span>') + '</div></div>' +
-        (st === 'pending' ? '<button class="btn outline small" data-clean="' + n.rowNum + '">' + esc(t('cleanBtn')) + '</button>' : '') +
-        (st === 'cleaned' ? '<button class="btn go small" data-approve="' + n.rowNum + '">' + esc(t('approveBtn')) + '</button>' : '') +
+        (REV.editing === n.rowNum ? '<label class="hint" style="font-weight:700" for="revEdit">' + esc(t('editLabel')) + '</label><textarea id="revEdit" style="min-height:140px">' + esc(n.finalNote || n.cleanedNote || n.notesPublic || '') + '</textarea><div class="actions" style="padding:0"><button class="btn go small" data-release-edit="' + n.rowNum + '">' + esc(t('releaseEdited')) + '</button><button class="btn outline small" data-cancel-edit="1">' + esc(t('neverMind')) + '</button></div>' :
+          (st !== 'approved' ? '<div class="actions" style="padding:0;flex-wrap:wrap">' +
+            (st === 'pending' ? '<button class="btn outline small" data-clean="' + n.rowNum + '">' + esc(t('cleanBtn')) + '</button>' : '') +
+            (st === 'cleaned' ? '<button class="btn go small" data-approve="' + n.rowNum + '">' + esc(t('releaseCleaned')) + '</button>' : '') +
+            '<button class="btn outline small" data-approve-raw="' + n.rowNum + '">' + esc(t('releaseRaw')) + '</button>' +
+            '<button class="btn outline small" data-edit="' + n.rowNum + '">' + esc(t('editRelease')) + '</button>' +
+            '<button class="linkbtn" style="color:var(--red)" data-reject="' + n.rowNum + '">' + esc(t('rejectNote')) + '</button>' +
+          '</div>' : '')) +
         '</div>';
     }).join('') : '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>';
     $('reviewList').querySelectorAll('[data-clean]').forEach(function (b) { b.onclick = function () { runOn([byRow(b.getAttribute('data-clean'))], 'clean', b); }; });
     $('reviewList').querySelectorAll('[data-approve]').forEach(function (b) { b.onclick = function () { runOn([byRow(b.getAttribute('data-approve'))], 'approve', b); }; });
+    $('reviewList').querySelectorAll('[data-approve-raw]').forEach(function (b) { b.onclick = function () { runOn([byRow(b.getAttribute('data-approve-raw'))], 'approve_raw', b); }; });
+    $('reviewList').querySelectorAll('[data-edit]').forEach(function (b) { b.onclick = function () { REV.editing = parseInt(b.getAttribute('data-edit'), 10); renderReview(); var ta = $('revEdit'); if (ta) ta.focus(); }; });
+    $('reviewList').querySelectorAll('[data-cancel-edit]').forEach(function (b) { b.onclick = function () { REV.editing = null; renderReview(); }; });
+    $('reviewList').querySelectorAll('[data-release-edit]').forEach(function (b) { b.onclick = function () { var n = byRow(b.getAttribute('data-release-edit')); n._text = $('revEdit').value.trim(); if (!n._text) return; runOn([n], 'edit', b); }; });
+    $('reviewList').querySelectorAll('[data-reject]').forEach(function (b) { b.onclick = function () { runOn([byRow(b.getAttribute('data-reject'))], 'reject', b); }; });
   }
   function byRow(r) { return REV.notes.filter(function (n) { return String(n.rowNum) === String(r); })[0]; }
   async function runOn(notes, what, btn) {
@@ -455,15 +466,24 @@
     if (!notes.length || REV.busy) return;
     REV.busy = true;
     if (btn) { btn.disabled = true; btn.textContent = t(what === 'clean' ? 'cleaning' : 'approving'); }
+    if (what === 'reject' && !window.confirm(t('rejectConfirm'))) { REV.busy = false; renderReview(); return; }
     var m = $('revMsg'); if (m) m.hidden = true;
     try {
+      var by = S.me.first_name + ' ' + S.me.last_name;
       if (what === 'approve') {
-        await post({ action: 'approveBatch', reviewedBy: S.me.first_name + ' ' + S.me.last_name, items: notes.map(function (n) { return { rowNum: n.rowNum, use: 'ai' }; }) });
+        await post({ action: 'approveBatch', reviewedBy: by, items: notes.map(function (n) { return { rowNum: n.rowNum, use: 'ai' }; }) });
+      } else if (what === 'approve_raw') {
+        await post({ action: 'approveBatch', reviewedBy: by, items: notes.map(function (n) { return { rowNum: n.rowNum, use: 'original' }; }) });
+      } else if (what === 'edit') {
+        for (var e2 = 0; e2 < notes.length; e2++) await post({ action: 'updateNoteStatus', rowNum: notes[e2].rowNum, status: 'edited', finalNote: notes[e2]._text, reviewedBy: by });
+        REV.editing = null;
+      } else if (what === 'reject') {
+        for (var r2 = 0; r2 < notes.length; r2++) await post({ action: 'updateNoteStatus', rowNum: notes[r2].rowNum, status: 'rejected', reviewedBy: by });
       } else {
         for (var i = 0; i < notes.length; i++) await post({ action: 'cleanNote', rowNum: notes[i].rowNum });
       }
       await loadReview();
-      if (what === 'approve' && REV.filter === 'cleaned') REV.filter = 'approved';
+      if ((what === 'approve' || what === 'approve_raw' || what === 'edit') && REV.filter !== 'approved') REV.filter = 'approved';
       if (what === 'clean' && REV.filter === 'pending') REV.filter = 'cleaned';
       renderReview();
     } catch (e) {
@@ -561,7 +581,7 @@
       });
       var rows = Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return b.notes - a.notes; });
       body = '<div class="disp h2">' + esc(t('coachesTitle')) + '</div><div class="pad">' + (rows.length ? rows.map(function (b) {
-        return '<div class="rowline"><div><b>' + esc(b.name) + '</b>' + (b.role ? ' <span class="hint">' + esc(b.role) + '</span>' : '') + '<br><span class="hint">' + Object.keys(b.refs).length + ' ' + esc(t('coachRefs')) + ', ' + b.released + ' ' + esc(t('coachReleased')) + ', ' + b.read + ' ' + esc(t('coachRead')) + '</span></div><div class="n">' + b.notes + '</div></div>';
+        return '<div class="rowline"><div><a class="refname" href="#coachcard/' + encodeURIComponent(b.name) + '"><b>' + esc(b.name) + '</b></a>' + (b.role ? ' <span class="hint">' + esc(b.role) + '</span>' : '') + '<br><span class="hint">' + Object.keys(b.refs).length + ' ' + esc(t('coachRefs')) + ', ' + b.released + ' ' + esc(t('coachReleased')) + ', ' + b.read + ' ' + esc(t('coachRead')) + '</span></div><div class="n">' + b.notes + '</div></div>';
       }).join('') : '<div class="hint">' + esc(t('noCoachActivity')) + '</div>') + '</div>';
     } else if (CC.tab === 'ai') {
       body = '<div class="card" style="gap:10px"><div style="font-size:15px;line-height:1.45">' + esc(t('aiLead')) + '</div>' +
@@ -1071,6 +1091,35 @@
   }
   var REF = { from: '' };
 
+  // ── A coach's card: who they are, what they wrote ────────────────
+  async function renderCoachCard(name) {
+    $('refBack').href = REF.from || '#center';
+    $('refBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>';
+    busy(true);
+    var card = await sb.rpc('ref_card', { p_name: name });
+    var notes = await fetchAll(function () { return sb.from('observations').select('id,date,ref_name,public_notes,cleaned_note,final_note,cleanup_status,field,area,reviewed_by').eq('observer', name).order('date', { ascending: false }); });
+    var ids = (notes.data || []).map(function (n) { return n.id; }), reads = {};
+    for (var i = 0; i < ids.length; i += 200) { var rd = await sb.from('note_reads').select('observation_id').in('observation_id', ids.slice(i, i + 200)); (rd.data || []).forEach(function (r) { reads[String(r.observation_id)] = 1; }); }
+    busy(false);
+    var c = card.data || {}, list = notes.data || [];
+    var released = list.filter(function (n) { return n.cleanup_status === 'approved' || n.cleanup_status === 'edited'; }).length;
+    var read = list.filter(function (n) { return reads[String(n.id)]; }).length;
+    var refs = {}; list.forEach(function (n) { refs[key(n.ref_name)] = 1; });
+    var titles = (c.titles || []).map(function (x) { return '<span class="pill' + (x.source === 'manual' ? ' ok' : '') + '" style="margin:4px 4px 0 0">' + esc(x.label) + '</span>'; }).join('');
+    var stat = function (n, l, cls) { return '<div class="stat' + (cls ? ' ' + cls : '') + '"><b>' + esc(n) + '</b><i>' + esc(l) + '</i></div>'; };
+    $('refBody').innerHTML =
+      '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(t('coachCardTitle')) + (c.city ? ', ' + esc(c.city) : '') + '</div><div class="disp" style="font-size:40px">' + esc(name) + '</div><div>' + (titles || '') + '</div></div>' +
+      '<div class="disp h2">' + esc(t('refSeason')) + '</div>' +
+      '<div class="stats">' + stat(list.length, t('coachNotes')) + stat(Object.keys(refs).length, t('coachRefs')) + stat(released, t('coachReleased')) + '</div>' +
+      '<div class="pad" style="padding-top:8px"><div class="hint">' + esc(t('coachReadRate')) + ': ' + read + ' / ' + released + '</div><div class="bar"><i style="width:' + (released ? Math.round(100 * read / released) : 0) + '%"></i></div></div>' +
+      '<div class="disp h2">' + esc(t('coachNotesTitle')) + '</div>' + (list.length ? list.slice(0, 60).map(function (n) {
+        var st = n.cleanup_status || 'pending', ok = st === 'approved' || st === 'edited';
+        var label = t('status.' + st); if (label === 'status.' + st) label = t('status.pending'); if (ok && reads[String(n.id)]) label = t('readBy').replace(/ on$| el$/, '');
+        return '<div class="card" style="gap:8px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div><b>' + refLink(n.ref_name || '') + '</b> <span class="hint">' + esc(dayLong(n.date)) + (n.field ? ', ' + esc(n.field) : '') + (n.area ? ', ' + esc(t('areas.' + n.area)) : '') + '</span></div><span class="pill' + (ok ? ' ok' : '') + '">' + esc(label) + '</span></div>' +
+          '<div class="side three"><div class="col"><b>' + esc(t('rawLabel')) + '</b>' + esc(n.public_notes || '') + '</div><div class="col"><b>' + esc(t('aiLabel')) + '</b>' + (n.cleaned_note ? esc(n.cleaned_note) : '<span class="hint">' + esc(t('notCleaned')) + '</span>') + '</div><div class="col"><b>' + esc(t('releasedLabel')) + '</b>' + (ok ? esc(n.final_note || n.cleaned_note || n.public_notes || '') : '<span class="hint">' + esc(t('notReleased')) + '</span>') + '</div></div></div>';
+      }).join('') : '<div class="card"><div class="hint">' + esc(t('noMyNotes')) + '</div></div>');
+  }
+
   // ── Staff roster ─────────────────────────────────────────────────
   var STAFF = { rows: null, filter: '' };
   async function renderStaff() {
@@ -1321,6 +1370,7 @@
     if (!S.me) { show('s-signin'); return; }
     var h = location.hash.replace(/^#/, '') || 'day';
     if (h.indexOf('coach') === 0 && !iCan('coaching')) { location.hash = '#day'; return; }
+    if (h.indexOf('coachcard/') === 0) { if (!iCan('review')) { location.hash = '#day'; return; } show('s-ref'); renderCoachCard(decodeURIComponent(h.slice(10))); return; }
     if (h.indexOf('ref/') === 0) { if (!canSeeRef()) { location.hash = '#day'; return; } show('s-ref'); renderRef(decodeURIComponent(h.slice(4))); return; }
     if (h === 'eod') { if (!canEod()) { location.hash = '#day'; return; } $('eodBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-eod'); loadEod().then(renderEod).catch(function (e) { $('eodBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'setup') { if (!iCan('setup')) { location.hash = '#day'; return; } $('setupBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-setup'); SU.ev = null; loadSetup().then(renderSetup).catch(function (e) { $('setupBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
@@ -1339,7 +1389,7 @@
   function renderAll() { if (S.me) route(); }
   window.addEventListener('hashchange', function () { if (location.hash !== '#help') S.reason = null; });
   var LAST_HASH = '';
-  window.addEventListener('hashchange', function (e) { var old = (e.oldURL || '').split('#')[1]; if (old != null && old.indexOf('ref/') !== 0) REF.from = '#' + old; });
+  window.addEventListener('hashchange', function (e) { var old = (e.oldURL || '').split('#')[1]; if (old != null && old.indexOf('ref/') !== 0 && old.indexOf('coachcard/') !== 0) REF.from = '#' + old; });
   window.addEventListener('hashchange', route);
 
   async function start() {
