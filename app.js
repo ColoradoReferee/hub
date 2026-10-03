@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.02-n';
+  var VERSION = '2026.10.02-o';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1385,10 +1385,12 @@
     } catch (e) { LIVE.channel = null; }
   }
   var LOADING = false;
+  // Never redraw under someone's fingers: if a box on this screen has focus, wait.
+  function typing() { var a = document.activeElement; return !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== 'button'); }
   function liveBump() {
     clearTimeout(LIVE.timer);
     LIVE.timer = setTimeout(function () {
-      if (LOADING) { liveBump(); return; }
+      if (LOADING || typing()) { liveBump(); return; }
       var h = location.hash;
       if (h === '#ops') loadOps().then(renderOps);
       else if (h === '#center') loadCenter().then(renderCenter);
@@ -1432,7 +1434,7 @@
     await loadDay();
     route();
     liveStart();
-    setInterval(function () { if (!S.me || LOADING) return; if (location.hash === '#ops' && OPS.tab === 'board') loadOps().then(renderOps); else if (location.hash.indexOf('game') < 0 && location.hash.indexOf('#') !== 0 || location.hash === '#day' || location.hash === '') renderDay(); }, 60000);
+    setInterval(function () { if (!S.me || LOADING || typing()) return; if (location.hash === '#ops' && OPS.tab === 'board') loadOps().then(renderOps); else if (location.hash.indexOf('game') < 0 && location.hash.indexOf('#') !== 0 || location.hash === '#day' || location.hash === '') renderDay(); }, 60000);
   }
 
   // ── Boot ─────────────────────────────────────────────────────────
