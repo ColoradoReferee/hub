@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.02-m';
+  var VERSION = '2026.10.02-n';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -900,8 +900,26 @@
   function renderPeople() {
     $('peopleResults').innerHTML = PP.q.length < 2 ? '' : (PP.results.length ? '<div class="list">' + PP.results.map(function (p) {
       return '<a class="item" href="#" data-person="' + p.id + '"><div><b>' + esc(p.first_name + ' ' + p.last_name) + '</b><br><span class="hint">' + esc(p.city || '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
-    }).join('') + '</div>' : '<div class="card"><div class="hint">' + esc(t('noMatch')) + '</div></div>');
+    }).join('') + '</div>' : '<div class="card"><div class="hint">' + esc(t('noMatch')) + '</div></div>' + addPersonHtml(PP.q));
+    var ap = $('addPersonBtn');
+    if (ap) ap.onclick = async function () {
+      var f = $('apFirst').value.trim(), l = $('apLast').value.trim(), e = $('apEmail').value.trim(), c = $('apCity').value.trim();
+      if (!f || !l) { say('apMsg', t('addPersonNeed'), 'bad'); return; }
+      ap.disabled = true; busy(true);
+      var r = await sb.rpc('add_person', { p_first: f, p_last: l, p_email: e, p_city: c });
+      busy(false);
+      if (r.error) { ap.disabled = false; say('apMsg', r.error.message, 'bad'); return; }
+      PP.results = [{ id: r.data, first_name: f, last_name: l, city: c }];
+      PP.q = f + ' ' + l; $('peopleQ').value = PP.q;
+      renderPeople(); openPerson(r.data);
+    };
     $('peopleResults').querySelectorAll('[data-person]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); if (LINK.pick) { linkTo(parseInt(a.getAttribute('data-person'), 10), null); PP.q = ''; $('peopleQ').value = ''; return; } openPerson(a.getAttribute('data-person')); }; });
+  }
+  function addPersonHtml(q) {
+    if (!iCan('people')) return '';
+    var parts = (q || '').split(/\s+/).filter(Boolean), first = parts.length > 1 ? parts[0] : '', last = parts.length > 1 ? parts.slice(1).join(' ') : (parts[0] || '');
+    var inp = function (id, v, ph, type) { return '<input id="' + id + '" type="' + (type || 'text') + '" value="' + esc(v) + '" placeholder="' + esc(ph) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">'; };
+    return '<div class="card" style="gap:8px"><b>' + esc(t('addPerson')) + '</b><div class="hint">' + esc(t('addPersonHint')) + '</div><div class="grid2">' + inp('apFirst', first, t('firstName')) + inp('apLast', last, t('lastName')) + '</div>' + inp('apEmail', '', t('emailLabel'), 'email') + inp('apCity', '', t('cityLabel')) + '<button class="btn outline" id="addPersonBtn">' + esc(t('addPersonGo')) + '</button><div class="msg" id="apMsg" hidden></div></div>';
   }
   function renderPerson() {
     var p = PP.person; if (!p) { $('personCard').innerHTML = ''; return; }
