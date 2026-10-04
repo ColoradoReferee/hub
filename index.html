@@ -8,7 +8,7 @@
 <title>Colorado Referees</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
-<link rel="stylesheet" href="app.css?v=2026.10.02-o">
+<link rel="stylesheet" href="app.css?v=2026.10.04-a">
 </head>
 <body>
 <div id="busy" style="display:none" aria-live="polite"><span class="ball">&#9917;</span></div>
@@ -31,6 +31,7 @@
         <label for="email" data-t="email"></label>
         <input id="email" type="email" autocomplete="email" inputmode="email">
         <button class="btn" id="sendBtn" style="margin-top:12px;width:100%" data-t="sendCode"></button>
+        <button class="linkbtn" id="haveCode" style="margin-top:6px" data-t="haveCode"></button>
         <div id="msgEmail" class="msg" hidden></div>
       </div>
       <div id="stepCode" hidden>
@@ -60,6 +61,7 @@
     <div class="list" id="laterList"></div>
     <div id="noteBox"></div>
     <div id="evalLine"></div>
+    <div id="staffLine"></div>
     <div id="bulletins"></div>
     <div class="pad hint" id="rulesNote" style="display:none;padding-top:10px" data-t="rulesNotPosted"></div>
     <div id="coachEntry"></div>
@@ -240,7 +242,7 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="lang.js?v=2026.10.02-o"></script>
-<script src="app.js?v=2026.10.02-o"></script>
+<script src="lang.js?v=2026.10.04-a"></script>
+<script src="app.js?v=2026.10.04-a"></script>
 </body>
 </html>

@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.02-o';
+  var VERSION = '2026.10.04-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -133,6 +133,7 @@
     var sc = await sb.from('scores').select('game_id,home_score,away_score,status,entered_by,created_at').eq('date', today);
     S.scores = {}; (sc.data || []).forEach(function (r) { S.scores[String(r.game_id)] = r; });
     await loadEvalRequests();
+    if (iCan('command_center') || iCan('scheduling')) { var smd = await sb.from('staff_messages').select('id,from_name,to_venue,body,created_at').eq('date', today).order('created_at', { ascending: false }).limit(20); S.staffMsgs = smd.data || []; } else S.staffMsgs = [];
     var cv = await sb.rpc('coached_venues', { p_date: today });
     S.coachedVenues = (cv.data || []).map(function (r) { return typeof r === 'string' ? r : r.coached_venues; });
   }
@@ -153,7 +154,8 @@
     if (g) {
       var mins = Math.round((new Date(g.kickoff).getTime() - Date.now()) / 60000);
       cd.style.display = 'flex';
-      if (mins >= 0 && mins < 120) { $('countN').textContent = mins; $('countW').innerHTML = t('minutesToKickoff'); }
+      if (isHQ(g)) { $('countN').textContent = clock(g.kickoff).replace(/\s?[AP]M/i, ''); $('countW').innerHTML = t('siteOpens'); }
+      else if (mins >= 0 && mins < 120) { $('countN').textContent = mins; $('countW').innerHTML = t('minutesToKickoff'); }
       else if (mins >= 120) { $('countN').textContent = Math.floor(mins / 60); $('countW').innerHTML = t('hoursToKickoff'); }
       else { $('countN').textContent = Math.abs(mins); $('countW').innerHTML = t('kickedOff') + '<br>' + t('minAgo'); }
       $('nextCard').innerHTML = cardHtml(g);
@@ -165,13 +167,14 @@
     var later = S.games.filter(function (x) { return x !== g; });
     $('laterList').innerHTML = later.length ? '<div class="hint" style="padding-bottom:8px;font-weight:700">' + esc(t('laterToday')) + '</div>' + later.map(function (x) {
       var inAt = S.checkins[String(x.game_id)];
-      return '<a class="item" href="#game/' + esc(x.game_id) + '"><div class="when"><div class="disp">' + esc(clock(x.kickoff)) + '</div><div class="sub">' + esc(x.field || '') + ', ' + esc(x.age_group || '') + '</div></div>' +
+      return '<a class="item" href="#game/' + esc(x.game_id) + '"><div class="when"><div class="disp">' + esc(clock(x.kickoff)) + '</div><div class="sub">' + (isHQ(x) ? esc(t('refereeHQ')) + ', ' + esc(x.venue || '') : esc(x.field || '') + ', ' + esc(x.age_group || '')) + '</div></div>' +
         (inAt ? '<div class="state in"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="currentColor"></circle><path d="M5.5 9.5l2.3 2.3L12.8 6.8" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>' + esc(t('checkedIn').charAt(0) + t('checkedIn').slice(1).toLowerCase()) + '</div>' : '') + '</a>';
     }).join('') : '';
     var note = S.notes[0];
     if (note) markRead([note]);
     $('noteBox').innerHTML = note ? '<div class="note"><div class="who">' + esc(note.observer || '') + (note.rater_role ? ', ' + esc(note.rater_role) : '') + (note.date ? ', ' + esc(t('noteFrom')) + ' ' + esc(dayLong(note.date)) : '') + '</div><div class="text">' + esc(note.final_note || note.cleaned_note || '') + '</div><a href="#notes">' + esc(t('allNotes')) + '</a></div>'
       : '<div class="note"><div class="text hint">' + esc(t('noNotes')) + '</div></div>';
+    $('staffLine').innerHTML = (S.staffMsgs || []).length ? '<a class="rowbtn" href="#ops" data-tab="staff" style="margin-top:10px;border-color:var(--gold)"><span><span class="t">' + esc(t('smTodayTitle').replace('{n}', S.staffMsgs.length)) + '</span><br><span class="s">' + esc((S.staffMsgs[0].from_name || '') + ': ' + S.staffMsgs[0].body.slice(0, 90)) + '</span></span></a>' : '';
     var coachedHere = S.games.some(function (x) { return (S.coachedVenues || []).indexOf(x.venue) >= 0; });
     var myEval = (ER.mine || []).filter(function (r) { return r.ref_person_id === S.me.person_id && r.status === 'assigned' && r.game_date >= todayStr(); })[0];
     $('evalLine').innerHTML = myEval ? '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('evalReqTitle')) + '</b><div>' + esc(dayLong(myEval.game_date)) + ', ' + esc(myEval.venue || '') + '. ' + esc(t('evalPurpose.' + myEval.purpose)) + '. ' + esc(t('evalStatus.assigned')) + '</div></div>' : '';
@@ -218,6 +221,12 @@
   }
   function cardHtml(g) {
     var inAt = S.checkins[String(g.game_id)];
+    if (isHQ(g)) {
+      var role = String(g.hq_role || '').toUpperCase() === 'SC' ? t('roleSC') : /standby/i.test(g.field + ' ' + g.age_group) ? t('roleStandby') : (g.age_group || '');
+      return '<div class="card" style="border-color:var(--gold)"><div class="row"><div class="disp big">' + esc(t('refereeHQ')) + '</div><div class="disp" style="font-size:28px">' + esc(clock(g.kickoff)) + '</div></div>' +
+        '<div>' + esc(g.venue || '') + '. ' + esc(t('youAreToday')) + ' ' + esc(role) + '.</div>' +
+        '<div class="actions">' + checkinBtn(g, inAt) + '</div><div class="hint">' + esc(t('hqHint')) + '</div><div class="msg bad" id="ci-msg-' + esc(g.game_id) + '" hidden></div></div>';
+    }
     return '<div class="card"><div class="row"><div class="disp big">' + esc(clock(g.kickoff)) + '</div><div class="disp big">' + esc(String(g.field || '').toUpperCase()) + '</div></div>' +
       '<div>' + (isCoachSlot(g) ? esc(t('coachSlot')) + (g.field ? ', ' + esc(g.field) : '') : esc(g.age_group || '') + (g.competition ? ', ' + esc(g.competition) : '') + '. ' + esc(t('youAre')) + ' ' + esc(t('role.' + myRole(g)))) + '.</div>' +
       '<div class="actions">' + checkinBtn(g, inAt) + '<a class="btn outline" href="#game/' + esc(g.game_id) + '">' + esc(t('details')) + '</a></div>' +
@@ -365,8 +374,8 @@
       '<div style="display:flex;justify-content:space-between;align-items:baseline"><div class="disp" style="font-size:48px">' + esc(clock(g.kickoff)) + '</div><div class="disp" style="font-size:48px;color:var(--count)">' + esc(fieldShort(g.field)) + '</div></div>' +
       '<div>' + esc(g.age_group || '') + (g.competition ? ', ' + esc(g.competition) : '') + '. ' + esc(g.home || '') + ' v ' + esc(g.away || '') + '</div></div>' +
       ((S.coach.evals || []).some(function (r) { return String(r.game_id) === String(g.game_id); }) ? '<div class="pad" style="padding-top:12px"><a class="rowbtn" style="margin:0;width:100%;border-color:var(--red)" href="evaluator.html?gameId=' + esc(g.game_id) + '"><span><span class="t">' + esc(t('evaluatorOpen')) + '</span><br><span class="s">' + esc(t('evaluatorHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a></div>' : '') +
-      '<div class="disp h2">' + esc(t('crewPick')) + '</div>' +
-      crew.map(function (k) { return '<div class="crewbtn' + (S.coach.ref === k ? ' on' : '') + '" role="button" tabindex="0" data-crew="' + k + '"><span><span class="t">' + esc(g[k]) + ' <a class="refname" href="#ref/' + encodeURIComponent(g[k]) + '" style="font-size:13px;font-weight:400" onclick="event.stopPropagation()">' + esc(t('refCardTitle')) + '</a></span><br><span class="s">' + esc(t('role.' + k)) + '. ' + seenLine(g[k]) + '</span></span>' + (S.coach.ref === k ? '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="10" fill="var(--navy)"></circle><path d="M6.5 11.5l3 3 6-6.5" stroke="var(--surface)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>' : '') + '</div>'; }).join('') +
+      '<div class="disp h2">' + esc(t('crewPick')) + '</div><div class="pad hint" style="padding-bottom:6px">' + esc(t('crewPickHint')) + '</div>' +
+      crew.map(function (k) { return '<div class="crewbtn' + (S.coach.ref === k ? ' on' : '') + '" role="button" tabindex="0" data-crew="' + k + '"><span><span class="t">' + esc(g[k]) + '</span><br><span class="s">' + esc(t('role.' + k)) + '. ' + seenLine(g[k]) + '</span></span><span style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="pill" style="background:var(--navy);color:var(--surface)">' + esc(S.coach.ref === k ? t('writingFor') : t('tapToNote')) + '</span><a class="btn outline small" href="#ref/' + encodeURIComponent(g[k]) + '" style="min-height:36px;padding:0 10px;font-size:13px" onclick="event.stopPropagation()">' + esc(t('refCardTitle')) + '</a></span></div>'; }).join('') +
       (S.coach.ref ? priorNotesHtml(g[S.coach.ref]) + '<div class="card" id="noteCard" style="gap:12px"><label for="noteText" style="font-weight:700">' + esc(t('noteLabel')) + '</label><textarea id="noteText" placeholder="' + esc(t('notePlaceholder')) + '"></textarea>' +
         '<div class="hint" style="font-weight:700">' + esc(t('areaLabel')) + '</div><div class="chips">' + AREAS.map(function (a) { return '<button class="chip-btn' + (S.coach.area === a ? ' on' : '') + '" data-area="' + a + '">' + esc(t('areas.' + a)) + '</button>'; }).join('') + '</div>' +
         '<div class="hint">' + esc(t('signedAs')) + ' ' + esc(S.me.first_name + ' ' + S.me.last_name) + ', ' + esc(signed) + '</div>' +
@@ -679,6 +688,8 @@
       var sn = await sb.from('observations').select('ref_name').in('ref_name', nl.slice(i, i + 200)).in('cleanup_status', ['approved', 'edited']).limit(1000);
       (sn.data || []).forEach(function (o) { OPS.seen[key(o.ref_name)] = 1; });
     }
+    var sm = await sb.from('staff_messages').select('id,from_name,to_venue,date,body,created_at').eq('date', OPS.date).order('created_at', { ascending: false }).limit(100);
+    OPS.msgs = sm.data || [];
     var al = await sb.from('alerts').select('id,kind,game_id,ref_name,position,game_date,venue,field,kickoff,age_group,detail,status,seen_by').gte('game_date', todayStr()).order('game_date').order('kickoff').limit(300);
     OPS.alerts = al.data || [];
   }
@@ -727,9 +738,9 @@
   }
   function inSet() { var s = {}; OPS.checkins.forEach(function (c) { s[key(c.ref_name)] = c.created_at; }); return s; }
   function renderOps() {
-    var tabs = ['board', 'protection', 'retain', 'bulletins'];
-    var openAlerts = OPS.alerts.filter(function (a) { return a.status === 'open'; }).length;
-    var head = '<div class="tabs">' + tabs.map(function (k) { return '<button class="chip-btn' + (OPS.tab === k ? ' on' : '') + '" data-otab="' + k + '">' + esc(t('tab' + k.charAt(0).toUpperCase() + k.slice(1))) + (k === 'protection' && openAlerts ? ' ' + openAlerts : '') + '</button>'; }).join('') + '</div>';
+    var tabs = ['board', 'staff', 'protection', 'retain', 'bulletins'];
+    var openAlerts = OPS.alerts.filter(function (a) { return a.status === 'open'; }).length, msgCount = (OPS.msgs || []).length;
+    var head = '<div class="tabs">' + tabs.map(function (k) { return '<button class="chip-btn' + (OPS.tab === k ? ' on' : '') + '" data-otab="' + k + '">' + esc(t('tab' + k.charAt(0).toUpperCase() + k.slice(1))) + (k === 'protection' && openAlerts ? ' ' + openAlerts : '') + (k === 'staff' && msgCount ? ' ' + msgCount : '') + '</button>'; }).join('') + '</div>';
     var body = '';
     if (OPS.tab === 'board') {
       var ins = inSet(), venues = {};
@@ -772,6 +783,12 @@
             return '<div class="item" style="flex-direction:column;align-items:stretch;gap:2px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div class="when"><div class="disp">' + esc(clock(g.kickoff)) + '</div><div class="sub">' + esc(g.field || '') + ', ' + esc(g.age_group || '') + (g.game_num ? ', ' + esc(g.game_num) : '') + '</div></div>' + (iCan('scheduling') && !edit ? '<button class="linkbtn" data-switch="' + esc(g.game_id) + '">' + esc(t('change')) + '</button>' : '') + '</div><div class="crewline">' + crew + '</div>' + (warn.length ? '<div class="hint" style="color:#8A6A00;font-weight:700">' + esc(t('alertOnGame').replace('{n}', warn.length)) + '</div>' : '') + form + '</div>';
           }).join('') + '</div>';
       }
+    } else if (OPS.tab === 'staff') {
+      var venuesToday = {}; OPS.games.forEach(function (g) { if (g.venue) venuesToday[g.venue] = 1; });
+      body = '<div class="pad lead" style="padding-top:12px">' + esc(t('staffLead2')) + '</div>' +
+        '<div class="card" style="gap:8px"><select id="smTo" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><option value="">' + esc(t('smAll')) + '</option>' + Object.keys(venuesToday).sort().map(function (v) { return '<option value="' + esc(v) + '">' + esc(v) + '</option>'; }).join('') + '</select>' +
+        '<textarea id="smBody" placeholder="' + esc(t('smPlaceholder')) + '" style="min-height:90px"></textarea><button class="btn primary" id="smSend">' + esc(t('smSend')) + '</button><div class="msg" id="smMsg" hidden></div></div>' +
+        ((OPS.msgs || []).length ? (OPS.msgs || []).map(function (m) { return '<div class="card" style="gap:4px"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + esc(m.from_name || '') + '</b><span class="hint">' + esc(clock(m.created_at)) + '</span></div><div class="hint">' + esc(m.to_venue ? t('smToVenue') + ' ' + m.to_venue : t('smAll')) + '</div><div style="font-size:16px;line-height:1.45">' + esc(m.body) + '</div></div>'; }).join('') : '<div class="card"><div class="hint">' + esc(t('smNone')) + '</div></div>');
     } else if (OPS.tab === 'protection') {
       var open = OPS.alerts.filter(function (a) { return a.status === 'open'; }), seen = OPS.alerts.filter(function (a) { return a.status !== 'open'; });
       var row = function (a) {
@@ -825,6 +842,14 @@
         } catch (e) { b.disabled = false; b.textContent = t('saveChanges'); var m = $('sw-msg'); if (m) { m.hidden = false; m.textContent = t('reviewFailed') + ' ' + (e.message || ''); } }
       };
     });
+    var sms = $('smSend');
+    if (sms) sms.onclick = async function () {
+      var text = $('smBody').value.trim(); if (!text) return;
+      sms.disabled = true;
+      var r = await sb.from('staff_messages').insert({ org_id: S.me.org_id, from_person: S.me.person_id, from_name: S.me.first_name + ' ' + S.me.last_name, to_venue: $('smTo').value || null, date: OPS.date, body: text });
+      if (r.error) { sms.disabled = false; say('smMsg', r.error.message, 'bad'); return; }
+      await loadOps(); renderOps();
+    };
     var ar = $('alertRefresh');
     if (ar) ar.onclick = async function () { ar.disabled = true; await sb.rpc('refresh_protection_alerts', { days_ahead: 14 }); await loadOps(); renderOps(); };
     $('opsBody').querySelectorAll('[data-alert]').forEach(function (b) {
@@ -880,7 +905,7 @@
     PP.q = q;
     if (q.length < 2) { PP.results = []; renderPeople(); return; }
     var parts = q.split(/\s+/).filter(Boolean);
-    var query = sb.from('people').select('id,first_name,last_name,city,dob').limit(20);
+    var query = sb.from('people').select('id,first_name,last_name,city,dob,email').limit(20);
     if (parts.length >= 2) query = query.ilike('first_name', parts[0] + '%').ilike('last_name', parts.slice(1).join(' ') + '%');
     else query = query.or('last_name.ilike.' + parts[0] + '*,first_name.ilike.' + parts[0] + '*');
     busy(true); var r = await query.order('last_name').order('first_name'); busy(false);
@@ -931,8 +956,20 @@
       '<div><div class="hint" style="font-weight:700">' + esc(t('lcTitles')) + '</div><div>' + (lc.length ? lc.map(function (h) { return '<span class="pill" style="margin:4px 4px 0 0">' + esc(byCode[h.title_code] ? byCode[h.title_code].label : h.title_code) + '</span>'; }).join('') : '<span class="hint">' + esc(t('noneYet')) + '</span>') + '</div></div>' +
       '<div><div class="hint" style="font-weight:700">' + esc(t('coTitles')) + '</div><div>' + (co.length ? co.map(function (h) { return '<span class="pill ok" style="margin:4px 4px 0 0">' + esc(byCode[h.title_code] ? byCode[h.title_code].label : h.title_code) + ' <button class="linkbtn" style="display:inline;min-height:0;padding:0 0 0 6px;color:inherit" data-take="' + esc(h.title_code) + '">' + esc(t('remove')) + '</button></span>'; }).join('') : '<span class="hint">' + esc(t('noneYet')) + '</span>') + '</div></div>' +
       '<div><div class="hint" style="font-weight:700">' + esc(t('addTitle')) + '</div><div class="chips" style="margin-top:6px">' + givable.map(function (c) { return '<button class="chip-btn" data-give="' + esc(c.code) + '">' + esc(c.label) + '</button>'; }).join('') + '</div></div>' +
+      '<div><div class="hint" style="font-weight:700">' + esc(t('signinHelp')) + '</div><div class="go" style="margin-top:6px"><input id="ppEmail" type="email" value="' + esc(p.email || '') + '" placeholder="' + esc(t('emailLabel')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn outline" id="ppEmailSave">' + esc(t('save')) + '</button></div>' +
+        (iCan('setup') ? '<button class="btn outline small" id="ppCode" style="margin-top:8px">' + esc(t('signinCodeBtn')) + '</button><div id="ppCodeBox"></div>' : '') + '</div>' +
       '<div class="msg" id="ppMsg" hidden></div></div>';
     $('personCard').querySelectorAll('[data-give]').forEach(function (b) { b.onclick = async function () { b.disabled = true; var r = await sb.rpc('give_title', { p_person: p.id, p_code: b.getAttribute('data-give') }); if (r.error) { say('ppMsg', r.error.message, 'bad'); b.disabled = false; return; } await openPerson(p.id); say('ppMsg', t('titleGiven') + ': ' + b.textContent, 'good'); }; });
+    var es = $('ppEmailSave');
+    if (es) es.onclick = async function () { es.disabled = true; var r = await sb.rpc('set_person_email', { p_person: p.id, p_email: $('ppEmail').value.trim() }); es.disabled = false; if (r.error) { say('ppMsg', r.error.message, 'bad'); return; } p.email = $('ppEmail').value.trim().toLowerCase(); say('ppMsg', t('emailSaved'), 'good'); };
+    var pc = $('ppCode');
+    if (pc) pc.onclick = async function () {
+      var em = ($('ppEmail').value || p.email || '').trim(); if (!em) { say('ppMsg', t('emailFirst'), 'bad'); return; }
+      pc.disabled = true; pc.textContent = t('signinCodeMaking');
+      try { var j = await post({ action: 'signinCode', email: em }); $('ppCodeBox').innerHTML = '<div class="card" style="border-color:var(--gold);gap:4px;margin:8px 0 0"><div class="hint">' + esc(t('signinCodeRead')) + '</div><div class="disp" style="font-size:48px;letter-spacing:.12em">' + esc(j.code) + '</div><div class="hint">' + esc(t('signinCodeHow').replace('{email}', em)) + '</div></div>'; }
+      catch (e) { say('ppMsg', t('reviewFailed') + ' ' + (e.message || ''), 'bad'); }
+      pc.disabled = false; pc.textContent = t('signinCodeBtn');
+    };
     $('personCard').querySelectorAll('[data-take]').forEach(function (b) { b.onclick = async function () { var r = await sb.rpc('take_title', { p_person: p.id, p_code: b.getAttribute('data-take') }); if (r.error) { say('ppMsg', r.error.message, 'bad'); return; } await openPerson(p.id); say('ppMsg', t('titleTaken'), 'good'); }; });
   }
 
@@ -1199,6 +1236,14 @@
     if (!g) { show('s-day'); return; }
     var inAt = S.checkins[String(g.game_id)], mins = Math.round((new Date(g.kickoff).getTime() - Date.now()) / 60000);
     var ev = eventFor(g), r = rulesFor(g), role = myRole(g);
+    if (isHQ(g)) {
+      $('gameBody').innerHTML = '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(ev ? ev.name : '') + ', ' + esc(dayLong(g.date)) + '</div><div class="disp" style="font-size:48px">' + esc(t('refereeHQ')) + '</div><div class="lead">' + esc(g.venue || '') + ', ' + esc(clock(g.kickoff)) + '</div></div>' +
+        '<div style="margin:14px 20px 0">' + (inAt ? '<div class="btn done"><span class="disp">' + esc(t('checkedIn')) + '</span><small>' + esc(clock(inAt)) + '</small></div>' : '<div class="actions" style="padding:0">' + checkinBtn(g, null) + '</div><div class="msg bad" id="ci-msg-' + esc(g.game_id) + '" hidden></div>') + '</div>' +
+        (ev && ev.blurb ? '<div class="card"><div class="sep" style="border:0;padding:0">' + esc(ev.blurb) + '</div></div>' : '') +
+        '<div style="margin:14px 20px 0"><a class="btn outline" href="#ops">' + esc(t('opsEntry')) + '</a></div>';
+      wireCheckin(g, $('gameBody'));
+      return;
+    }
     var crew = ['cr', 'ar1', 'ar2', 'fourth'].filter(function (k) { return g[k]; }).map(function (k) { return esc(g[k]) + ' (' + esc(t('role.' + k)) + ')'; });
     $('gameBody').innerHTML =
       '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(ev ? ev.name : g.competition || '') + (g.game_num ? ', ' + esc(g.game_num) : '') + ', ' + esc(dayLong(g.date)) + '</div>' +
@@ -1358,6 +1403,7 @@
     }
     $('stepEmail').hidden = true; $('stepCode').hidden = false; say('msgCode', t('codeSent'), 'good'); $('code').focus();
   };
+  $('haveCode').onclick = function () { email = $('email').value.trim().toLowerCase(); if (!email) { say('msgEmail', t('emailFirst'), 'bad'); return; } $('stepEmail').hidden = true; $('stepCode').hidden = false; say('msgCode', t('codeFromHQ'), 'good'); $('code').focus(); };
   $('verifyBtn').onclick = async function () {
     var code = $('code').value.replace(/\D/g, '');
     if (code.length < 6) { say('msgCode', t('wholeCode'), 'bad'); return; }
@@ -1378,7 +1424,7 @@
     if (LIVE.channel || !sb.channel) return;
     try {
       LIVE.channel = sb.channel('hub-live');
-      ['checkins', 'emergencies', 'scores', 'observations', 'announcements', 'coach_assignments', 'alerts'].forEach(function (table) {
+      ['checkins', 'emergencies', 'scores', 'observations', 'announcements', 'coach_assignments', 'alerts', 'staff_messages'].forEach(function (table) {
         LIVE.channel.on('postgres_changes', { event: '*', schema: 'public', table: table }, function () { liveBump(); });
       });
       LIVE.channel.subscribe();
@@ -1410,7 +1456,7 @@
     if (h === 'eod') { if (!canEod()) { location.hash = '#day'; return; } $('eodBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-eod'); loadEod().then(renderEod).catch(function (e) { $('eodBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'setup') { if (!iCan('setup')) { location.hash = '#day'; return; } $('setupBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-setup'); SU.ev = null; loadSetup().then(renderSetup).catch(function (e) { $('setupBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'people') { if (!iCan('people')) { location.hash = '#day'; return; } show('s-people'); PP.person = null; $('personCard').innerHTML = ''; renderPeople(); setTimeout(function () { $('peopleQ').focus(); }, 50); return; }
-    if (h === 'ops') { if (!iCan('command_center')) { location.hash = '#day'; return; } $('opsBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-ops'); loadOps().then(renderOps).catch(function (e) { $('opsBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
+    if (h === 'ops') { if (!iCan('command_center')) { location.hash = '#day'; return; } if (OPS.openStaff) { OPS.tab = 'staff'; OPS.openStaff = false; } $('opsBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-ops'); loadOps().then(renderOps).catch(function (e) { $('opsBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'center') { if (!iCan('review')) { location.hash = '#day'; return; } $('centerBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-center'); loadCenter().then(renderCenter).catch(function (e) { $('centerBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'review') { if (!iCan('review')) { location.hash = '#day'; return; } $('reviewList').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-review'); loadReview().then(renderReview).catch(function (e) { $('reviewList').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'coach') { loadCoach().then(function () { renderCoach(); }); show('s-coach'); }
@@ -1451,6 +1497,7 @@
     $('staffBtn').onclick = function () { renderStaff(); };
     $('linkBtn').onclick = function () { LINK.rows = null; LINK.pick = null; renderLinks(); };
     $('peopleGo').onclick = function () { clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); };
+    document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('[data-tab="staff"]'); if (a && a.getAttribute('href') === '#ops') OPS.openStaff = true; });
     $('signOut').onclick = async function (e) { e.preventDefault(); if (LIVE.channel) { try { sb.removeChannel(LIVE.channel); } catch (er) {} LIVE.channel = null; } await sb.auth.signOut(); S.me = null; location.hash = ''; show('s-signin'); };
     applyWords();
     document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v' + VERSION; });
