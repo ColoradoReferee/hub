@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.09-d';
+  var VERSION = '2026.10.10-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -170,6 +170,9 @@
       return '<a class="item" href="#game/' + esc(x.game_id) + '"><div class="when"><div class="disp">' + esc(clock(x.kickoff)) + '</div><div class="sub">' + (isHQ(x) ? esc(t('refereeHQ')) + ', ' + esc(x.venue || '') : esc(x.field || '') + ', ' + esc(x.age_group || '')) + '</div></div>' +
         (inAt ? '<div class="state in"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="currentColor"></circle><path d="M5.5 9.5l2.3 2.3L12.8 6.8" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>' + esc(t('checkedIn').charAt(0) + t('checkedIn').slice(1).toLowerCase()) + '</div>' : '') + '</a>';
     }).join('') : '';
+    var up = $('dayUpcoming');
+    if (S.me.previewing) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div><div class="hint">' + esc(t('loadingReview')) + '</div>'; upcomingFor(S.me.first_name + ' ' + S.me.last_name, 90).then(function (list) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div>' + upcomingHtml(list.filter(function (g) { return g.date !== todayStr(); }), S.me.first_name + ' ' + S.me.last_name).replace(/class="card"/g, 'class="card" style="margin:0 0 8px"'); }).catch(function () { up.innerHTML = ''; }); }
+    else up.innerHTML = '';
     var note = S.notes[0];
     if (note) markRead([note]);
     $('noteBox').innerHTML = note ? '<div class="note"><div class="who">' + esc(note.observer || '') + (note.rater_role ? ', ' + esc(note.rater_role) : '') + (note.date ? ', ' + esc(t('noteFrom')) + ' ' + esc(dayLong(note.date)) : '') + '</div><div class="text">' + esc(note.final_note || note.cleaned_note || '') + '</div><a href="#notes">' + esc(t('allNotes')) + '</a></div>'
@@ -184,6 +187,7 @@
     $('coachEntry').innerHTML = iCan('coaching') ? '<a class="rowbtn" href="#coach" style="margin-top:14px"><span><span class="t">' + esc(t('coachingEntry')) + '</span><br><span class="s">' + esc(t('coachingEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
     $('reviewEntry').innerHTML = iCan('review') ? '<a class="rowbtn" href="#review" style="margin-top:8px"><span><span class="t">' + esc(t('reviewEntry')) + '</span><br><span class="s">' + esc(t('reviewEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
     $('centerEntry').innerHTML = iCan('review') ? '<a class="rowbtn" href="#center" style="margin-top:8px"><span><span class="t">' + esc(t('centerEntry')) + '</span><br><span class="s">' + esc(t('centerEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
+    $('stateEntry').innerHTML = iCan('state_view') ? '<a class="rowbtn" href="#state" style="margin-top:8px"><span><span class="t">' + esc(t('stateEntry')) + '</span><br><span class="s">' + esc(t('stateEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
     $('opsEntry').innerHTML = iCan('command_center') ? '<a class="rowbtn" href="#ops" style="margin-top:8px"><span><span class="t">' + esc(t('opsEntry')) + '</span><br><span class="s">' + esc(t('opsEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
     var pb = $('previewBar');
     if (S.me.previewing) { pb.style.display = 'flex'; $('previewText').textContent = t('previewing').replace('{name}', S.me.first_name + ' ' + S.me.last_name) + ' ' + t('previewNoWrite'); $('previewStop').textContent = t('previewStop'); $('previewStop').onclick = async function () { await sb.rpc('clear_preview'); location.hash = ''; start(); }; }
@@ -1214,11 +1218,156 @@
     };
   }
 
+  // ── State view: the program by year (SRA / SYRA / SDRO / ADMIN) ───
+  var ST = { rows: [], year: null, table: false };
+  async function loadState_() {
+    var r = await sb.from('program_years').select('year,metric,segment,value,note').order('year');
+    if (r.error) throw r.error;
+    ST.rows = r.data || [];
+  }
+  async function loadState() { return load(loadState_()); }
+  function stVal(y, m, s) { var v = null; ST.rows.forEach(function (r) { if (r.year === y && r.metric === m && r.segment === (s || 'all')) v = r.value; }); return v; }
+  function stNote(y) { var n = ''; ST.rows.forEach(function (r) { if (r.year === y && r.metric === 'referees' && r.note) n = r.note; }); return n; }
+  function stYears(m) { var ys = {}; ST.rows.forEach(function (r) { if (r.metric === m) ys[r.year] = 1; }); return Object.keys(ys).map(Number).sort(); }
+  function pct(a, b) { return b ? Math.round(100 * a / b) : null; }
+  function fmtN(n) { return n == null ? '' : String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+  // Small SVG charts. One axis each, thin marks, labels in ink, series in --c1/--c2/--c3.
+  function svgBars(labels, values, opt) {
+    opt = opt || {}; var W = 360, H = 190, L = 34, R = 8, T = 18, B = 26, n = values.length;
+    var max = Math.max.apply(null, values.filter(function (v) { return v != null; }).concat([1]));
+    var pw = (W - L - R) / n, bw = Math.max(4, pw - 3), ch = H - T - B;
+    var ticks = [0, 0.5, 1].map(function (f) { return Math.round(max * f); });
+    var out = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(opt.label || '') + '">';
+    ticks.forEach(function (tv) { var y = T + ch - ch * tv / max; out += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" class="grid"/><text x="' + (L - 4) + '" y="' + (y + 4) + '" class="tick" text-anchor="end">' + fmtN(tv) + '</text>'; });
+    values.forEach(function (v, i) {
+      if (v == null) return;
+      var x = L + i * pw + (pw - bw) / 2, h = ch * v / max, y = T + ch - h;
+      var cls = opt.dim && opt.dim(i) ? ' dim' : '';
+      out += '<rect x="' + x + '" y="' + y + '" width="' + bw + '" height="' + h + '" rx="3" class="bb c1' + cls + '"><title>' + esc(labels[i] + ': ' + fmtN(v)) + '</title></rect>';
+      if (!opt.labelsOn || opt.labelsOn(i, v)) out += '<text x="' + (x + bw / 2) + '" y="' + (y - 4) + '" class="val" text-anchor="middle">' + fmtN(v) + '</text>';
+    });
+    labels.forEach(function (l, i) { if (n > 8 && i % 2 === 1 && i !== n - 1) return; out += '<text x="' + (L + i * pw + pw / 2) + '" y="' + (H - 8) + '" class="tick" text-anchor="middle">' + esc(String(l).replace(/^20/, "'")) + '</text>'; });
+    return out + '</svg>';
+  }
+  function svgStack(labels, series, opt) {
+    opt = opt || {}; var W = 360, H = 190, L = 34, R = 8, T = 18, B = 26, n = labels.length;
+    var totals = labels.map(function (_, i) { return series.reduce(function (a, s) { return a + (s.values[i] || 0); }, 0); });
+    var max = Math.max.apply(null, totals.concat([1])), pw = (W - L - R) / n, bw = Math.max(4, Math.min(44, pw - 6)), ch = H - T - B;
+    var out = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(opt.label || '') + '">';
+    [0, 0.5, 1].forEach(function (f) { var tv = Math.round(max * f), y = T + ch - ch * tv / max; out += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" class="grid"/><text x="' + (L - 4) + '" y="' + (y + 4) + '" class="tick" text-anchor="end">' + fmtN(tv) + '</text>'; });
+    labels.forEach(function (l, i) {
+      var x = L + i * pw + (pw - bw) / 2, yTop = T + ch;
+      series.forEach(function (s, k) {
+        var v = s.values[i] || 0, h = ch * v / max; yTop -= h;
+        out += '<rect x="' + x + '" y="' + (yTop + (k ? 2 : 0)) + '" width="' + bw + '" height="' + Math.max(0, h - (k ? 2 : 0)) + '" rx="2" class="bb c' + (k + 1) + '"><title>' + esc(l + ', ' + s.name + ': ' + fmtN(v)) + '</title></rect>';
+        if (h > 16) out += '<text x="' + (x + bw / 2) + '" y="' + (yTop + h / 2 + 4) + '" class="inval" text-anchor="middle">' + fmtN(v) + '</text>';
+      });
+      out += '<text x="' + (x + bw / 2) + '" y="' + (yTop - 4) + '" class="val" text-anchor="middle">' + fmtN(totals[i]) + '</text>';
+      out += '<text x="' + (x + bw / 2) + '" y="' + (H - 8) + '" class="tick" text-anchor="middle">' + esc(String(l)) + '</text>';
+    });
+    out += '</svg><div class="legend">' + series.map(function (s, k) { return '<span><i class="sw c' + (k + 1) + '"></i>' + esc(s.name) + '</span>'; }).join('') + '</div>';
+    return out;
+  }
+  function svgLines(labels, series, opt) {
+    opt = opt || {}; var W = 360, H = 190, L = 34, R = 44, T = 14, B = 26, n = labels.length, max = opt.max || 100, ch = H - T - B, pw = (W - L - R) / Math.max(1, n - 1);
+    var out = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(opt.label || '') + '">';
+    [0, 50, 100].forEach(function (tv) { var y = T + ch - ch * tv / max; out += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" class="grid"/><text x="' + (L - 4) + '" y="' + (y + 4) + '" class="tick" text-anchor="end">' + tv + '%</text>'; });
+    labels.forEach(function (l, i) { out += '<text x="' + (L + i * pw) + '" y="' + (H - 8) + '" class="tick" text-anchor="middle">' + esc(String(l)) + '</text>'; });
+    var ends = [];
+    series.forEach(function (s, k) {
+      var pts = [], last = null;
+      s.values.forEach(function (v, i) { if (v == null) return; var x = L + i * pw, y = T + ch - ch * v / max; pts.push(x + ',' + y); last = { x: x, y: y, v: v }; });
+      if (!pts.length) return;
+      out += '<polyline points="' + pts.join(' ') + '" class="line c' + (k + 1) + '"/>';
+      s.values.forEach(function (v, i) { if (v == null) return; var x = L + i * pw, y = T + ch - ch * v / max; out += '<circle cx="' + x + '" cy="' + y + '" r="4" class="dot c' + (k + 1) + '"><title>' + esc(labels[i] + ', ' + s.name + ': ' + v + '%') + '</title></circle>'; });
+      ends.push({ x: last.x, y: last.y, v: last.v, k: k });
+    });
+    // End labels: value only (the legend names the series), pushed apart so they never overlap.
+    ends.sort(function (a, b) { return a.y - b.y; });
+    for (var e = 1; e < ends.length; e++) if (ends[e].y - ends[e - 1].y < 13) ends[e].y = ends[e - 1].y + 13;
+    ends.forEach(function (e) { out += '<text x="' + (e.x + 8) + '" y="' + (e.y + 4) + '" class="val"><tspan class="sw' + (e.k + 1) + '">\u25CF</tspan> ' + e.v + '%</text>'; });
+    out += '</svg><div class="legend">' + series.map(function (s, k) { return '<span><i class="sw c' + (k + 1) + '"></i>' + esc(s.name) + '</span>'; }).join('') + '</div>';
+    return out;
+  }
+  function hbars(items, total) {
+    var max = Math.max.apply(null, items.map(function (i) { return i.v || 0; }).concat([1]));
+    return '<div class="hbars">' + items.map(function (i) {
+      return '<div class="hb"><div class="hl">' + esc(i.l) + (i.d != null ? ' <span class="delta ' + (i.d > 0 ? 'up' : i.d < 0 ? 'down' : '') + '">' + (i.d > 0 ? '+' : '') + fmtN(i.d) + '</span>' : '') + '</div><div class="ht"><i style="width:' + Math.round(100 * (i.v || 0) / max) + '%"></i></div><div class="hv">' + fmtN(i.v || 0) + (total ? ' <span class="hint">' + pct(i.v || 0, total) + '%</span>' : '') + '</div></div>';
+    }).join('') + '</div>';
+  }
+  function renderState() {
+    var fileYears = stYears('level'), allYears = stYears('referees');
+    var open = fileYears.length && stVal(fileYears[fileYears.length - 1], 'referees') < 1500 ? fileYears[fileYears.length - 1] : null;
+    var full = fileYears.filter(function (y) { return y !== open; });
+    var latest = full[full.length - 1], prev = full[full.length - 2];
+    if (!ST.year || fileYears.indexOf(ST.year) < 0) ST.year = latest;
+    var Y = ST.year, P = full[full.indexOf(Y) - 1] || null;
+    var arrow = function (now, before) { if (now == null || before == null) return ''; var d = now - before; return '<span class="delta ' + (d > 0 ? 'up' : d < 0 ? 'down' : '') + '">' + (d > 0 ? '+' : '') + fmtN(d) + ' ' + esc(t('stVs')) + ' ' + before + '</span>'; };
+    var pctArrow = function (now, before) { if (now == null || before == null) return ''; var d = now - before; return '<span class="delta ' + (d > 0 ? 'up' : d < 0 ? 'down' : '') + '">' + (d > 0 ? '+' : '') + d + ' pts</span>'; };
+    var tot = stVal(latest, 'referees'), totP = stVal(prev, 'referees');
+    var ret = pct(stVal(latest, 'retained_from_prev'), stVal(latest, 'prev_total')), retP = pct(stVal(prev, 'retained_from_prev'), stVal(prev, 'prev_total'));
+    var u18 = pct(stVal(latest, 'age', 'u18'), tot), u18P = pct(stVal(prev, 'age', 'u18'), totP);
+    var nw = stVal(latest, 'new'), nwP = stVal(prev, 'new');
+    var tile = function (big, label, sub) { return '<div class="stat"><b>' + big + '</b><i>' + esc(label) + '</i>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>'; };
+    var html = '<div class="stats two">' + tile(fmtN(tot), t('stReferees').replace('{y}', latest), arrow(tot, totP)) + tile(ret == null ? '' : ret + '%', t('stRetention'), pctArrow(ret, retP)) + tile(u18 == null ? '' : u18 + '%', t('stUnder18'), pctArrow(u18, u18P)) + tile(fmtN(nw), t('stNew'), arrow(nw, nwP)) + '</div>' +
+      '<div class="pad hint" style="padding-top:8px">' + esc(stNote(latest)) + '</div>';
+    if (open) html += '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('stOpenTitle').replace('{y}', open)) + '</b><div>' + esc(t('stOpenBody').replace('{n}', fmtN(stVal(open, 'referees'))).replace('{r}', fmtN(stVal(open, 'retained_from_prev'))).replace('{f}', fmtN(stVal(open, 'new')))) + '</div><div class="hint">' + esc(stNote(open)) + '</div></div>';
+    // 1. Referees by year
+    var trendYears = allYears.filter(function (y) { return y !== open; });
+    var tv = trendYears.map(function (y) { return stVal(y, 'referees'); });
+    var peak = Math.max.apply(null, tv);
+    html += '<div class="disp h2">' + esc(t('stByYear')) + '</div><div class="card chartcard">' + svgBars(trendYears, tv, { label: t('stByYear'), labelsOn: function (i, v) { return i === 0 || i === tv.length - 1 || (v === peak && i < tv.length - 2); }, dim: function (i) { return stVal(trendYears[i], 'source', 'file') == null; } }) + '<div class="hint">' + esc(t('stByYearHint')) + '</div></div>';
+    // 2. New vs returning
+    var nrYears = full.filter(function (y) { return stVal(y, 'new') != null && stVal(y, 'returning') != null; });
+    if (nrYears.length) html += '<div class="disp h2">' + esc(t('stNewReturning')) + '</div><div class="card chartcard">' + svgStack(nrYears, [{ name: t('stReturning'), values: nrYears.map(function (y) { return stVal(y, 'returning'); }) }, { name: t('stFirstTime'), values: nrYears.map(function (y) { return stVal(y, 'new'); }) }], { label: t('stNewReturning') }) + '</div>';
+    // 3. Retention
+    var rYears = full.filter(function (y) { return stVal(y, 'prev_total') != null; });
+    if (rYears.length) html += '<div class="disp h2">' + esc(t('stRetentionTitle')) + '</div><div class="card chartcard">' + svgLines(rYears, [
+      { name: t('stRetAll'), short: t('stRetAllShort'), values: rYears.map(function (y) { return pct(stVal(y, 'retained_from_prev'), stVal(y, 'prev_total')); }) },
+      { name: t('stRetFirst'), short: t('stRetFirstShort'), values: rYears.map(function (y) { return pct(stVal(y, 'first_year_retained'), stVal(y, 'first_year_pool')); }) },
+      { name: t('stRetU18'), short: t('stRetU18Short'), values: rYears.map(function (y) { return pct(stVal(y, 'u18_retained'), stVal(y, 'u18_pool')); }) }
+    ], { label: t('stRetentionTitle') }) + '<div class="hint">' + esc(t('stRetentionHint')) + '</div></div>';
+    // 4. One year in detail
+    var yt = stVal(Y, 'referees');
+    var d = function (m, s) { var a = stVal(Y, m, s), b = P ? stVal(P, m, s) : null; return a != null && b != null ? a - b : null; };
+    html += '<div class="disp h2">' + esc(t('stDetail')) + '</div><div class="pad"><div class="chips">' + fileYears.map(function (y) { return '<button class="chip-btn' + (Y === y ? ' on' : '') + '" data-styear="' + y + '">' + y + '</button>'; }).join('') + '</div><div class="hint" style="padding-top:6px">' + esc(fmtN(yt)) + ' ' + esc(t('stRefereesIn')) + ' ' + Y + (P ? '. ' + esc(t('stDeltaHint')).replace('{y}', P) : '') + '</div></div>' +
+      '<div class="card" style="gap:6px"><b>' + esc(t('stAge')) + '</b>' + hbars([['u18', t('ageU18')], ['18_24', '18 to 24'], ['25_39', '25 to 39'], ['40_54', '40 to 54'], ['55plus', '55+']].map(function (b) { return { l: b[1], v: stVal(Y, 'age', b[0]), d: d('age', b[0]) }; }), yt) + '</div>' +
+      '<div class="card" style="gap:6px"><b>' + esc(t('stGender')) + '</b>' + hbars([['m', t('genderM')], ['f', t('genderF')], ['other', t('genderOther')]].map(function (b) { return { l: b[1], v: stVal(Y, 'gender', b[0]), d: d('gender', b[0]) }; }), yt) + '</div>' +
+      '<div class="card" style="gap:6px"><b>' + esc(t('stLevel')) + '</b>' + hbars([['grassroots', t('lvlGrassroots')], ['regional', t('lvlRegional')], ['national', t('lvlNational')]].map(function (b) { return { l: b[1], v: stVal(Y, 'level', b[0]), d: d('level', b[0]) }; }), yt) + '</div>' +
+      '<div class="card" style="gap:6px"><b>' + esc(t('stStaff')) + '</b>' + hbars([['assignor', t('stAssignors')], ['mentor', t('stMentors')], ['coach', t('stCoaches')], ['instructor', t('stInstructors')]].map(function (b) { return { l: b[1], v: stVal(Y, 'staff', b[0]) || 0, d: d('staff', b[0]) }; }), 0) + '<div class="hint">' + esc(t('stStaffHint')) + '</div></div>';
+    // Table view
+    html += '<div class="pad"><button class="btn outline small" id="stTable">' + esc(t(ST.table ? 'stHideTable' : 'stShowTable')) + '</button></div>' +
+      (ST.table ? '<div class="pad"><table class="dt"><thead><tr><th>' + esc(t('stYear')) + '</th><th>' + esc(t('stRefereesCol')) + '</th><th>' + esc(t('stFirstTime')) + '</th><th>' + esc(t('stRetAllShort')) + '</th><th>' + esc(t('ageU18')) + '</th></tr></thead><tbody>' + allYears.map(function (y) { var r = pct(stVal(y, 'retained_from_prev'), stVal(y, 'prev_total')); return '<tr><td>' + y + (y === open ? '*' : '') + '</td><td>' + fmtN(stVal(y, 'referees')) + '</td><td>' + fmtN(stVal(y, 'new')) + '</td><td>' + (r == null ? '' : r + '%') + '</td><td>' + fmtN(stVal(y, 'age', 'u18')) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '') +
+      '<div class="pad hint" style="padding-top:12px">' + esc(t('stSources')) + '</div>';
+    $('stateBody').innerHTML = html;
+    $('stateBody').querySelectorAll('[data-styear]').forEach(function (b) { b.onclick = function () { ST.year = parseInt(b.getAttribute('data-styear'), 10); renderState(); }; });
+    $('stTable').onclick = function () { ST.table = !ST.table; renderState(); };
+  }
+
   // ── A referee's card: from any name, anywhere ────────────────────
   function canSeeRef() { return iCan('coaching') || iCan('review') || iCan('command_center'); }
   function refLink(name) {
     if (!name || !canSeeRef() || /^(tbd|open|none)$/i.test(name)) return esc(name || '');
     return '<a class="refname" href="#ref/' + encodeURIComponent(name) + '">' + esc(name) + '</a>';
+  }
+  // Every future game a name is on, across every assigning group.
+  async function upcomingFor(name, days) {
+    var today = todayStr(), until = iso(new Date(Date.now() + (days || 60) * 86400000));
+    var q = name.replace(/[,()]/g, ' ').trim();
+    var r = await fetchAll(function () { return sb.from('games').select('game_id,date,kickoff,field,age_group,venue,competition,cr,ar1,ar2,fourth,status,site_id').gte('date', today).lte('date', until).not('status', 'in', '(C,X,canceled_no_pay)').or('cr.ilike.' + q + ',ar1.ilike.' + q + ',ar2.ilike.' + q + ',fourth.ilike.' + q).order('date').order('kickoff'); });
+    return r.data || [];
+  }
+  function upcomingHtml(list, name) {
+    var k = key(name);
+    if (!list.length) return '<div class="card"><div class="hint">' + esc(t('upNone')) + '</div></div>';
+    var days = {}, order = [];
+    list.forEach(function (g) { if (!days[g.date]) { days[g.date] = []; order.push(g.date); } days[g.date].push(g); });
+    return order.map(function (d) {
+      return '<div class="card" style="gap:4px"><b>' + esc(dayLong(d)) + '</b>' + days[d].map(function (g) {
+        var role = key(g.cr) === k ? 'CR' : key(g.ar1) === k ? 'AR1' : key(g.ar2) === k ? 'AR2' : '4th';
+        return '<a class="item" href="#game/' + esc(g.game_id) + '" style="margin:0"><div class="when"><div class="disp">' + esc(clock(g.kickoff)) + '</div><div class="sub">' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + '</div></div><div class="sub" style="text-align:right">' + esc(role) + '<br>' + esc(g.age_group || '') + (g.competition ? '<br>' + esc(g.competition) : '') + '</div></a>';
+      }).join('') + '</div>';
+    }).join('');
   }
   async function renderRef(name) {
     $('refBack').href = REF.from || '#day';
@@ -1238,9 +1387,11 @@
       '<div class="stats">' + stat(c.notes, t('refSeen'), c.notes ? 'green' : 'red') + stat(c.released, t('refReleased')) + stat(c.coaches, t('refCoaches')) + '</div>' +
       '<div class="pad hint" style="padding-top:8px">' + (c.first_game ? esc(t('refFirst')) + ' ' + esc(dayLong(c.first_game)) + ', ' : '') + (c.last_game ? esc(t('refLast')) + ' ' + esc(dayLong(c.last_game)) : '') + (c.last_seen ? '. ' + esc(t('refLastSeen')) + ' ' + esc(dayLong(c.last_seen)) : '') + '</div>' +
       (c.next_game ? '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('refNext')) + '</b><div>' + esc(dayLong(c.next_game)) + ', ' + esc(clock(c.next_kickoff)) + ', ' + esc(c.next_venue || '') + (c.next_field ? ', ' + esc(c.next_field) : '') + '</div><div class="hint">' + esc(t('refNextHint')) + '</div></div>' : '') +
+      '<div class="disp h2">' + esc(t('upTitle')) + '</div><div id="refUpcoming"><div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div></div>' +
       '<div class="disp h2">' + esc(t('refNotes')) + '</div>' + ((notes.data || []).length ? (notes.data || []).map(function (n) {
         return '<div class="note"><div class="who">' + esc(n.observer || '') + (n.rater_role ? ', ' + esc(n.rater_role) : '') + ', ' + esc(dayLong(n.date)) + (n.field ? ', ' + esc(n.field) : '') + (n.area ? ', ' + esc(t('areas.' + n.area)) : '') + '</div><div class="text">' + esc(n.final_note || n.cleaned_note || '') + '</div></div>';
       }).join('') : '<div class="card"><div class="hint">' + esc(t('refNoNotes')) + '</div></div>');
+    upcomingFor(name, 90).then(function (list) { var el = $('refUpcoming'); if (el) el.innerHTML = upcomingHtml(list, name); }).catch(function (e) { var el = $('refUpcoming'); if (el) el.innerHTML = '<div class="msg bad">' + esc(e.message || '') + '</div>'; });
   }
   var REF = { from: '' };
 
@@ -1542,6 +1693,7 @@
     if (h === 'setup') { if (!iCan('setup')) { location.hash = '#day'; return; } $('setupBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-setup'); SU.ev = null; loadSetup().then(renderSetup).catch(function (e) { $('setupBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'people') { if (!iCan('people')) { location.hash = '#day'; return; } show('s-people'); PP.person = null; $('personCard').innerHTML = ''; renderPeople(); setTimeout(function () { $('peopleQ').focus(); }, 50); return; }
     if (h === 'ops') { if (!iCan('command_center')) { location.hash = '#day'; return; } if (OPS.openStaff) { OPS.tab = 'staff'; OPS.openStaff = false; } $('opsBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-ops'); loadOps().then(renderOps).catch(function (e) { $('opsBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
+    if (h === 'state') { if (!iCan('state_view')) { location.hash = '#day'; return; } $('stateBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-state'); loadState().then(renderState).catch(function (e) { $('stateBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'center') { if (!iCan('review')) { location.hash = '#day'; return; } $('centerBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-center'); loadCenter().then(renderCenter).catch(function (e) { $('centerBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'review') { if (!iCan('review')) { location.hash = '#day'; return; } $('reviewList').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-review'); loadReview().then(renderReview).catch(function (e) { $('reviewList').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'coach') { loadCoach().then(function () { renderCoach(); }); show('s-coach'); }
@@ -1575,8 +1727,8 @@
     ['themeBtn0', 'themeBtn1', 'themeBtn2'].forEach(function (id) { $(id).onclick = toggleTheme; });
     ['langBtn0', 'langBtn1'].forEach(function (id) { $(id).onclick = function () { setLang(S.lang === 'es' ? 'en' : 'es'); }; });
     $('markSignin').src = C.marks.csa; $('markDay').src = C.marks.csa;
-    ['markGame', 'markNotes', 'markHelp', 'markCoach', 'markCoachGame', 'markMyNotes', 'markReview', 'markCenter', 'markOps', 'markPeople', 'markSetup', 'markEod', 'markRef'].forEach(function (id) { $(id).src = C.marks.program; });
-    ['ja0', 'ja1', 'ja2', 'ja3', 'ja4', 'ja5', 'ja6', 'ja7', 'ja8', 'ja9', 'ja10', 'ja11', 'ja12', 'ja13', 'ja14'].forEach(function (id) { $(id).src = C.marks.ja; });
+    ['markGame', 'markNotes', 'markHelp', 'markCoach', 'markCoachGame', 'markMyNotes', 'markReview', 'markCenter', 'markOps', 'markPeople', 'markSetup', 'markEod', 'markRef', 'markState'].forEach(function (id) { $(id).src = C.marks.program; });
+    ['ja0', 'ja1', 'ja2', 'ja3', 'ja4', 'ja5', 'ja6', 'ja7', 'ja8', 'ja9', 'ja10', 'ja11', 'ja12', 'ja13', 'ja14', 'ja15'].forEach(function (id) { $(id).src = C.marks.ja; });
     $('peopleQ').oninput = function () { var q = $('peopleQ').value.trim(); clearTimeout(PP.timer); PP.timer = setTimeout(function () { searchPeople(q); }, 300); };
     $('peopleQ').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); } };
     $('staffBtn').onclick = function () { renderStaff(); };

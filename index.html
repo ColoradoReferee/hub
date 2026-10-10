@@ -8,7 +8,7 @@
 <title>Colorado Referees</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
-<link rel="stylesheet" href="app.css?v=2026.10.09-d">
+<link rel="stylesheet" href="app.css?v=2026.10.10-a">
 </head>
 <body>
 <div id="busy" style="display:none" aria-live="polite"><span class="ball">&#9917;</span></div>
@@ -59,6 +59,7 @@
     </div>
     <div id="nextCard"></div>
     <div class="list" id="laterList"></div>
+    <div id="dayUpcoming"></div>
     <div id="noteBox"></div>
     <div id="evalLine"></div>
     <div id="staffLine"></div>
@@ -67,6 +68,7 @@
     <div id="coachEntry"></div>
     <div id="reviewEntry"></div>
     <div id="centerEntry"></div>
+    <div id="stateEntry"></div>
     <div id="opsEntry"></div>
     <div id="peopleEntry"></div>
     <div id="viewAsEntry"></div>
@@ -154,6 +156,15 @@
   </section>
 
   <!-- ── Command Center: referee development ─────────────────── -->
+  <section class="screen" id="s-state">
+    <div class="top">
+      <a class="backlink" href="#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="yourDay"></span></a>
+      <img id="markState" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+    <div class="pad" style="padding-top:16px"><div class="disp" style="font-size:44px" data-t="stateTitle"></div><div class="lead" data-t="stateLead"></div></div>
+    <div id="stateBody"></div>
+    <div class="credit" style="margin-top:auto"><span class="chip"><img id="ja15" alt=""></span><span class="ver"></span></div>
+  </section>
   <section class="screen" id="s-center">
     <div class="top">
       <a class="backlink" href="#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="yourDay"></span></a>
@@ -242,7 +253,7 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="lang.js?v=2026.10.09-d"></script>
-<script src="app.js?v=2026.10.09-d"></script>
+<script src="lang.js?v=2026.10.10-a"></script>
+<script src="app.js?v=2026.10.10-a"></script>
 </body>
 </html>
