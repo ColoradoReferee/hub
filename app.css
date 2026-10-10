@@ -208,6 +208,8 @@ a.refname, button.refname { color: inherit; font: inherit; font-weight: inherit;
   body::before, .no-print, .top, .credit, #busy, #previewBar, .disp.h2:not(.print-keep) { display: none !important; }
   .eod-day .eod-rows { display: block !important; }
   .eod-day { break-inside: avoid; }
+  .eod-pay table th, .eod-pay table td { border-color: #999 !important; color: #000; }
+  .eod-pay .hint { color: #333; }
   .rowline { border-color: #999; color: #000; }
   .rowbtn { border: 0; box-shadow: none; background: none; color: #000; padding-left: 0; }
   .app { max-width: none; }

@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.09-a';
+  var VERSION = '2026.10.09-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1070,17 +1070,24 @@
   }
 
   // ── End of day ───────────────────────────────────────────────────
-  var EOD = { mine: [], all: [], date: '', venues: [], role: 'sc' };
+  // EOD.edit holds the report being corrected (tap a report to load it);
+  // the backend keys on date + event + name, so filing again updates it.
+  // EOD.pay is a day to print as a payroll sheet (everyone who filed).
+  var EOD = { mine: [], all: [], date: '', venues: [], role: 'sc', edit: null, pay: null };
   function canEod() { return iCan('coaching') || iCan('scheduling') || iCan('command_center'); }
+  function roleLabel(r) { var k = String(r || 'other').toLowerCase(), v = t('roles.' + k); return v === 'roles.' + k ? k.toUpperCase() : v; }
+  async function eodVenuesFor(date) {
+    var g = await fetchAll(function () { return sb.from('games').select('venue').eq('date', date).not('status', 'in', '(C,X,canceled_no_pay)').order('venue'); });
+    var vs = {}; (g.data || []).forEach(function (x) { if (x.venue) vs[x.venue] = 1; });
+    return Object.keys(vs).sort();
+  }
   async function loadEod_() {
-    var today = todayStr();
     var mine = await fetchAll(function () { return sb.from('eod_reports').select('id,date,venue,staff_name,role,time_in,time_out,hours,games_covered,incidents,notes').order('date', { ascending: false }).order('staff_name'); });
     var keys = S.me.nameKeys || [];
     EOD.error = mine.error ? (mine.error.message || String(mine.error)) : '';
     EOD.all = mine.data || [];
     EOD.mine = EOD.all.filter(function (r) { return keys.indexOf(key(r.staff_name)) >= 0; });
-    var g = await fetchAll(function () { return sb.from('games').select('venue').eq('date', today).not('status', 'in', '(C,X,canceled_no_pay)').order('venue'); });
-    var vs = {}; (g.data || []).forEach(function (x) { if (x.venue) vs[x.venue] = 1; }); EOD.venues = Object.keys(vs).sort();
+    EOD.venues = await eodVenuesFor(EOD.date || todayStr());
     if (!EOD.role) EOD.role = iCan('command_center') || iCan('scheduling') ? 'sc' : 'coach';
   }
   async function loadEod() { return load(loadEod_()); }
@@ -1094,40 +1101,87 @@
       (order.length ? order.map(function (d) {
         var list = days[d], hours = 0; list.forEach(function (r) { hours += Number(r.hours || 0); });
         var open = EOD.open === d;
-        return '<div class="pad eod-day' + (open ? ' open' : '') + '"><button class="rowbtn" style="margin:8px 0 0;width:100%" data-eodday="' + esc(d) + '"><span><span class="t">' + esc(dayLong(d)) + (EOD.vfilter ? ', ' + esc(EOD.vfilter) : '') + '</span><br><span class="s">' + list.length + ' ' + esc(t(list.length === 1 ? 'eodReportOne' : 'eodReportMany')) + ', ' + hours.toFixed(1) + ' ' + esc(t('eodHours')) + '</span></span><span class="disp no-print" style="font-size:22px">' + (open ? '\u2212' : '+') + '</span></button><div class="eod-rows">' + list.map(row).join('') + '</div></div>';
+        return '<div class="pad eod-day' + (open ? ' open' : '') + '"><button class="rowbtn" style="margin:8px 0 0;width:100%" data-eodday="' + esc(d) + '"><span><span class="t">' + esc(dayLong(d)) + (EOD.vfilter ? ', ' + esc(EOD.vfilter) : '') + '</span><br><span class="s">' + list.length + ' ' + esc(t(list.length === 1 ? 'eodReportOne' : 'eodReportMany')) + ', ' + hours.toFixed(1) + ' ' + esc(t('eodHours')) + '</span></span><span class="disp no-print" style="font-size:22px">' + (open ? '−' : '+') + '</span></button><div class="eod-rows">' + (open ? '<button class="btn outline small no-print" data-eodpay="' + esc(d) + '" style="margin:8px 0">' + esc(t('eodPayroll')) + '</button>' : '') + list.map(row).join('') + '</div></div>';
       }).join('') : '<div class="pad hint">' + esc(t('eodNone')) + '</div>');
   }
   function hhmm(v) { return v ? String(v).slice(0, 5) : ''; }
+  // Payroll sheet for one day: everyone who filed, one line each, total at the bottom.
+  function renderEodPay() {
+    var d = EOD.pay, list = EOD.all.filter(function (r) { return r.date === d && (!EOD.vfilter || r.venue === EOD.vfilter); });
+    list.sort(function (a, b) { return (a.venue || '').localeCompare(b.venue || '') || (a.staff_name || '').localeCompare(b.staff_name || ''); });
+    var total = 0; list.forEach(function (r) { total += Number(r.hours || 0); });
+    var cell = 'padding:8px 6px;border-bottom:1px solid var(--muted);text-align:left;vertical-align:top';
+    $('eodBody').innerHTML = '<div class="pad no-print" style="display:flex;gap:8px;padding-top:8px"><button class="btn outline small" id="eodPayBack">' + esc(t('back')) + '</button><button class="btn primary small" id="eodPayPrint">' + esc(t('print')) + '</button></div>' +
+      '<div class="pad eod-pay"><div class="disp h2 print-keep" style="padding:0">' + esc(t('eodPayroll')) + '</div><div class="hint" style="margin-bottom:10px">' + esc(dayLong(d)) + (EOD.vfilter ? ', ' + esc(EOD.vfilter) : '') + '. ' + list.length + ' ' + esc(t(list.length === 1 ? 'eodReportOne' : 'eodReportMany')) + '.</div>' +
+      '<table style="width:100%;border-collapse:collapse;font-size:14px"><thead><tr><th style="' + cell + '">' + esc(t('eodName')) + '</th><th style="' + cell + '">' + esc(t('eodRole')) + '</th><th style="' + cell + '">' + esc(t('eodVenue')) + '</th><th style="' + cell + '">' + esc(t('eodIn')) + '</th><th style="' + cell + '">' + esc(t('eodOut')) + '</th><th style="' + cell + ';text-align:right">' + esc(t('eodHours')) + '</th></tr></thead><tbody>' +
+      list.map(function (r) { return '<tr><td style="' + cell + '"><b>' + esc(r.staff_name) + '</b></td><td style="' + cell + '">' + esc(roleLabel(r.role)) + '</td><td style="' + cell + '">' + esc(r.venue || '') + '</td><td style="' + cell + '">' + esc(hhmm(r.time_in)) + '</td><td style="' + cell + '">' + esc(hhmm(r.time_out)) + '</td><td style="' + cell + ';text-align:right">' + esc(r.hours != null ? Number(r.hours).toFixed(1) : '') + '</td></tr>'; }).join('') +
+      '<tr><td colspan="5" style="' + cell + ';border-bottom:0;font-weight:700">' + esc(t('eodTotal')) + '</td><td style="' + cell + ';border-bottom:0;text-align:right;font-weight:700">' + total.toFixed(1) + '</td></tr></tbody></table>' +
+      '<div class="hint" style="margin-top:14px">' + esc(t('eodPayNote')) + '</div></div>';
+    $('eodPayBack').onclick = function () { EOD.pay = null; renderEod(); };
+    $('eodPayPrint').onclick = function () { window.print(); };
+  }
   function renderEod() {
-    var today = todayStr(), roles = ['sc', 'sm', 'coach', 'mentor', 'other'];
-    var venueField = EOD.venues.length ? '<select id="eodVenue" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' + EOD.venues.map(function (v) { return '<option value="' + esc(v) + '">' + esc(v) + '</option>'; }).join('') + '<option value="">' + esc(t('other')) + '</option></select>' : '<input id="eodVenue" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">';
-    var row = function (r) { return '<div class="rowline"><div><b>' + esc(r.staff_name) + '</b> <span class="hint">' + esc(t('roles.' + (r.role || 'other'))) + '</span><br><span class="hint">' + esc(dayLong(r.date)) + ', ' + esc(r.venue || '') + ', ' + esc(hhmm(r.time_in)) + ' to ' + esc(hhmm(r.time_out)) + (r.notes ? '. ' + esc(r.notes) : '') + '</span></div><div class="n">' + esc(r.hours != null ? r.hours : '') + '</div></div>'; };
+    if (EOD.pay) { renderEodPay(); return; }
+    var today = todayStr(), roles = ['sc', 'sm', 'coach', 'mentor', 'admin'];
+    var e = EOD.edit, venue = e ? (e.venue || '') : '';
+    var vlist = EOD.venues.slice(); if (venue && vlist.indexOf(venue) < 0) vlist.unshift(venue);
+    var inp = 'font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)';
+    var venueOpts = function (list, sel) { return list.map(function (v) { return '<option value="' + esc(v) + '"' + (v === sel ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('') + '<option value="">' + esc(t('other')) + '</option>'; };
+    var venueField = '<select id="eodVenue" style="' + inp + '">' + venueOpts(vlist, venue) + '</select>';
+    var canEditAny = !!S.me.real_admin && !S.me.previewing;
+    var row = function (r) {
+      var mine = (S.me.nameKeys || []).indexOf(key(r.staff_name)) >= 0, editable = mine || canEditAny;
+      var body = '<div><b>' + esc(r.staff_name) + '</b> <span class="hint">' + esc(roleLabel(r.role)) + '</span><br><span class="hint">' + esc(dayLong(r.date)) + ', ' + esc(r.venue || '') + ', ' + esc(hhmm(r.time_in)) + ' to ' + esc(hhmm(r.time_out)) + (r.notes ? '. ' + esc(r.notes) : '') + '</span>' + (editable ? '<br><span class="hint no-print" style="color:var(--navy);font-weight:700">' + esc(t('eodTapEdit')) + '</span>' : '') + '</div><div class="n">' + esc(r.hours != null ? r.hours : '') + '</div>';
+      return editable ? '<button class="rowline rowbtn" style="width:100%;text-align:left" data-eodedit="' + r.id + '">' + body + '</button>' : '<div class="rowline">' + body + '</div>';
+    };
     $('eodBody').innerHTML = (EOD.error ? '<div class="msg bad" style="margin:10px 20px 0">' + esc(t('loadFailed')) + ' ' + esc(EOD.error) + '</div>' : '') +
-      '<div class="card no-print" style="gap:10px"><div class="hint" style="font-weight:700">' + esc(t('eodRole')) + '</div><div class="chips">' + roles.map(function (k) { return '<button class="chip-btn' + (EOD.role === k ? ' on' : '') + '" data-role="' + k + '">' + esc(t('roles.' + k)) + '</button>'; }).join('') + '</div>' +
-      '<label class="hint" style="font-weight:700" for="eodDate">' + esc(t('evDates')) + '</label><input id="eodDate" type="date" value="' + (EOD.date || today) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' +
-      '<label class="hint" style="font-weight:700" for="eodVenue">' + esc(t('eodVenue')) + '</label>' + venueField +
-      '<div class="grid2"><div><label class="hint" style="font-weight:700" for="eodIn">' + esc(t('eodIn')) + '</label><input id="eodIn" type="time" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div><div><label class="hint" style="font-weight:700" for="eodOut">' + esc(t('eodOut')) + '</label><input id="eodOut" type="time" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div></div>' +
+      '<div class="card no-print" style="gap:10px">' +
+      (e ? '<div class="msg good" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>' + esc(t('eodEditing')) + ' <b>' + esc(e.staff_name) + '</b>, ' + esc(dayLong(e.date)) + '</span><button class="btn outline small" id="eodEditCancel">' + esc(t('cancel')) + '</button></div>' : '') +
+      '<div class="hint" style="font-weight:700">' + esc(t('eodRole')) + '</div><div class="chips">' + roles.map(function (k) { return '<button class="chip-btn' + (EOD.role === k ? ' on' : '') + '" data-role="' + k + '">' + esc(t('roles.' + k)) + '</button>'; }).join('') + '</div>' +
+      '<label class="hint" style="font-weight:700" for="eodDate">' + esc(t('evDates')) + '</label><input id="eodDate" type="date" value="' + esc(e ? e.date : (EOD.date || today)) + '" style="' + inp + '">' +
+      '<label class="hint" style="font-weight:700" for="eodVenue">' + esc(t('eodVenue')) + '</label>' + venueField + '<div class="hint" id="eodVenueHint">' + esc(t('eodVenueHint')) + '</div>' +
+      '<div class="grid2"><div><label class="hint" style="font-weight:700" for="eodIn">' + esc(t('eodIn')) + '</label><input id="eodIn" type="time" value="' + esc(e ? hhmm(e.time_in) : '') + '" style="' + inp + '"></div><div><label class="hint" style="font-weight:700" for="eodOut">' + esc(t('eodOut')) + '</label><input id="eodOut" type="time" value="' + esc(e ? hhmm(e.time_out) : '') + '" style="' + inp + '"></div></div>' +
       '<div class="hint">' + esc(t('eodCounted')) + '</div>' +
-      '<label class="hint" style="font-weight:700" for="eodNotes">' + esc(t('eodNotes')) + '</label><textarea id="eodNotes" placeholder="' + esc(t('eodNotesPlaceholder')) + '" style="min-height:100px"></textarea>' +
-      '<button class="btn primary" id="eodFile">' + esc(t('eodFile')) + '</button><div class="msg" id="eodMsg" hidden></div></div>' +
+      '<label class="hint" style="font-weight:700" for="eodNotes">' + esc(t('eodNotes')) + '</label><textarea id="eodNotes" placeholder="' + esc(t('eodNotesPlaceholder')) + '" style="min-height:100px">' + esc(e ? (e.notes || '') : '') + '</textarea>' +
+      '<button class="btn primary" id="eodFile">' + esc(t(e ? 'eodUpdate' : 'eodFile')) + '</button><div class="msg" id="eodMsg" hidden></div></div>' +
       '<div class="disp h2">' + esc(t('eodMine')) + '</div><div class="pad">' + (EOD.mine.length ? EOD.mine.slice(0, 10).map(row).join('') : '<div class="hint">' + esc(t('eodNone')) + '</div>') + '</div>' +
       (iCan('command_center') ? '<div class="disp h2">' + esc(t('eodAll')) + '</div>' + eodArchive(row) : '');
     var pb = $('eodPrint'); if (pb) pb.onclick = function () { window.print(); };
     var vf = $('eodVenueFilter'); if (vf) vf.onchange = function () { EOD.vfilter = vf.value; EOD.date = $('eodDate').value; renderEod(); };
+    var ec = $('eodEditCancel'); if (ec) ec.onclick = function () { EOD.edit = null; EOD.date = ''; renderEod(); };
     $('eodBody').querySelectorAll('[data-eodday]').forEach(function (b) { b.onclick = function () { var d = b.getAttribute('data-eodday'); EOD.open = EOD.open === d ? null : d; EOD.date = $('eodDate').value; renderEod(); }; });
-    $('eodBody').querySelectorAll('[data-role]').forEach(function (b) { b.onclick = function () { EOD.role = b.getAttribute('data-role'); EOD.date = $('eodDate').value; renderEod(); }; });
+    $('eodBody').querySelectorAll('[data-eodpay]').forEach(function (b) { b.onclick = function () { EOD.pay = b.getAttribute('data-eodpay'); renderEod(); }; });
+    $('eodBody').querySelectorAll('[data-eodedit]').forEach(function (b) { b.onclick = function () {
+      var id = b.getAttribute('data-eodedit'), r = null; EOD.all.forEach(function (x) { if (String(x.id) === id) r = x; });
+      if (!r) return; EOD.edit = r; EOD.role = String(r.role || 'sc').toLowerCase(); if (roles.indexOf(EOD.role) < 0) EOD.role = EOD.role === 'other' ? 'admin' : 'sc'; EOD.date = r.date;
+      eodVenuesFor(r.date).then(function (v) { EOD.venues = v; renderEod(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    }; });
+    $('eodBody').querySelectorAll('[data-role]').forEach(function (b) { b.onclick = function () { EOD.role = b.getAttribute('data-role'); EOD.date = $('eodDate').value; b.parentNode.querySelectorAll('.chip-btn').forEach(function (c) { c.classList.toggle('on', c === b); }); }; });
+    // Venue list follows the date picked, not today: a report filed the
+    // morning after still offers the venues that were running that day.
+    $('eodDate').onchange = async function () {
+      var d = $('eodDate').value; if (!d) return; EOD.date = d;
+      var sel = $('eodVenue'), cur = sel.value;
+      $('eodVenueHint').textContent = t('eodVenueLoading');
+      try { EOD.venues = await eodVenuesFor(d); } catch (err) { EOD.venues = []; }
+      var list = EOD.venues.slice(); if (cur && list.indexOf(cur) < 0) list.unshift(cur);
+      sel.innerHTML = venueOpts(list, cur);
+      $('eodVenueHint').textContent = EOD.venues.length ? t('eodVenueHint') : t('eodVenueNone');
+    };
     $('eodFile').onclick = async function () {
       var tin = $('eodIn').value, tout = $('eodOut').value;
       if (!tin || !tout) { say('eodMsg', t('eodBothTimes'), 'bad'); return; }
       var b = $('eodFile'); b.disabled = true; b.textContent = t('eodFiling');
       var venue = $('eodVenue').value, ev = null;
-      S.events.forEach(function (e) { if (!ev && (e.venues || []).some(function (v) { return key(v) === key(venue); })) ev = e; });
+      S.events.forEach(function (x) { if (!ev && (x.venues || []).some(function (v) { return key(v) === key(venue); })) ev = x; });
+      var who = EOD.edit && canEditAny ? EOD.edit.staff_name : (S.me.first_name + ' ' + S.me.last_name);
       try {
-        var j = await post({ action: 'scReport', event: ev ? ev.id : '', date: $('eodDate').value, venue: venue, scName: S.me.first_name + ' ' + S.me.last_name, role: EOD.role, timeIn: tin, timeOut: tout, notes: $('eodNotes').value.trim() });
+        var j = await post({ action: 'scReport', event: ev ? ev.id : '', date: $('eodDate').value, venue: venue, scName: who, role: EOD.role, timeIn: tin, timeOut: tout, notes: $('eodNotes').value.trim() });
+        var wasEdit = !!EOD.edit; EOD.edit = null; EOD.date = '';
         await loadEod(); renderEod();
-        say('eodMsg', t('eodFiled') + (j.hours != null ? ' ' + j.hours + ' ' + t('eodHours') + '.' : ''), 'good');
+        say('eodMsg', t(wasEdit || j.updated ? 'eodUpdated' : 'eodFiled') + (j.hours != null ? ' ' + j.hours + ' ' + t('eodHours') + '.' : ''), 'good');
         $('eodMsg').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } catch (e) { b.disabled = false; b.textContent = t('eodFile'); say('eodMsg', t('reviewFailed') + ' ' + (e.message || ''), 'bad'); }
+      } catch (err) { b.disabled = false; b.textContent = t(EOD.edit ? 'eodUpdate' : 'eodFile'); say('eodMsg', t('reviewFailed') + ' ' + (err.message || ''), 'bad'); }
     };
   }
 
