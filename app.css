@@ -201,4 +201,15 @@ textarea { font: inherit; width: 100%; min-height: 140px; padding: 12px; border:
 .hqcard .hint { font-weight: 700; }
 b[style*="--red"] a.refname { color: var(--red); }
 a.refname, button.refname { color: inherit; font: inherit; font-weight: inherit; background: none; border: 0; padding: 0; text-decoration: underline; text-decoration-color: var(--count); text-underline-offset: 3px; cursor: pointer; }
+.eod-day .eod-rows { display: none; }
+.eod-day.open .eod-rows { display: block; }
+@media print {
+  body { background: #fff; color: #000; }
+  body::before, .no-print, .top, .credit, #busy, #previewBar, .disp.h2:not(.print-keep) { display: none !important; }
+  .eod-day .eod-rows { display: block !important; }
+  .eod-day { break-inside: avoid; }
+  .rowline { border-color: #999; color: #000; }
+  .rowbtn { border: 0; box-shadow: none; background: none; color: #000; padding-left: 0; }
+  .app { max-width: none; }
+}
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
