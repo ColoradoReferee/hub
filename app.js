@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.09-c';
+  var VERSION = '2026.10.09-d';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1171,10 +1171,11 @@
       '<div class="hint">' + esc(t('eodCounted')) + '</div>' +
       '<label class="hint" style="font-weight:700" for="eodNotes">' + esc(t('eodNotes')) + '</label><textarea id="eodNotes" placeholder="' + esc(t('eodNotesPlaceholder')) + '" style="min-height:100px">' + esc(e ? (e.notes || '') : '') + '</textarea>' +
       '<button class="btn primary" id="eodFile">' + esc(t(e ? 'eodUpdate' : 'eodFile')) + '</button><div class="msg" id="eodMsg" hidden></div></div>' +
-      '<div class="disp h2">' + esc(t('eodMine')) + '</div><div class="pad">' + (EOD.mine.length ? EOD.mine.slice(0, 10).map(row).join('') : '<div class="hint">' + esc(t('eodNone')) + '</div>') + '</div>' +
+      '<div class="pad no-print"><button class="rowbtn" style="margin:8px 0 0;width:100%" id="eodMineToggle"><span><span class="t">' + esc(t('eodMine')) + '</span><br><span class="s">' + EOD.mine.length + ' ' + esc(t(EOD.mine.length === 1 ? 'eodReportOne' : 'eodReportMany')) + '</span></span><span class="disp" style="font-size:22px">' + (EOD.mineOpen ? '\u2212' : '+') + '</span></button></div>' + (EOD.mineOpen ? '<div class="pad">' + (EOD.mine.length ? EOD.mine.slice(0, 10).map(row).join('') : '<div class="hint">' + esc(t('eodNone')) + '</div>') + '</div>' : '') +
       (iCan('command_center') ? '<div class="disp h2">' + esc(t('eodAll')) + '</div>' + eodArchive(row) : '');
     var pb = $('eodPrint'); if (pb) pb.onclick = function () { window.print(); };
     var vf = $('eodVenueFilter'); if (vf) vf.onchange = function () { EOD.vfilter = vf.value; EOD.date = $('eodDate').value; renderEod(); };
+    $('eodMineToggle').onclick = function () { EOD.mineOpen = !EOD.mineOpen; EOD.date = $('eodDate').value; renderEod(); };
     var ec = $('eodEditCancel'); if (ec) ec.onclick = function () { EOD.edit = null; EOD.date = ''; renderEod(); };
     $('eodBody').querySelectorAll('[data-eodday]').forEach(function (b) { b.onclick = function () { var d = b.getAttribute('data-eodday'); EOD.open = EOD.open === d ? null : d; EOD.date = $('eodDate').value; renderEod(); }; });
     $('eodBody').querySelectorAll('[data-eodpay]').forEach(function (b) { b.onclick = function () { var d = b.getAttribute('data-eodpay'); EOD.pay = { from: d, to: d, venue: EOD.vfilter || '' }; renderEod(); }; });
