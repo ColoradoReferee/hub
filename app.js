@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.10-a';
+  var VERSION = '2026.10.13-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1224,6 +1224,8 @@
     var r = await sb.from('program_years').select('year,metric,segment,value,note').order('year');
     if (r.error) throw r.error;
     ST.rows = r.data || [];
+    // Live season numbers from the same view the Coverage tab uses.
+    try { var cov = await sb.rpc('coverage_rows'); ST.cov = cov.data || []; } catch (e) { ST.cov = []; }
   }
   async function loadState() { return load(loadState_()); }
   function stVal(y, m, s) { var v = null; ST.rows.forEach(function (r) { if (r.year === y && r.metric === m && r.segment === (s || 'all')) v = r.value; }); return v; }
@@ -1246,7 +1248,7 @@
       out += '<rect x="' + x + '" y="' + y + '" width="' + bw + '" height="' + h + '" rx="3" class="bb c1' + cls + '"><title>' + esc(labels[i] + ': ' + fmtN(v)) + '</title></rect>';
       if (!opt.labelsOn || opt.labelsOn(i, v)) out += '<text x="' + (x + bw / 2) + '" y="' + (y - 4) + '" class="val" text-anchor="middle">' + fmtN(v) + '</text>';
     });
-    labels.forEach(function (l, i) { if (n > 8 && i % 2 === 1 && i !== n - 1) return; out += '<text x="' + (L + i * pw + pw / 2) + '" y="' + (H - 8) + '" class="tick" text-anchor="middle">' + esc(String(l).replace(/^20/, "'")) + '</text>'; });
+    labels.forEach(function (l, i) { if (n > 8 && !opt.allLabels && i % 2 === 1 && i !== n - 1) return; out += '<text x="' + (L + i * pw + pw / 2) + '" y="' + (H - 8) + '" class="tick" text-anchor="middle">' + esc(String(l).replace(/^20(\d\d)$/, "'$1")) + '</text>'; });
     return out + '</svg>';
   }
   function svgStack(labels, series, opt) {
@@ -1335,6 +1337,30 @@
       '<div class="card" style="gap:6px"><b>' + esc(t('stGender')) + '</b>' + hbars([['m', t('genderM')], ['f', t('genderF')], ['other', t('genderOther')]].map(function (b) { return { l: b[1], v: stVal(Y, 'gender', b[0]), d: d('gender', b[0]) }; }), yt) + '</div>' +
       '<div class="card" style="gap:6px"><b>' + esc(t('stLevel')) + '</b>' + hbars([['grassroots', t('lvlGrassroots')], ['regional', t('lvlRegional')], ['national', t('lvlNational')]].map(function (b) { return { l: b[1], v: stVal(Y, 'level', b[0]), d: d('level', b[0]) }; }), yt) + '</div>' +
       '<div class="card" style="gap:6px"><b>' + esc(t('stStaff')) + '</b>' + hbars([['assignor', t('stAssignors')], ['mentor', t('stMentors')], ['coach', t('stCoaches')], ['instructor', t('stInstructors')]].map(function (b) { return { l: b[1], v: stVal(Y, 'staff', b[0]) || 0, d: d('staff', b[0]) }; }), 0) + '<div class="hint">' + esc(t('stStaffHint')) + '</div></div>';
+    // This season, live: licensed vs working, and the feedback reach
+    if (ST.cov && ST.cov.length) {
+      var worked = ST.cov.length, seen = ST.cov.filter(function (r) { return r.notes > 0; }).length, rel = 0, rd = 0;
+      ST.cov.forEach(function (r) { rel += r.released || 0; rd += r.read || 0; });
+      html += '<div class="disp h2">' + esc(t('stSeason')) + '</div><div class="stats two">' + tile(fmtN(worked), t('stWorked'), tot ? '<span class="hint">' + pct(worked, tot) + '% ' + esc(t('stOfLicensed')) + '</span>' : '') + tile(fmtN(seen), t('stSeen'), '<span class="hint">' + pct(seen, worked) + '% ' + esc(t('stOfWorking')) + '</span>') + tile(fmtN(rel), t('stReleased'), '') + tile(rel ? pct(rd, rel) + '%' : '0%', t('stReadShare'), '') + '</div><div class="pad hint" style="padding-top:8px">' + esc(t('stSeasonHint')) + '</div>';
+    }
+    // Where they are, experience, ethnicity, compliance, registration month
+    var regions = [['denver', t('regDenver')], ['north', t('regNorth')], ['springs', t('regSprings')], ['foothills', t('regFoothills')], ['west', t('regWest')], ['mountains', t('regMountains')], ['boulder', t('regBoulder')], ['pueblo', t('regPueblo')], ['south', t('regSouth')], ['southwest', t('regSouthwest')], ['plains', t('regPlains')], ['outside', t('regOutside')]];
+    var regItems = regions.map(function (b) { return { l: b[1], v: stVal(Y, 'region', b[0]) || 0, d: d('region', b[0]) }; }).filter(function (i) { return i.v; }).sort(function (a, b) { return b.v - a.v; });
+    if (regItems.length) html += '<div class="card" style="gap:6px"><b>' + esc(t('stWhere')) + '</b>' + hbars(regItems, yt) + '<div class="hint">' + esc(t('stWhereHint')) + '</div></div>';
+    if (stVal(Y, 'experience', 'first') != null) html += '<div class="card" style="gap:6px"><b>' + esc(t('stExperience')) + '</b>' + hbars([['first', t('expFirst')], ['1_3', t('exp13')], ['4_9', t('exp49')], ['10plus', t('exp10')]].map(function (b) { return { l: b[1], v: stVal(Y, 'experience', b[0]) || 0, d: d('experience', b[0]) }; }), yt) + '</div>';
+    if (stVal(Y, 'ethnicity', 'white') != null) {
+      var ethItems = [['white', t('ethWhite')], ['hispanic', t('ethHispanic')], ['two_or_more', t('ethTwo')], ['black', t('ethBlack')], ['asian', t('ethAsian')], ['native', t('ethNative')], ['hawaiian', t('ethHawaiian')], ['no_answer', t('ethNoAnswer')]].map(function (b) { return { l: b[1], v: stVal(Y, 'ethnicity', b[0]) || 0, d: d('ethnicity', b[0]) }; }).filter(function (i) { return i.v; });
+      html += '<div class="card" style="gap:6px"><b>' + esc(t('stEthnicity')) + '</b>' + hbars(ethItems, yt) + '<div class="hint">' + esc(t('stEthnicityHint')) + '</div></div>';
+    }
+    var adults = stVal(Y, 'adults');
+    if (adults) {
+      var bg = stVal(Y, 'adults_bgc_clear'), ssv = stVal(Y, 'adults_safesport_valid'), ipsv = stVal(Y, 'ips_valid');
+      html += '<div class="card" style="gap:6px"><b>' + esc(t('stCompliance')) + '</b><div class="hint">' + esc(t('stAdultsCount').replace('{n}', fmtN(adults)).replace('{m}', fmtN(stVal(Y, 'minor', 'yes') || 0))) + '</div>' +
+        hbars([{ l: t('cmpBgc'), v: bg }, { l: t('cmpSafeSport'), v: ssv }], adults) +
+        '<div class="hint" style="margin-top:6px">' + esc(t('stEveryone')) + '</div>' + hbars([{ l: t('cmpIps'), v: ipsv }, { l: t('cmpSafeCleared'), v: stVal(Y, 'safe_soccer', 'cleared') || 0 }, { l: t('cmpSafePhase'), v: (stVal(Y, 'safe_soccer', 'phase_1') || 0) + (stVal(Y, 'safe_soccer', 'phase_2') || 0) }], yt) + '</div>';
+    }
+    var months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'], mv = months.map(function (m) { return stVal(Y, 'issue_month', m) || 0; });
+    if (mv.some(function (v) { return v; })) html += '<div class="card chartcard"><b>' + esc(t('stWhen')) + '</b>' + svgBars(months.map(function (m) { return t('mon.' + m); }), mv, { label: t('stWhen'), allLabels: true, labelsOn: function (i, v) { return v === Math.max.apply(null, mv); } }) + '<div class="hint">' + esc(t('stWhenHint')) + '</div></div>';
     // Table view
     html += '<div class="pad"><button class="btn outline small" id="stTable">' + esc(t(ST.table ? 'stHideTable' : 'stShowTable')) + '</button></div>' +
       (ST.table ? '<div class="pad"><table class="dt"><thead><tr><th>' + esc(t('stYear')) + '</th><th>' + esc(t('stRefereesCol')) + '</th><th>' + esc(t('stFirstTime')) + '</th><th>' + esc(t('stRetAllShort')) + '</th><th>' + esc(t('ageU18')) + '</th></tr></thead><tbody>' + allYears.map(function (y) { var r = pct(stVal(y, 'retained_from_prev'), stVal(y, 'prev_total')); return '<tr><td>' + y + (y === open ? '*' : '') + '</td><td>' + fmtN(stVal(y, 'referees')) + '</td><td>' + fmtN(stVal(y, 'new')) + '</td><td>' + (r == null ? '' : r + '%') + '</td><td>' + fmtN(stVal(y, 'age', 'u18')) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '') +
