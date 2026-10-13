@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.13-d';
+  var VERSION = '2026.10.13-f';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1239,6 +1239,56 @@
     ST.rows = r.data || [];
     // Live season numbers from the same view the Coverage tab uses.
     try { var cov = await sb.rpc('coverage_rows'); ST.cov = cov.data || []; } catch (e) { ST.cov = []; }
+    // ZIP centroids and the fields we use, static files in this folder.
+    if (!ST.zips) { try { var z = await Promise.all([fetch('zips.json?v=' + VERSION).then(function (x) { return x.json(); }), fetch('venues.json?v=' + VERSION).then(function (x) { return x.json(); })]); ST.zips = z[0]; ST.venues = z[1]; delete ST.venues._note; } catch (e) { ST.zips = {}; ST.venues = {}; } }
+  }
+  // Colorado is a rectangle: lon -109.05 to -102.04, lat 37.0 to 41.0. Plain scaling is a map.
+  function stMap(Y) {
+    var W = 360, H = 206, L = -109.06, R = -102.04, T = 41.0, B = 36.99;
+    var px = function (lon) { return (lon - L) / (R - L) * W; }, py = function (lat) { return (T - lat) / (T - B) * H; };
+    var miles = function (a, b) { var dLat = (a[0] - b[0]) * 69, dLon = (a[1] - b[1]) * 69 * Math.cos(a[0] * Math.PI / 180); return Math.sqrt(dLat * dLat + dLon * dLon); };
+    var radius = ST.radius || 25, pts = [], total = 0, near = 0, unknown = 0, byVenue = {};
+    var vnames = Object.keys(ST.venues || {});
+    vnames.forEach(function (v) { byVenue[v] = 0; });
+    ST.rows.forEach(function (r) {
+      if (r.year !== Y || r.metric !== 'zip') return;
+      total += r.value; var z = ST.zips[r.segment]; if (!z) { unknown += r.value; return; }
+      var isNear = false;
+      vnames.forEach(function (v) { if (miles(z, ST.venues[v]) <= radius) { byVenue[v] += r.value; isNear = true; } });
+      if (isNear) near += r.value;
+      pts.push({ zip: r.segment, city: z[2], n: r.value, x: px(z[1]), y: py(z[0]), near: isNear });
+    });
+    if (!pts.length) return '';
+    pts.sort(function (a, b) { return b.n - a.n; });
+    // Search: a ZIP or a venue name. The match becomes the focus point.
+    var q = (ST.q || '').trim(), focus = null, focusLabel = '', focusHtml = '';
+    if (/^\d{5}$/.test(q)) { var fz = ST.zips[q]; if (fz) { focus = fz; focusLabel = q + ' ' + fz[2]; } }
+    else if (q) { var qk = q.toLowerCase(); var hit = vnames.filter(function (v) { return v.toLowerCase().indexOf(qk) >= 0; })[0]; if (hit) { focus = ST.venues[hit]; focusLabel = hit; } }
+    if (q && !focus) focusHtml = '<div class="msg bad">' + esc(t('stNoMatch')) + '</div>';
+    if (focus) {
+      var around = pts.filter(function (p) { var z = ST.zips[p.zip]; return miles(z, focus) <= radius; }).sort(function (a, b) { return b.n - a.n; });
+      var sum = 0; around.forEach(function (p) { sum += p.n; });
+      var here = /^\d{5}$/.test(q) ? pts.filter(function (p) { return p.zip === q; })[0] : null;
+      focusHtml = '<div class="card" style="border-color:var(--gold);gap:4px;margin:8px 0 0"><b>' + esc(focusLabel) + '</b>' + (here ? '<div>' + esc(t('stZipHere').replace('{n}', fmtN(here.n)).replace('{y}', Y)) + '</div>' : (/^\d{5}$/.test(q) ? '<div>' + esc(t('stZipHere').replace('{n}', '0').replace('{y}', Y)) + '</div>' : '')) +
+        '<div><b>' + fmtN(sum) + '</b> ' + esc(t('stWithin').replace('{r}', radius)) + '</div>' + hbars(around.slice(0, 10).map(function (p) { return { l: p.city + ' ' + p.zip, v: p.n }; }), sum) + '</div>';
+    }
+    var max = pts[0].n, rad = function (n) { return 2 + 14 * Math.sqrt(n / max); };
+    var cities = [['Denver', 39.7392, -104.9903], ['Boulder', 40.015, -105.2705], ['Fort Collins', 40.5853, -105.0844], ['Colorado Springs', 38.8339, -104.8214], ['Pueblo', 38.2544, -104.6091], ['Grand Junction', 39.0639, -108.5506], ['Durango', 37.2753, -107.8801], ['Greeley', 40.4233, -104.7091], ['Alamosa', 37.4695, -105.87]];
+    var cityLabels = cities.map(function (c) { return '<circle cx="' + px(c[2]) + '" cy="' + py(c[1]) + '" r="1.5" class="citydot"/><text x="' + (px(c[2]) + 4) + '" y="' + (py(c[1]) + 3) + '" class="city">' + esc(c[0]) + '</text>'; }).join('');
+    var svg = '<svg class="chart map" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(t('stMapTitle')) + '"><rect x="0.5" y="0.5" width="' + (W - 1) + '" height="' + (H - 1) + '" class="state"/>' +
+      pts.slice().reverse().map(function (p) { return '<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + rad(p.n).toFixed(1) + '" class="ref' + (p.near ? ' near' : '') + '"><title>' + esc(p.zip + ' ' + p.city + ': ' + p.n) + '</title></circle>'; }).join('') +
+      vnames.map(function (v) { var c = ST.venues[v]; return '<g class="venue-pin"><circle cx="' + px(c[1]) + '" cy="' + py(c[0]) + '" r="' + (radius / 69 / (R - L) * W).toFixed(1) + '" class="ring"/><path d="M' + px(c[1]) + ' ' + py(c[0]) + ' l-4 -9 a4 4 0 1 1 8 0 z" class="pin"><title>' + esc(v) + '</title></path></g>'; }).join('') + (focus ? '<circle cx="' + px(focus[1]) + '" cy="' + py(focus[0]) + '" r="' + (radius / 69 / (R - L) * W).toFixed(1) + '" class="focusring"/><circle cx="' + px(focus[1]) + '" cy="' + py(focus[0]) + '" r="3" class="focusdot"/>' : '') + cityLabels + '</svg>';
+    var top = pts.slice(0, 8);
+    var vlist = vnames.map(function (v) { return { v: v, n: byVenue[v] }; }).sort(function (a, b) { return b.n - a.n; });
+    return '<div class="card chartcard"><b>' + esc(t('stMapTitle')) + '</b><div class="hint">' + esc(t('stMapHint').replace('{y}', Y)) + '</div>' +
+      '<div class="go"><input id="stQ" placeholder="' + esc(t('stSearchPh')) + '" value="' + esc(q) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn outline" id="stQGo">' + esc(t('go')) + '</button></div>' + svg +
+      '<div class="legend"><span><i class="sw" style="background:var(--c1)"></i>' + esc(t('stMapRefs')) + '</span><span><i class="sw" style="background:var(--c2)"></i>' + esc(t('stMapNear')) + '</span><span><i class="sw" style="background:var(--c3)"></i>' + esc(t('stMapField')) + '</span></div>' +
+      '<div class="chips" style="margin-top:6px">' + [10, 25, 50].map(function (m) { return '<button class="chip-btn' + (radius === m ? ' on' : '') + '" data-radius="' + m + '">' + m + ' ' + esc(t('stMiles')) + '</button>'; }).join('') + '</div>' +
+      focusHtml +
+      '<div style="margin-top:6px"><b>' + fmtN(near) + '</b> ' + esc(t('stNearBody').replace('{p}', pct(near, total - unknown) || 0).replace('{r}', radius)) + '</div>' +
+      hbars(vlist.map(function (x) { return { l: x.v, v: x.n }; }), 0) +
+      '<div class="hint" style="margin-top:8px"><b>' + esc(t('stTopZips')) + '</b> ' + top.map(function (p) { return esc(p.city) + ' ' + p.zip + ' (' + fmtN(p.n) + ')'; }).join(', ') + '.' + (unknown ? ' ' + esc(t('stZipUnknown').replace('{n}', fmtN(unknown))) : '') + '</div>' +
+      '<div class="hint">' + esc(t('stVenuesHint')) + '</div></div>';
   }
   async function loadState() { return load(loadState_()); }
   function stVal(y, m, s) { var v = null; ST.rows.forEach(function (r) { if (r.year === y && r.metric === m && r.segment === (s || 'all')) v = r.value; }); return v; }
@@ -1363,6 +1413,7 @@
     var regions = [['denver', t('regDenver')], ['north', t('regNorth')], ['springs', t('regSprings')], ['foothills', t('regFoothills')], ['west', t('regWest')], ['mountains', t('regMountains')], ['boulder', t('regBoulder')], ['pueblo', t('regPueblo')], ['south', t('regSouth')], ['southwest', t('regSouthwest')], ['plains', t('regPlains')], ['outside', t('regOutside')]];
     var regItems = regions.map(function (b) { return { l: b[1], v: stVal(Y, 'region', b[0]) || 0, d: d('region', b[0]) }; }).filter(function (i) { return i.v; }).sort(function (a, b) { return b.v - a.v; });
     if (regItems.length) html += '<div class="card" style="gap:6px"><b>' + esc(t('stWhere')) + '</b>' + hbars(regItems, yt) + '<div class="hint">' + esc(t('stWhereHint')) + '</div></div>';
+    html += stMap(Y);
     if (stVal(Y, 'experience', 'first') != null) html += '<div class="card" style="gap:6px"><b>' + esc(t('stExperience')) + '</b>' + hbars([['first', t('expFirst')], ['1_3', t('exp13')], ['4_9', t('exp49')], ['10plus', t('exp10')]].map(function (b) { return { l: b[1], v: stVal(Y, 'experience', b[0]) || 0, d: d('experience', b[0]) }; }), yt) + '</div>';
     if (stVal(Y, 'ethnicity', 'white') != null) {
       var ethItems = [['white', t('ethWhite')], ['hispanic', t('ethHispanic')], ['two_or_more', t('ethTwo')], ['black', t('ethBlack')], ['asian', t('ethAsian')], ['native', t('ethNative')], ['hawaiian', t('ethHawaiian')], ['no_answer', t('ethNoAnswer')]].map(function (b) { return { l: b[1], v: stVal(Y, 'ethnicity', b[0]) || 0, d: d('ethnicity', b[0]) }; }).filter(function (i) { return i.v; });
@@ -1384,6 +1435,8 @@
     $('stateBody').innerHTML = html;
     $('stateBody').querySelectorAll('[data-styear]').forEach(function (b) { b.onclick = function () { ST.year = parseInt(b.getAttribute('data-styear'), 10); renderState(); }; });
     $('stTable').onclick = function () { ST.table = !ST.table; renderState(); };
+    $('stateBody').querySelectorAll('[data-radius]').forEach(function (b) { b.onclick = function () { ST.radius = parseInt(b.getAttribute('data-radius'), 10); renderState(); }; });
+    var sq = $('stQ'); if (sq) { var goQ = function () { ST.q = sq.value; renderState(); var el = $('stQ'); if (el) el.scrollIntoView({ block: 'center' }); }; $('stQGo').onclick = goQ; sq.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); goQ(); } }; }
   }
 
   // ── A referee's card: from any name, anywhere ────────────────────
