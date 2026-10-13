@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.13-i';
+  var VERSION = '2026.10.13-j';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -82,7 +82,7 @@
   }
   var BUSY = 0, LAST_ERROR = '';
   function busy(on) { BUSY += on ? 1 : -1; if (BUSY < 0) BUSY = 0; var b = $('busy'); if (b) b.style.display = BUSY === 0 ? 'none' : 'flex'; }
-  async function load(p) { busy(true); LOADING = true; try { return await p; } finally { busy(false); LOADING = false; } }
+  async function load(p) { busy(true); LOADING = true; try { return await p; } finally { busy(false); LOADING = false; LAST_ACTIVE = Date.now(); } }
   async function loadDay() { return load(loadDay_()); }
   async function loadOps() { return load(loadOps_()); }
   async function loadCenter() { return load(loadCenter_()); }
@@ -157,6 +157,16 @@
     var upcoming = S.games.filter(function (g) { return new Date(g.kickoff).getTime() > now - 100 * 60000; });
     return upcoming[0] || null;
   }
+  // The big number only. Runs once a minute without touching the rest of
+  // the screen or the network, so a phone on a field all day does no work.
+  function tickCountdown() {
+    var g = nextGame(); if (!g) return;
+    var mins = Math.round((new Date(g.kickoff).getTime() - Date.now()) / 60000);
+    if (isHQ(g)) { $('countN').textContent = clock(g.kickoff).replace(/\s?[AP]M/i, ''); $('countW').innerHTML = t('siteOpens'); }
+    else if (mins >= 0 && mins < 120) { $('countN').textContent = mins; $('countW').innerHTML = t('minutesToKickoff'); }
+    else if (mins >= 120) { $('countN').textContent = Math.floor(mins / 60); $('countW').innerHTML = t('hoursToKickoff'); }
+    else { $('countN').textContent = Math.abs(mins); $('countW').innerHTML = t('kickedOff') + '<br>' + t('minAgo'); }
+  }
   function renderDay() {
     var me = S.me, h = new Date().getHours();
     var greet = t(h < 12 ? 'greeting.morning' : h < 17 ? 'greeting.afternoon' : 'greeting.evening');
@@ -165,12 +175,8 @@
     var g = nextGame();
     var cd = $('countdown');
     if (g) {
-      var mins = Math.round((new Date(g.kickoff).getTime() - Date.now()) / 60000);
       cd.style.display = 'flex';
-      if (isHQ(g)) { $('countN').textContent = clock(g.kickoff).replace(/\s?[AP]M/i, ''); $('countW').innerHTML = t('siteOpens'); }
-      else if (mins >= 0 && mins < 120) { $('countN').textContent = mins; $('countW').innerHTML = t('minutesToKickoff'); }
-      else if (mins >= 120) { $('countN').textContent = Math.floor(mins / 60); $('countW').innerHTML = t('hoursToKickoff'); }
-      else { $('countN').textContent = Math.abs(mins); $('countW').innerHTML = t('kickedOff') + '<br>' + t('minAgo'); }
+      tickCountdown();
       $('nextCard').innerHTML = cardHtml(g);
       wireCheckin(g, $('nextCard'));
     } else {
@@ -1783,30 +1789,54 @@
   // so a burst of writes becomes one redraw. The 60-second timer stays as
   // the fallback for a phone that lost its connection.
   var LIVE = { channel: null, timer: null };
+  // Live updates cost battery: a socket held open and a reload on every
+  // change. So they run only for people running a venue, only while the
+  // Command Center board is on screen, only for today's rows, and never
+  // while the phone is in a pocket. A referee's screen is still right: a
+  // check-in is their own tap, and anything else refreshes when they come
+  // back to the app.
+  function liveWanted() {
+    return !!(S.me && (iCan('command_center') || iCan('scheduling')) && location.hash === '#ops' && !document.hidden);
+  }
   function liveStart() {
-    if (LIVE.channel || !sb.channel) return;
+    if (LIVE.channel || !sb.channel || !liveWanted()) return;
     try {
+      var today = todayStr();
       LIVE.channel = sb.channel('hub-live');
-      ['checkins', 'emergencies', 'scores', 'observations', 'announcements', 'coach_assignments', 'alerts', 'staff_messages'].forEach(function (table) {
-        LIVE.channel.on('postgres_changes', { event: '*', schema: 'public', table: table }, function () { liveBump(); });
-      });
+      LIVE.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'checkins', filter: 'date=eq.' + today }, function () { liveBump(); });
+      LIVE.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'staff_messages', filter: 'date=eq.' + today }, function () { liveBump(); });
+      LIVE.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'emergencies' }, function () { liveBump(); });
       LIVE.channel.subscribe();
     } catch (e) { LIVE.channel = null; }
   }
+  function liveStop() {
+    if (!LIVE.channel) return;
+    try { sb.removeChannel(LIVE.channel); } catch (e) {}
+    LIVE.channel = null;
+  }
+  function liveSync() { if (liveWanted()) liveStart(); else liveStop(); }
   var LOADING = false;
   // Never redraw under someone's fingers: if a box on this screen has focus, wait.
   function typing() { var a = document.activeElement; return !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== 'button'); }
+  // Many changes in a burst (a whole crew checking in) become one reload.
   function liveBump() {
     clearTimeout(LIVE.timer);
     LIVE.timer = setTimeout(function () {
       if (LOADING || typing()) { liveBump(); return; }
-      var h = location.hash;
-      if (h === '#ops') loadOps().then(renderOps);
-      else if (h === '#center') loadCenter().then(renderCenter);
-      else if (h === '#coach') loadCoach().then(renderCoach);
-      else if (h.indexOf('#game/') === 0) loadDay().then(function () { renderGame(h.slice(6)); });
-      else if (h === '' || h === '#day') loadDay().then(renderDay);
-    }, 400);
+      if (location.hash === '#ops' && !document.hidden) loadOps().then(renderOps);
+    }, 3000);
+  }
+  // Coming back to the app after a while: one fresh read of the screen you are on.
+  var LAST_ACTIVE = Date.now();
+  function refreshIfStale() {
+    if (!S.me || LOADING || typing() || document.hidden) return;
+    if (Date.now() - LAST_ACTIVE < 5 * 60000) return;
+    LAST_ACTIVE = Date.now();
+    var h = location.hash;
+    if (h === '#ops') loadOps().then(renderOps);
+    else if (h === '#center') loadCenter().then(renderCenter);
+    else if (h === '#coach') loadCoach().then(renderCoach);
+    else if (h === '' || h === '#day') loadDay().then(renderDay);
   }
 
   // ── Routing ──────────────────────────────────────────────────────
@@ -1843,8 +1873,21 @@
     if (S.me.language === 'es' && S.lang !== 'es') { S.lang = 'es'; applyWords(); }
     await loadDay();
     route();
-    liveStart();
-    setInterval(function () { if (!S.me || LOADING || typing()) return; if (location.hash === '#ops' && OPS.tab === 'board') loadOps().then(renderOps); else if (location.hash.indexOf('game') < 0 && location.hash.indexOf('#') !== 0 || location.hash === '#day' || location.hash === '') renderDay(); }, 60000);
+    liveSync();
+    var ticks = 0;
+    setInterval(function () {
+      if (!S.me || document.hidden) return;
+      ticks++;
+      if (location.hash === '' || location.hash === '#day') tickCountdown();
+      // The board without a live socket (a referee-only tester, or the socket dropped) refreshes every two minutes.
+      else if (location.hash === '#ops' && OPS.tab === 'board' && !LIVE.channel && ticks % 2 === 0 && !LOADING && !typing()) loadOps().then(renderOps);
+    }, 60000);
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { liveStop(); return; }
+      liveSync(); refreshIfStale();
+    });
+    window.addEventListener('hashchange', liveSync);
+    window.addEventListener('focus', refreshIfStale);
   }
 
   // ── Boot ─────────────────────────────────────────────────────────
@@ -1862,7 +1905,7 @@
     $('linkBtn').onclick = function () { LINK.rows = null; LINK.pick = null; renderLinks(); };
     $('peopleGo').onclick = function () { clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); };
     document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('[data-tab="staff"]'); if (a && a.getAttribute('href') === '#ops') OPS.openStaff = true; });
-    $('signOut').onclick = async function (e) { e.preventDefault(); if (LIVE.channel) { try { sb.removeChannel(LIVE.channel); } catch (er) {} LIVE.channel = null; } await sb.auth.signOut(); S.me = null; location.hash = ''; show('s-signin'); };
+    $('signOut').onclick = async function (e) { e.preventDefault(); liveStop(); await sb.auth.signOut(); S.me = null; location.hash = ''; show('s-signin'); };
     applyWords();
     document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v' + VERSION; });
     sb.auth.getSession().then(function (r) { if (r.data && r.data.session) start(); else show('s-signin'); });
