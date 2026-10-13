@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.13-c';
+  var VERSION = '2026.10.13-d';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1342,6 +1342,9 @@
       { name: t('stRetFirst'), short: t('stRetFirstShort'), values: rYears.map(function (y) { return pct(stVal(y, 'first_year_retained'), stVal(y, 'first_year_pool')); }) },
       { name: t('stRetU18'), short: t('stRetU18Short'), values: rYears.map(function (y) { return pct(stVal(y, 'u18_retained'), stVal(y, 'u18_pool')); }) }
     ], { label: t('stRetentionTitle') }) + '<div class="hint">' + esc(t('stRetentionHint')) + '</div></div>';
+    // Notes on the data: any year that carries one, in order
+    var noted = allYears.filter(function (y) { return stNote(y); });
+    if (noted.length) html += '<div class="card" style="gap:4px"><b>' + esc(t('stDataNotes')) + '</b>' + noted.map(function (y) { return '<div class="hint"><b>' + y + '</b> ' + esc(stNote(y)) + '</div>'; }).join('') + '</div>';
     // 4. One year in detail
     var yt = stVal(Y, 'referees');
     var d = function (m, s) { var a = stVal(Y, m, s), b = P ? stVal(P, m, s) : null; return a != null && b != null ? a - b : null; };
