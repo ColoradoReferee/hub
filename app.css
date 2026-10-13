@@ -274,3 +274,4 @@ table.dt th:first-child, table.dt td:first-child { text-align: left; }
 .chart.map .pin { fill: var(--c3); stroke: var(--surface); stroke-width: 0.8; }
 .chart.map .focusring { fill: var(--gold); fill-opacity: 0.18; stroke: var(--gold); stroke-width: 1.2; }
 .chart.map .focusdot { fill: var(--gold); stroke: var(--ink); stroke-width: 0.8; }
+.chip-btn.small { min-height: 36px; padding: 6px 12px; font-size: 14px; }

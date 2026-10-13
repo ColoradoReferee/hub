@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.13-j';
+  var VERSION = '2026.10.13-k';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1037,7 +1037,14 @@
   function renderSetup() {
     var ev = SU.ev;
     if (!ev) {
-      $('setupBody').innerHTML = '<div class="pad" style="padding-top:12px"><button class="btn primary" id="evNew" style="width:100%">' + esc(t('newEvent')) + '</button></div><div class="list">' + SU.events.map(function (e) {
+      // Events and competitions with no rules yet: the list to chase.
+      var noRules = SU.events.filter(function (e) { return e.active !== false && !e.rules_url; }).map(function (e) { return e.name || e.id; });
+      var covered = {}; SU.events.forEach(function (e) { if (e.rules_url && e.league) covered[key(e.league)] = 1; if (e.rules_url && e.name) covered[key(e.name)] = 1; });
+      var compNoRules = (SU.leagues || []).filter(function (c) { return !covered[key(c)] && !SU.events.some(function (e) { return e.rules_url && (key(e.name) === key(c) || (e.league && key(e.league) === key(c))); }); });
+      var rulesCard = (noRules.length || compNoRules.length) ? '<div class="card" style="border-color:var(--gold);gap:6px"><b>' + esc(t('rulesMissingTitle')) + '</b><div class="hint">' + esc(t('rulesMissingHint')) + '</div>' +
+        (noRules.length ? '<div><b>' + esc(t('rulesMissingEvents')) + '</b> ' + noRules.map(esc).join(', ') + '</div>' : '') +
+        (compNoRules.length ? '<div><b>' + esc(t('rulesMissingComps')) + '</b> ' + compNoRules.slice(0, 25).map(esc).join(', ') + (compNoRules.length > 25 ? ' +' + (compNoRules.length - 25) : '') + '</div>' : '') + '</div>' : '';
+      $('setupBody').innerHTML = rulesCard + '<div class="pad" style="padding-top:12px"><button class="btn primary" id="evNew" style="width:100%">' + esc(t('newEvent')) + '</button></div><div class="list">' + SU.events.map(function (e) {
         return '<a class="item" href="#" data-ev="' + esc(e.id) + '"><div><b>' + esc(e.name || e.id) + '</b> <span class="pill' + (e.active ? ' ok' : '') + '">' + esc(e.active ? t('evOn') : t('evOff')) + '</span><br><span class="hint">' + esc(e.type || '') + ', ' + esc(e.start_date || '') + (e.end_date && e.end_date !== e.start_date ? ' to ' + esc(e.end_date) : '') + ', ' + esc((e.venues || []).join(', ')) + (e.game_prefix ? ', ' + esc(e.game_prefix) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
       }).join('') + '</div>';
       $('evNew').onclick = function () { SU.ev = blankEvent(); SU.check = null; renderSetup(); };
@@ -1617,7 +1624,7 @@
     $('gameBody').innerHTML =
       '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(ev ? ev.name : g.competition || '') + (g.game_num ? ', ' + esc(g.game_num) : '') + ', ' + esc(dayLong(g.date)) + '</div>' +
       '<div class="row" style="display:flex;justify-content:space-between;align-items:baseline"><div class="disp" style="font-size:64px;line-height:.95">' + esc(clock(g.kickoff)) + '</div><div class="disp" style="font-size:64px;line-height:.95;color:var(--count)">' + esc(fieldShort(g.field)) + '</div></div>' +
-      (mins > 0 ? '<div class="lead">' + esc(t('kicksIn')) + ' ' + mins + ' min</div>' : '') + '</div>' +
+      (mins > 0 ? '<div class="lead">' + esc(t('kicksIn')) + ' ' + (mins < 120 ? mins + ' min' : mins < 48 * 60 ? Math.round(mins / 60) + ' ' + esc(t('hoursWord')) : Math.round(mins / 1440) + ' ' + esc(t('daysWord'))) + '</div>' : '') + '</div>' +
       '<div style="margin:14px 20px 0" id="gameCheckin">' + (inAt ? '<div class="btn done"><span class="disp">' + esc(t('checkedIn')) + '</span><small>' + esc(clock(inAt)) + '. ' + esc(t('checkedInAt')) + '</small></div>' : '<div class="actions" style="padding:0">' + checkinBtn(g, null) + '</div><div class="msg bad" id="ci-msg-' + esc(g.game_id) + '" hidden></div>') + '</div>' +
       '<div class="card"><div class="grid2"><div class="kv"><div class="k">' + esc(t('home')) + '</div><div class="v">' + esc(g.home || '') + '</div></div><div class="kv"><div class="k">' + esc(t('away')) + '</div><div class="v">' + esc(g.away || '') + '</div></div></div>' +
       '<div>' + esc(g.age_group || '') + (g.gender ? ', ' + esc(g.gender) : '') + (g.competition ? ', ' + esc(g.competition) : '') + '</div>' +
@@ -1636,21 +1643,24 @@
   }
   // ── Formal evaluation: the referee asks, the SDRD assigns a coach ──
   var ER = { mine: [], purpose: null };
+  // One small pill. Tapping it asks what the evaluation is for (the SDRD
+  // needs that to pick the coach), and that tap sends the request.
   function evalRequestHtml(g) {
     if (new Date(g.kickoff).getTime() < Date.now()) return '';
     var req = (ER.mine || []).filter(function (r) { return String(r.game_id) === String(g.game_id); })[0];
-    if (req) return '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('evalReqTitle')) + '</b><div>' + esc(t('evalPurpose.' + req.purpose)) + '. ' + esc(t('evalStatus.' + req.status)) + '</div></div>';
-    return '<div class="card" style="gap:8px" id="evalReqCard"><b>' + esc(t('evalReqTitle')) + '</b><div class="hint">' + esc(t('evalReqLead')) + '</div><div class="chips">' + ['maintenance', 'upgrade_regional', 'upgrade_national'].map(function (p) { return '<button class="chip-btn' + (ER.purpose === p ? ' on' : '') + '" data-purpose="' + p + '">' + esc(t('evalPurpose.' + p)) + '</button>'; }).join('') + '</div><button class="btn outline" id="evalReqSend"' + (ER.purpose ? '' : ' disabled') + '>' + esc(t('evalReqSend')) + '</button><div class="msg" id="evalReqMsg" hidden></div></div>';
+    if (req) return '<div class="pad" style="padding-top:10px"><span class="pill ok">' + esc(t('evalReqShort')) + ': ' + esc(t('evalPurpose.' + req.purpose)) + ', ' + esc(t('evalStatus.' + req.status)) + '</span></div>';
+    if (!ER.open) return '<div class="pad" style="padding-top:10px"><button class="chip-btn small" id="evalReqOpen">' + esc(t('evalReqShort')) + '</button></div>';
+    return '<div class="pad" style="padding-top:10px"><div class="hint" style="padding-bottom:6px">' + esc(t('evalReqWhy')) + '</div><div class="chips">' + ['maintenance', 'upgrade_regional', 'upgrade_national'].map(function (p) { return '<button class="chip-btn small" data-purpose="' + p + '">' + esc(t('evalPurpose.' + p)) + '</button>'; }).join('') + '<button class="chip-btn small" id="evalReqCancel">' + esc(t('neverMind')) + '</button></div><div class="msg" id="evalReqMsg" hidden></div></div>';
   }
   function wireEvalRequest(g) {
-    $('gameBody').querySelectorAll('[data-purpose]').forEach(function (b) { b.onclick = function () { ER.purpose = b.getAttribute('data-purpose'); renderGame(g.game_id); }; });
-    var send = $('evalReqSend');
-    if (send) send.onclick = async function () {
-      send.disabled = true;
-      var r = await sb.from('eval_requests').insert({ org_id: S.me.org_id, ref_person_id: S.me.person_id, ref_name: myNameOn(g), purpose: ER.purpose, game_id: g.game_id, game_date: g.date, venue: g.venue });
-      if (r.error) { send.disabled = false; say('evalReqMsg', r.error.message, 'bad'); return; }
-      ER.purpose = null; await loadEvalRequests(); renderGame(g.game_id);
-    };
+    var o = $('evalReqOpen'); if (o) o.onclick = function () { ER.open = true; renderGame(g.game_id); };
+    var c = $('evalReqCancel'); if (c) c.onclick = function () { ER.open = false; renderGame(g.game_id); };
+    $('gameBody').querySelectorAll('[data-purpose]').forEach(function (b) { b.onclick = async function () {
+      b.disabled = true; b.textContent = t('sending');
+      var r = await sb.from('eval_requests').insert({ org_id: S.me.org_id, ref_person_id: S.me.person_id, ref_name: myNameOn(g), purpose: b.getAttribute('data-purpose'), game_id: g.game_id, game_date: g.date, venue: g.venue });
+      if (r.error) { b.disabled = false; b.textContent = t('evalPurpose.' + b.getAttribute('data-purpose')); say('evalReqMsg', r.error.message, 'bad'); return; }
+      ER.open = false; await loadEvalRequests(); renderGame(g.game_id);
+    }; });
   }
   async function loadEvalRequests() {
     var r = await sb.from('eval_requests').select('id,game_id,game_date,venue,purpose,status,coach_person_id,ref_name,ref_person_id,note,created_at').order('game_date');
