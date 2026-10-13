@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.13-f';
+  var VERSION = '2026.10.13-g';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1234,7 +1234,9 @@
   // ── State view: the program by year (SRA / SYRA / SDRO / ADMIN) ───
   var ST = { rows: [], year: null, table: false };
   async function loadState_() {
-    var r = await sb.from('program_years').select('year,metric,segment,value,note').order('year');
+    // 1,600+ rows now that ZIPs are in; the database hands back 1,000 per
+    // request, so page through, or the far ZIPs silently vanish.
+    var r = await fetchAll(function () { return sb.from('program_years').select('year,metric,segment,value,note').order('year').order('metric').order('segment'); });
     if (r.error) throw r.error;
     ST.rows = r.data || [];
     // Live season numbers from the same view the Coverage tab uses.
