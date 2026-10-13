@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.13-n';
+  var VERSION = '2026.10.13-o';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -141,7 +141,8 @@
       loadEvalRequests(),
       wide ? sb.from('staff_messages').select('id,from_name,to_venue,body,created_at').eq('date', today).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [] }),
       sb.rpc('coached_venues', { p_date: today }),
-      sb.from('late_notices').select('id,game_id,ref_name,venue,field,eta_min,created_at,ack_by,ack_at').eq('date', today)
+      sb.from('late_notices').select('id,game_id,ref_name,venue,field,eta_min,created_at,ack_by,ack_at').eq('date', today),
+      loadSessions_()
     ]);
     S.games = (r[0].data || []).filter(function (x) { return ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(x[k])) >= 0; }); });
     S.events = r[1].data || [];
@@ -165,6 +166,97 @@
     return '<details class="fold" data-fold="' + esc(k) + '"' + (open ? ' open' : '') + '><summary><span class="t">' + esc(title) + '</span><span class="n">' + count + '</span></summary><div class="fold-body">' + inner + '</div></details>';
   }
   document.addEventListener('toggle', function (e) { var d = e.target; if (d && d.matches && d.matches('details.fold')) FOLD[d.getAttribute('data-fold')] = d.open; }, true);
+
+  // ── Sessions: fitness tests, classes, clinics ────────────────────
+  var SES = { list: [], mine: [], counts: {}, open: null, roster: [], form: null };
+  function runsSessions() { return iCan('setup') || iCan('review'); }
+  async function loadSessions_() {
+    var today = todayStr();
+    var r = await Promise.all([
+      sb.from('sessions').select('id,kind,title,date,start_time,end_time,venue,address,capacity,open_to,notes,active').gte('date', today).eq('active', true).order('date').order('start_time'),
+      sb.from('session_signups').select('id,session_id,status,result').eq('person_id', S.me.person_id),
+      sb.rpc('session_counts')
+    ]);
+    SES.list = r[0].data || []; SES.mine = r[1].data || [];
+    SES.counts = {}; (r[2].data || []).forEach(function (c) { SES.counts[String(c.session_id)] = Number(c.signed); });
+  }
+  function mySignup(sid) { return SES.mine.filter(function (x) { return String(x.session_id) === String(sid); })[0]; }
+  function sessionLine(x) { return esc(dayLong(x.date)) + (x.start_time ? ', ' + esc(hhmm(x.start_time)) + (x.end_time ? ' to ' + esc(hhmm(x.end_time)) : '') : '') + (x.venue ? ', ' + esc(x.venue) : ''); }
+  // The sign-up card on Your day: upcoming sessions a referee may join.
+  function signupCardHtml() {
+    var list = SES.list.filter(function (x) { return x.open_to !== 'invite' || mySignup(x.id); });
+    if (!list.length) return '';
+    return '<div class="card" style="gap:8px;border-color:var(--gold)"><b>' + esc(t('sesTitle')) + '</b>' + list.map(function (x) {
+      var me = mySignup(x.id), n = SES.counts[String(x.id)] || 0, full = x.capacity && n >= x.capacity && !me;
+      var state = me ? (me.status === 'passed' ? t('sesPassed') : me.status === 'failed' ? t('sesFailed') : me.status === 'no_show' ? t('sesNoShow') : me.status === 'waitlist' ? t('sesWaitlisted') : t('sesIn')) : (full ? t('sesFull') : (x.capacity ? t('sesSpots').replace('{n}', x.capacity - n) : ''));
+      return '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><div><b>' + esc(t('sesKind.' + x.kind)) + ': ' + esc(x.title) + '</b><br><span class="hint">' + sessionLine(x) + (state ? '. ' + esc(state) : '') + '</span>' + (x.notes ? '<br><span class="hint">' + esc(x.notes) + '</span>' : '') + '</div>' +
+        (me && ['signed', 'waitlist'].indexOf(me.status) >= 0 ? '<button class="btn outline small" data-ses-out="' + me.id + '">' + esc(t('sesWithdraw')) + '</button>' : (!me && !full ? '<button class="btn primary small" data-ses-in="' + x.id + '">' + esc(t('sesSignUp')) + '</button>' : '')) + '</div>';
+    }).join('') + '<div class="msg" id="sesMsg" hidden></div></div>';
+  }
+  function wireSignup(root) {
+    root.querySelectorAll('[data-ses-in]').forEach(function (b) { b.onclick = async function () {
+      b.disabled = true; var sid = parseInt(b.getAttribute('data-ses-in'), 10), x = SES.list.filter(function (y) { return y.id === sid; })[0];
+      var n = SES.counts[String(sid)] || 0, status = x && x.capacity && n >= x.capacity ? 'waitlist' : 'signed';
+      var r = await sb.from('session_signups').insert({ org_id: S.me.org_id, session_id: sid, person_id: S.me.person_id, name: S.me.first_name + ' ' + S.me.last_name, status: status });
+      if (r.error) { b.disabled = false; say('sesMsg', r.error.message, 'bad'); return; }
+      await loadSessions_(); renderDay();
+    }; });
+    root.querySelectorAll('[data-ses-out]').forEach(function (b) { b.onclick = async function () {
+      if (!window.confirm(t('sesWithdrawConfirm'))) return;
+      b.disabled = true;
+      var r = await sb.from('session_signups').delete().eq('id', parseInt(b.getAttribute('data-ses-out'), 10));
+      if (r.error) { b.disabled = false; say('sesMsg', r.error.message, 'bad'); return; }
+      await loadSessions_(); renderDay();
+    }; });
+  }
+  // Setup side: list, create, roster and results.
+  function sessionsSetupHtml() {
+    if (SES.open) {
+      var x = SES.list.filter(function (y) { return y.id === SES.open; })[0] || SES.pastOpen;
+      if (!x) { SES.open = null; return sessionsSetupHtml(); }
+      var roster = SES.roster || [], n = roster.filter(function (r) { return r.status !== 'withdrawn' && r.status !== 'waitlist'; }).length;
+      var res = function (r, k, label) { return '<button class="chip-btn small' + (r.status === k ? ' on' : '') + '" data-ses-res="' + r.id + '" data-res="' + k + '">' + esc(label) + '</button>'; };
+      return '<div class="pad no-print" style="padding-top:12px;display:flex;gap:8px"><button class="btn outline small" id="sesBack">' + esc(t('back')) + '</button><button class="btn outline small" id="sesPrint">' + esc(t('print')) + '</button><button class="btn outline small" id="sesClose" style="margin-left:auto">' + esc(x.active ? t('sesCancel') : t('sesReopen')) + '</button></div>' +
+        '<div class="pad" style="padding-top:12px"><div class="disp" style="font-size:30px">' + esc(x.title) + '</div><div class="hint">' + esc(t('sesKind.' + x.kind)) + '. ' + sessionLine(x) + (x.address ? '. ' + esc(x.address) : '') + '</div><div class="hint">' + n + (x.capacity ? ' / ' + x.capacity : '') + ' ' + esc(t('sesSignedUp')) + '</div></div>' +
+        (roster.length ? roster.map(function (r) { return '<div class="card" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + refLink(r.name) + '</b><span class="hint">' + esc(r.status === 'waitlist' ? t('sesWaitlisted') : '') + '</span></div><div class="chips no-print">' + res(r, 'passed', t('sesMarkPassed')) + res(r, 'failed', t('sesMarkFailed')) + res(r, 'no_show', t('sesMarkNoShow')) + res(r, 'signed', t('sesMarkClear')) + '</div></div>'; }).join('') : '<div class="card"><div class="hint">' + esc(t('sesNobody')) + '</div></div>');
+    }
+    var f = SES.form;
+    var inp = function (id, v, type, extra) { return '<input id="' + id + '" type="' + (type || 'text') + '" value="' + esc(v == null ? '' : v) + '" ' + (extra || '') + ' style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">'; };
+    var form = !f ? '<div class="pad" style="padding-top:12px"><button class="btn outline" id="sesNew" style="width:100%">' + esc(t('sesNew')) + '</button></div>' :
+      '<div class="card" style="gap:8px"><b>' + esc(t('sesNew')) + '</b><div class="chips">' + ['fitness', 'class', 'clinic'].map(function (k) { return '<button class="chip-btn small' + (f.kind === k ? ' on' : '') + '" data-ses-kind="' + k + '">' + esc(t('sesKind.' + k)) + '</button>'; }).join('') + '</div>' +
+      '<label class="hint" for="sesTitle">' + esc(t('sesFieldTitle')) + '</label>' + inp('sesTitle', f.title) +
+      '<div class="grid2"><div><label class="hint" for="sesDate">' + esc(t('eodDate')) + '</label>' + inp('sesDate', f.date, 'date') + '</div><div><label class="hint" for="sesCap">' + esc(t('sesCapacity')) + '</label>' + inp('sesCap', f.capacity, 'number', 'min="1"') + '</div></div>' +
+      '<div class="grid2"><div><label class="hint" for="sesStart">' + esc(t('sesStart')) + '</label>' + inp('sesStart', f.start_time, 'time') + '</div><div><label class="hint" for="sesEnd">' + esc(t('sesEnd')) + '</label>' + inp('sesEnd', f.end_time, 'time') + '</div></div>' +
+      '<label class="hint" for="sesVenue">' + esc(t('eodVenue')) + '</label>' + inp('sesVenue', f.venue) +
+      '<label class="hint" for="sesAddr">' + esc(t('sesAddress')) + '</label>' + inp('sesAddr', f.address) +
+      '<label class="hint" for="sesOpen">' + esc(t('sesOpenTo')) + '</label><select id="sesOpen" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' + ['all', 'regional', 'invite'].map(function (k) { return '<option value="' + k + '"' + (f.open_to === k ? ' selected' : '') + '>' + esc(t('sesOpen.' + k)) + '</option>'; }).join('') + '</select>' +
+      '<label class="hint" for="sesNotes">' + esc(t('sesNotes')) + '</label><textarea id="sesNotes" style="min-height:70px">' + esc(f.notes || '') + '</textarea>' +
+      '<div class="actions" style="padding:0"><button class="btn primary" id="sesSave">' + esc(t('sesSave')) + '</button><button class="btn outline" id="sesCancelForm">' + esc(t('neverMind')) + '</button></div><div class="msg" id="sesFormMsg" hidden></div></div>';
+    return '<div class="disp h2">' + esc(t('sesSetupTitle')) + '</div>' + form + (SES.list.length ? '<div class="list">' + SES.list.map(function (x) { var n = SES.counts[String(x.id)] || 0; return '<a class="item" href="#" data-ses-open="' + x.id + '"><div><b>' + esc(t('sesKind.' + x.kind)) + ': ' + esc(x.title) + '</b><br><span class="hint">' + sessionLine(x) + '. ' + n + (x.capacity ? ' / ' + x.capacity : '') + ' ' + esc(t('sesSignedUp')) + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>' : '<div class="pad hint">' + esc(t('sesNone')) + '</div>');
+  }
+  function wireSessionsSetup(root) {
+    var nb = $('sesNew'); if (nb) nb.onclick = function () { SES.form = { kind: 'fitness', title: '', date: todayStr(), capacity: '', start_time: '', end_time: '', venue: '', address: '', open_to: 'all', notes: '' }; renderSetup(); };
+    var cf = $('sesCancelForm'); if (cf) cf.onclick = function () { SES.form = null; renderSetup(); };
+    root.querySelectorAll('[data-ses-kind]').forEach(function (b) { b.onclick = function () { SES.form.kind = b.getAttribute('data-ses-kind'); root.querySelectorAll('[data-ses-kind]').forEach(function (c) { c.classList.toggle('on', c === b); }); }; });
+    var sv = $('sesSave'); if (sv) sv.onclick = async function () {
+      var f = SES.form; f.title = $('sesTitle').value.trim(); f.date = $('sesDate').value; f.capacity = $('sesCap').value ? parseInt($('sesCap').value, 10) : null; f.start_time = $('sesStart').value || null; f.end_time = $('sesEnd').value || null; f.venue = $('sesVenue').value.trim(); f.address = $('sesAddr').value.trim(); f.open_to = $('sesOpen').value; f.notes = $('sesNotes').value.trim();
+      if (!f.title || !f.date) { say('sesFormMsg', t('sesNeedTitleDate'), 'bad'); return; }
+      sv.disabled = true;
+      var r = await sb.from('sessions').insert({ org_id: S.me.org_id, kind: f.kind, title: f.title, date: f.date, start_time: f.start_time, end_time: f.end_time, venue: f.venue, address: f.address, capacity: f.capacity, open_to: f.open_to, notes: f.notes, created_by: S.me.first_name + ' ' + S.me.last_name });
+      if (r.error) { sv.disabled = false; say('sesFormMsg', r.error.message, 'bad'); return; }
+      SES.form = null; await loadSessions_(); renderSetup();
+    };
+    root.querySelectorAll('[data-ses-open]').forEach(function (a) { a.onclick = async function (e) { e.preventDefault(); SES.open = parseInt(a.getAttribute('data-ses-open'), 10); busy(true); var r = await sb.from('session_signups').select('id,person_id,name,status,result,created_at').eq('session_id', SES.open).order('created_at'); busy(false); SES.roster = r.data || []; renderSetup(); }; });
+    var bk = $('sesBack'); if (bk) bk.onclick = function () { SES.open = null; renderSetup(); };
+    var pr = $('sesPrint'); if (pr) pr.onclick = function () { window.print(); };
+    var cl = $('sesClose'); if (cl) cl.onclick = async function () { var x = SES.list.filter(function (y) { return y.id === SES.open; })[0]; if (!x || !window.confirm(t('sesCancelConfirm'))) return; await sb.from('sessions').update({ active: !x.active }).eq('id', x.id); SES.open = null; await loadSessions_(); renderSetup(); };
+    root.querySelectorAll('[data-ses-res]').forEach(function (b) { b.onclick = async function () {
+      var id = parseInt(b.getAttribute('data-ses-res'), 10), st = b.getAttribute('data-res');
+      var r = await sb.from('session_signups').update({ status: st, updated_at: new Date().toISOString() }).eq('id', id);
+      if (r.error) return;
+      SES.roster.forEach(function (x) { if (x.id === id) x.status = st; }); renderSetup();
+    }; });
+  }
 
   // ── Your day ─────────────────────────────────────────────────────
   function nextGame() {
@@ -217,6 +309,7 @@
     $('staffLine').innerHTML = (S.staffMsgs || []).length ? '<a class="rowbtn" href="#ops" data-tab="staff" style="margin-top:10px;border-color:var(--gold)"><span><span class="t">' + esc(t('smTodayTitle').replace('{n}', S.staffMsgs.length)) + '</span><br><span class="s">' + esc((S.staffMsgs[0].from_name || '') + ': ' + S.staffMsgs[0].body.slice(0, 90)) + '</span></span></a>' : '';
     var coachedHere = S.games.some(function (x) { return (S.coachedVenues || []).indexOf(x.venue) >= 0; });
     var myEval = (ER.mine || []).filter(function (r) { return r.ref_person_id === S.me.person_id && r.status === 'assigned' && r.game_date >= todayStr(); })[0];
+    $('sessionsLine').innerHTML = signupCardHtml(); wireSignup($('sessionsLine'));
     $('evalLine').innerHTML = myEval ? '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('evalReqTitle')) + '</b><div>' + esc(dayLong(myEval.game_date)) + ', ' + esc(myEval.venue || '') + '. ' + esc(t('evalPurpose.' + myEval.purpose)) + '. ' + esc(t('evalStatus.assigned')) + '</div></div>' : '';
     $('bulletins').innerHTML = (coachedHere ? '<div class="bulletin"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="9" stroke="currentColor" stroke-width="2"></circle><path d="M7 11.5l3 3 5-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><div class="text">' + esc(t('coachHereToday')) + ' <a href="#" id="badgeLink">' + esc(t('lanyard')) + '</a><div id="badgeBox" hidden style="margin-top:8px"><img src="assets/badge.png" alt="" style="width:130px;border-radius:8px"><div class="hint">' + esc(t('badgeCaption')) + '</div></div></div></div>' : '') + S.bulletins.slice(0, 2).map(function (b) {
       return '<div class="bulletin"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="9" stroke="currentColor" stroke-width="2"></circle><path d="M11 6v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><circle cx="11" cy="15.5" r="1.2" fill="currentColor"></circle></svg><div class="text">' + (b.title ? '<b>' + esc(b.title) + '</b> ' : '') + esc(b.body || '') + ' <span>' + esc(t('fromState')) + '.</span></div></div>';
@@ -1125,6 +1218,7 @@
   var TOOLS = ['hub', 'coaching', 'checkin', 'scoreboard', 'scoreentry', 'rules', 'screports', 'incident'];
   function slug(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24); }
   async function loadSetup_() {
+    await loadSessions_();
     var e = await sb.from('events').select('id,name,type,year,start_date,end_date,site_id,league,venues,tools,url,accent,blurb,active,alert_emails,game_prefix,rules_url').order('start_date', { ascending: false }).limit(200);
     SU.events = e.data || [];
     var from = shiftDate(todayStr(), -60), to = shiftDate(todayStr(), 60);
@@ -1152,9 +1246,11 @@
       var rulesCard = (noRules.length || compNoRules.length) ? '<div class="card" style="border-color:var(--gold);gap:6px"><b>' + esc(t('rulesMissingTitle')) + '</b><div class="hint">' + esc(t('rulesMissingHint')) + '</div>' +
         (noRules.length ? '<div><b>' + esc(t('rulesMissingEvents')) + '</b> ' + noRules.map(esc).join(', ') + '</div>' : '') +
         (compNoRules.length ? '<div><b>' + esc(t('rulesMissingComps')) + '</b> ' + compNoRules.slice(0, 25).map(esc).join(', ') + (compNoRules.length > 25 ? ' +' + (compNoRules.length - 25) : '') + '</div>' : '') + '</div>' : '';
-      $('setupBody').innerHTML = rulesCard + '<div class="pad" style="padding-top:12px"><button class="btn primary" id="evNew" style="width:100%">' + esc(t('newEvent')) + '</button></div><div class="list">' + SU.events.map(function (e) {
+      if (SES.open) { $('setupBody').innerHTML = sessionsSetupHtml(); wireSessionsSetup($('setupBody')); return; }
+      $('setupBody').innerHTML = rulesCard + sessionsSetupHtml() + '<div class="disp h2">' + esc(t('setupEventsTitle')) + '</div><div class="pad" style="padding-top:12px"><button class="btn primary" id="evNew" style="width:100%">' + esc(t('newEvent')) + '</button></div><div class="list">' + SU.events.map(function (e) {
         return '<a class="item" href="#" data-ev="' + esc(e.id) + '"><div><b>' + esc(e.name || e.id) + '</b> <span class="pill' + (e.active ? ' ok' : '') + '">' + esc(e.active ? t('evOn') : t('evOff')) + '</span><br><span class="hint">' + esc(e.type || '') + ', ' + esc(e.start_date || '') + (e.end_date && e.end_date !== e.start_date ? ' to ' + esc(e.end_date) : '') + ', ' + esc((e.venues || []).join(', ')) + (e.game_prefix ? ', ' + esc(e.game_prefix) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
       }).join('') + '</div>';
+      wireSessionsSetup($('setupBody'));
       $('evNew').onclick = function () { SU.ev = blankEvent(); SU.check = null; renderSetup(); };
       $('setupBody').querySelectorAll('[data-ev]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); var src = SU.events.filter(function (x) { return x.id === a.getAttribute('data-ev'); })[0]; SU.ev = JSON.parse(JSON.stringify(src)); SU.ev.venues = SU.ev.venues || []; SU.ev.tools = SU.ev.tools || []; SU.ev.alert_emails = SU.ev.alert_emails || []; SU.check = null; renderSetup(); }; });
       return;

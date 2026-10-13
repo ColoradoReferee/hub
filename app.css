@@ -308,3 +308,4 @@ details.fold > .fold-body > .list { padding-top: 8px; }
 .card.attn .why.late { color: #8a6500; }
 .card.attn .why.late-ok { color: var(--green); }
 .card.attn .why .refname { color: inherit; }
+.btn.small { white-space: nowrap; }
