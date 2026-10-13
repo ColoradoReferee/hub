@@ -292,3 +292,19 @@ details.fold > .fold-body > .list { padding-top: 8px; }
   #stateBody > .stats, #stateBody > .disp.h2, #stateBody > .pad, #stateBody > table, #stateBody > .card.chartcard.wide { grid-column: 1 / -1; }
   #stateBody > .stats.two { grid-template-columns: repeat(4, 1fr); }
 }
+
+/* Needs attention cards on the board */
+.card.attn { width: calc(100% - 40px); text-align: left; font: inherit; color: var(--ink); cursor: pointer; border-color: var(--gold); border-width: 2px; gap: 4px; }
+.card.attn.severe { border-color: var(--red); }
+.card.attn .why { font-size: 14px; font-weight: 700; }
+.card.attn .why.missing { color: var(--red); }
+.card.attn .why.open { color: var(--muted); }
+.card.attn .why.help { color: var(--red); }
+.card.attn .why.alert { color: #8a6500; }
+
+.late { margin-top: 8px; font-size: 14px; font-weight: 700; color: #8a6500; }
+.late.ok { color: var(--green); }
+.card.attn .why.warn { color: #8a6500; }
+.card.attn .why.late { color: #8a6500; }
+.card.attn .why.late-ok { color: var(--green); }
+.card.attn .why .refname { color: inherit; }

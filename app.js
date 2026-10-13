@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.13-l';
+  var VERSION = '2026.10.13-n';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -140,7 +140,8 @@
       sb.from('scores').select('game_id,home_score,away_score,status,entered_by,created_at').eq('date', today),
       loadEvalRequests(),
       wide ? sb.from('staff_messages').select('id,from_name,to_venue,body,created_at').eq('date', today).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [] }),
-      sb.rpc('coached_venues', { p_date: today })
+      sb.rpc('coached_venues', { p_date: today }),
+      sb.from('late_notices').select('id,game_id,ref_name,venue,field,eta_min,created_at,ack_by,ack_at').eq('date', today)
     ]);
     S.games = (r[0].data || []).filter(function (x) { return ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(x[k])) >= 0; }); });
     S.events = r[1].data || [];
@@ -151,7 +152,9 @@
     S.scores = {}; (r[5].data || []).forEach(function (x) { S.scores[String(x.game_id)] = x; });
     S.staffMsgs = r[7].data || [];
     S.coachedVenues = (r[8].data || []).map(function (x) { return typeof x === 'string' ? x : x.coached_venues; });
+    S.late = (r[9].data || []).filter(function (l) { return keys.indexOf(key(l.ref_name)) >= 0; });
   }
+  function myLate(g) { return (S.late || []).filter(function (l) { return String(l.game_id) === String(g.game_id) || (l.venue === g.venue && !l.game_id); })[0]; }
 
   // A folded section: one row with a count, tap to open. Native <details>,
   // so it works the same on iOS and Android with no script, and the open
@@ -190,7 +193,7 @@
       cd.style.display = 'flex';
       tickCountdown();
       $('nextCard').innerHTML = cardHtml(g);
-      wireCheckin(g, $('nextCard'));
+      wireCheckin(g, $('nextCard')); wireLate($('nextCard'));
     } else {
       cd.style.display = 'none';
       $('nextCard').innerHTML = '<div class="card"><div class="disp" style="font-size:28px">' + esc(t('noGamesToday')) + '</div><div class="hint">' + esc(t('noGamesHint')) + '</div></div>';
@@ -268,7 +271,28 @@
     return '<div class="card"><div class="row"><div class="disp big">' + esc(clock(g.kickoff)) + '</div><div class="disp big">' + esc(String(g.field || '').toUpperCase()) + '</div></div>' +
       '<div>' + (isCoachSlot(g) ? esc(t('coachSlot')) + (g.field ? ', ' + esc(g.field) : '') : esc(g.age_group || '') + (g.competition ? ', ' + esc(g.competition) : '') + '. ' + esc(t('youAre')) + ' ' + esc(t('role.' + myRole(g)))) + '.</div>' +
       '<div class="actions">' + checkinBtn(g, inAt) + '<a class="btn outline" href="#game/' + esc(g.game_id) + '">' + esc(t('details')) + '</a></div>' +
-      '<div class="hint">' + esc(t('checkinWhere')) + '</div><div class="msg bad" id="ci-msg-' + esc(g.game_id) + '" hidden></div></div>';
+      '<div class="hint">' + esc(t('checkinWhere')) + '</div>' + lateHtml(g, inAt) + '<div class="msg bad" id="ci-msg-' + esc(g.game_id) + '" hidden></div></div>';
+  }
+  // Running late: one tap tells the Site Coordinator; the card then shows
+  // whether the SC has seen it. Only before check-in, only before kickoff.
+  function lateHtml(g, inAt) {
+    if (inAt || gameState(g) === 'done') return '';
+    var l = myLate(g);
+    if (l) return '<div class="late' + (l.ack_at ? ' ok' : '') + '">' + esc(l.ack_at ? t('lateAcked').replace('{t}', clock(l.ack_at)) : t('lateSent').replace('{n}', l.eta_min || '')) + '</div>';
+    if (LATE.open === String(g.game_id)) return '<div class="chips" style="margin-top:8px">' + [10, 20, 30, 45].map(function (m) { return '<button class="chip-btn small" data-late="' + m + '" data-late-game="' + esc(g.game_id) + '">' + m + ' min</button>'; }).join('') + '<button class="chip-btn small" data-late-cancel="1">' + esc(t('neverMind')) + '</button></div>';
+    return '<div style="margin-top:8px"><button class="linkbtn" data-late-open="' + esc(g.game_id) + '">' + esc(t('runningLate')) + '</button></div>';
+  }
+  var LATE = { open: null };
+  function wireLate(root) {
+    root.querySelectorAll('[data-late-open]').forEach(function (b) { b.onclick = function () { LATE.open = b.getAttribute('data-late-open'); renderAll(); }; });
+    root.querySelectorAll('[data-late-cancel]').forEach(function (b) { b.onclick = function () { LATE.open = null; renderAll(); }; });
+    root.querySelectorAll('[data-late]').forEach(function (b) { b.onclick = async function () {
+      var g = S.games.filter(function (x) { return String(x.game_id) === b.getAttribute('data-late-game'); })[0]; if (!g) return;
+      b.disabled = true;
+      var r = await sb.from('late_notices').insert({ org_id: S.me.org_id, date: g.date, game_id: g.game_id, ref_name: myNameOn(g), venue: g.venue, field: g.field, eta_min: parseInt(b.getAttribute('data-late'), 10) }).select('id,game_id,ref_name,venue,field,eta_min,created_at,ack_by,ack_at');
+      if (r.error) { b.disabled = false; var m = root.querySelector('#ci-msg-' + g.game_id); if (m) { m.hidden = false; m.textContent = r.error.message; } return; }
+      LATE.open = null; S.late = (S.late || []).concat(r.data || []); renderAll();
+    }; });
   }
   function checkinBtn(g, inAt) {
     if (inAt) return '<div class="btn done" style="flex-grow:1"><span class="disp">' + esc(t('checkedIn')) + '</span><small>' + esc(clock(inAt)) + '. ' + esc(t('checkedInAt')) + '</small></div>';
@@ -734,15 +758,18 @@
   function shiftDate(iso, n) { var d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return iso.length ? iso.slice(0, 0) + d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') : iso; }
   async function loadOps_() {
     if (!OPS.date) OPS.date = todayStr();
+    if (OPS.focus == null) { try { OPS.focus = localStorage.getItem('hub-focus') === '1'; } catch (e) { OPS.focus = false; } }
     var r = await Promise.all([
       fetchAll(function () { return sb.from('games').select('game_id,kickoff,field,age_group,competition,cr,ar1,ar2,fourth,venue,status,game_num,hq_role,hq_staff,home,away').eq('date', OPS.date).not('status', 'in', '(C,X,canceled_no_pay)').order('venue').order('kickoff'); }),
       fetchAll(function () { return sb.from('checkins').select('ref_name,game_id,created_at').eq('date', OPS.date).order('created_at'); }),
       sb.from('emergencies').select('id,src_key,created_at,ref_name,venue,field,reason,status,ack_by').gte('created_at', OPS.date + 'T00:00:00').lte('created_at', OPS.date + 'T23:59:59').order('created_at', { ascending: false }),
       sb.from('announcements').select('id,src_key,created_at,start_date,end_date,venue,event_id,title,body,severity,active,posted_by').order('created_at', { ascending: false }).limit(40),
       sb.from('staff_messages').select('id,from_name,to_venue,date,body,created_at').eq('date', OPS.date).order('created_at', { ascending: false }).limit(100),
-      sb.from('alerts').select('id,kind,game_id,ref_name,position,game_date,venue,field,kickoff,age_group,detail,status,seen_by').gte('game_date', todayStr()).order('game_date').order('kickoff').limit(300)
+      sb.from('alerts').select('id,kind,game_id,ref_name,position,game_date,venue,field,kickoff,age_group,detail,status,seen_by').gte('game_date', todayStr()).order('game_date').order('kickoff').limit(300),
+      sb.from('late_notices').select('id,game_id,ref_name,venue,field,eta_min,created_at,ack_by,ack_at').eq('date', OPS.date)
     ]);
     if (r[0].error) { OPS.error = r[0].error.message || String(r[0].error); return; }   // keep what we have, say why
+    OPS.late = r[6].data || [];
     OPS.error = '';
     OPS.games = r[0].data || [];
     OPS.checkins = r[1].data || [];
@@ -804,6 +831,46 @@
     return active.map(slotHtml).join('') + (finished.length ? fold('ops-finished-' + OPS.date, t('finishedSlots'), finished.length, finished.map(slotHtml).join(''), !active.length) : '');
   }
   function inSet() { var s = {}; OPS.checkins.forEach(function (c) { s[key(c.ref_name)] = c.created_at; }); return s; }
+  // Needs attention: only the games where something is wrong right now.
+  // A crew member not checked in with kickoff inside 45 minutes or the
+  // game under way, an open slot, an open Help call, or an open
+  // protection alert. Finished games never. Everything green is hidden,
+  // so a Site Coordinator at twenty fields sees only the fields to walk to.
+  var ATTN_WARN = 30, ATTN_ALERT = 15, ATTN_MINS = 30;
+  function lateFor(name, g) { return (OPS.late || []).filter(function (l) { return key(l.ref_name) === key(name) && (String(l.game_id) === String(g.game_id) || l.venue === g.venue); })[0]; }
+  function attentionItems(games, ins) {
+    var now = Date.now(), out = [];
+    var helpByVenue = {}; OPS.help.forEach(function (h) { if (h.status === 'open') (helpByVenue[h.venue] = helpByVenue[h.venue] || []).push(h); });
+    games.forEach(function (g) {
+      if (isHQ(g) || isCoachSlot(g)) return;
+      var st = gameState(g); if (st === 'done') return;
+      var k = new Date(g.kickoff).getTime(), minsTo = (k - now) / 60000, soon = st === 'live' || minsTo <= ATTN_WARN, urgent = st === 'live' || minsTo <= ATTN_ALERT;
+      var missing = [], open = [], late = [];
+      ['cr', 'ar1', 'ar2', 'fourth'].forEach(function (x) { var n = g[x]; if (!n) return; if (/^(tbd|open|none)$/i.test(n)) open.push(t('role.' + x)); else if (!ins[key(n)]) { var l = lateFor(n, g); if (l) late.push({ name: n, role: t('role.' + x), l: l }); else missing.push({ name: n, role: t('role.' + x) }); } });
+      var alerts = OPS.alerts.filter(function (a) { return a.status === 'open' && String(a.game_id) === String(g.game_id); });
+      var help = (helpByVenue[g.venue] || []).filter(function (h) { return !h.field || key(h.field) === key(g.field); });
+      var why = [];
+      var nameLink = function (n) { return '<a class="refname" href="#ref/' + encodeURIComponent(n) + '">' + esc(n) + '</a>'; };
+      if (soon && missing.length) why.push({ kind: urgent ? 'missing' : 'warn', html: esc(t(urgent ? 'attnMissing' : 'attnWarn').replace('{n}', missing.length)) + ' ' + missing.map(function (m) { return nameLink(m.name) + ' (' + esc(m.role) + ')'; }).join(', ') });
+      late.forEach(function (x) { why.push({ kind: x.l.ack_at ? 'late-ok' : 'late', html: esc((x.l.ack_at ? t('attnLateAcked') : t('attnLate')).replace('{n}', x.l.eta_min || '').replace('{t}', clock(x.l.created_at))).replace('{name}', nameLink(x.name)), late: x.l }); });
+      if (open.length) why.push({ kind: 'open', text: t('attnOpen') + ' ' + open.join(', ') });
+      if (help.length) why.push({ kind: 'help', text: t('attnHelp') + ' ' + help.map(function (h) { return h.reason || ''; }).join(', ') });
+      if (alerts.length) why.push({ kind: 'alert', text: t('attnAlert') + ' ' + alerts.map(function (a) { return a.detail || a.kind || ''; }).join('; ') });
+      if (why.length) out.push({ g: g, st: st, mins: Math.round(minsTo), why: why, severe: !!(help.length || (urgent && missing.length)) });
+    });
+    out.sort(function (a, b) { return (b.severe - a.severe) || (new Date(a.g.kickoff) - new Date(b.g.kickoff)); });
+    return out;
+  }
+  function attentionHtml(games, ins, showVenue) {
+    var items = attentionItems(games, ins);
+    if (!items.length) return '<div class="card" style="border-color:var(--green);text-align:center;gap:4px"><div class="disp" style="font-size:30px;color:var(--green)">' + esc(t('attnClear')) + '</div><div class="hint">' + esc(t('attnClearHint').replace('{m}', ATTN_MINS)) + '</div></div>';
+    return '<div class="pad hint" style="padding-top:10px">' + esc(t('attnLead').replace('{n}', items.length).replace('{m}', ATTN_MINS)) + '</div>' + items.map(function (it) {
+      var g = it.g;
+      return '<div class="card attn' + (it.severe ? ' severe' : '') + '" data-attn="' + esc(g.game_id) + '" data-attn-venue="' + esc(g.venue || '') + '"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span class="disp" style="font-size:26px">' + esc(clock(g.kickoff)) + '</span><span class="hint">' + (it.st === 'live' ? esc(t('state_live')) : it.mins <= 0 ? '' : esc(t('inMins').replace('{n}', it.mins))) + '</span></div>' +
+        '<div><b>' + esc(g.field || '') + '</b>' + (showVenue ? ' <span class="hint">' + esc(g.venue || '') + '</span>' : '') + ' <span class="hint">' + esc(g.age_group || '') + '</span></div>' +
+        it.why.map(function (w) { return '<div class="why ' + w.kind + '">' + (w.html || esc(w.text)) + (w.kind === 'late' ? ' <button class="btn outline small" data-late-ack="' + w.late.id + '">' + esc(t('lateAck')) + '</button>' : '') + '</div>'; }).join('') + '</div>';
+    }).join('');
+  }
   function renderOps() {
     var tabs = ['board', 'staff', 'protection', 'retain', 'bulletins'];
     var openAlerts = OPS.alerts.filter(function (a) { return a.status === 'open'; }).length, msgCount = (OPS.msgs || []).length;
@@ -826,7 +893,10 @@
       var open = OPS.help.filter(function (h) { return h.status === 'open'; }).length;
       body = (OPS.error ? '<div class="msg bad" style="margin:10px 20px 0">' + esc(t('loadFailed')) + ' ' + esc(OPS.error) + '</div>' : '') + '<div class="datebar"><button class="iconbtn" data-day="-1" aria-label="Previous day">&#8249;</button><div class="d">' + esc(dayLong(OPS.date)) + '</div><button class="iconbtn" data-day="1" aria-label="Next day">&#8250;</button></div>' +
         '<div class="stats" style="grid-template-columns:repeat(4,1fr)"><div class="stat"><b>' + vlist.length + '</b><i>' + esc(t('stVenues')) + '</i></div><div class="stat"><b>' + realGames + '</b><i>' + esc(t('stGames')) + '</i></div><div class="stat green"><b>' + totIn + '</b><i>' + esc(t('stCheckedIn')) + ' / ' + totSlots + '</i></div><div class="stat' + (open ? ' red' : '') + '"><b>' + open + '</b><i>' + esc(t('stHelpOpen')) + '</i></div></div>';
+      var attnCount = vlist.length ? attentionItems(OPS.games, ins).length : 0;
+      if (vlist.length) body += '<div class="pad" style="padding-top:12px"><div class="chips"><button class="chip-btn' + (OPS.focus ? ' on' : '') + '" data-focus="1">' + esc(t('attnTab')) + (attnCount ? ' ' + attnCount : '') + '</button><button class="chip-btn' + (!OPS.focus ? ' on' : '') + '" data-focus="0">' + esc(t('attnAll')) + '</button></div></div>';
       if (!vlist.length) body += '<div class="card"><div class="hint">' + esc(t('noGamesDay')) + '</div></div>';
+      else if (OPS.focus) body += attentionHtml(OPS.venue ? OPS.games.filter(function (g) { return g.venue === OPS.venue; }) : OPS.games, ins, !OPS.venue) + (OPS.venue ? '<div class="pad" style="padding-top:12px"><button class="btn outline small" data-venue="">' + esc(t('allVenues')) + '</button></div>' : '');
       else if (!OPS.venue && vlist.length > 8) {
         body += '<div class="pad" style="padding-top:12px"><select id="opsVenueSel" style="font:inherit;width:100%;padding:12px;border:2px solid var(--navy);border-radius:8px;background:var(--surface);color:var(--ink)"><option value="">' + esc(t('allVenuesPick')) + '</option>' + vlist.map(function (v) { return '<option value="' + esc(v.name) + '">' + esc(v.name) + ' (' + v.in + '/' + v.slots + (v.help ? ', ' + v.help + ' ' + esc(t('helpOpenAt')) : '') + ')</option>'; }).join('') + '</select></div>' +
           vlist.map(function (v) {
@@ -893,6 +963,10 @@
     $('opsBody').innerHTML = head + body;
     $('opsBody').querySelectorAll('[data-otab]').forEach(function (b) { b.onclick = function () { OPS.tab = b.getAttribute('data-otab'); if (OPS.tab === 'retain' && !CC.cov.length) loadCenter().then(renderOps); else renderOps(); }; });
     $('opsBody').querySelectorAll('[data-day]').forEach(function (b) { b.onclick = function () { OPS.date = shiftDate(OPS.date, parseInt(b.getAttribute('data-day'), 10)); OPS.venue = null; loadOps().then(renderOps); }; });
+    $('opsBody').querySelectorAll('[data-focus]').forEach(function (b) { b.onclick = function () { OPS.focus = b.getAttribute('data-focus') === '1'; try { localStorage.setItem('hub-focus', OPS.focus ? '1' : '0'); } catch (e) {} renderOps(); }; });
+    $('opsBody').querySelectorAll('[data-late-ack]').forEach(function (b) { b.onclick = async function (e) { e.stopPropagation(); b.disabled = true; var r = await sb.from('late_notices').update({ ack_by: S.me.first_name + ' ' + S.me.last_name, ack_at: new Date().toISOString() }).eq('id', parseInt(b.getAttribute('data-late-ack'), 10)); if (r.error) { b.disabled = false; return; } loadOps().then(renderOps); }; });
+    $('opsBody').querySelectorAll('[data-attn] a.refname').forEach(function (a) { a.onclick = function () { REF.venue = a.closest('[data-attn]').getAttribute('data-attn-venue'); REF.from = '#ops'; }; });
+    $('opsBody').querySelectorAll('[data-attn]').forEach(function (b) { b.onclick = function (e) { if (e.target.closest && e.target.closest('a,button')) return; OPS.focus = false; OPS.venue = b.getAttribute('data-attn-venue') || null; OPS.edit = b.getAttribute('data-attn'); OPS.editForm = false; renderOps(); var el = $('opsBody').querySelector('[data-fcard="' + OPS.edit + '"]'); if (el) el.scrollIntoView({ block: 'center' }); }; });
     $('opsBody').querySelectorAll('[data-venue]').forEach(function (b) { b.onclick = function (e) { e.preventDefault(); OPS.venue = b.getAttribute('data-venue') || null; OPS.edit = null; renderOps(); window.scrollTo(0, 0); }; });
     var ovs = $('opsVenueSel'); if (ovs) ovs.onchange = function () { OPS.venue = ovs.value || null; OPS.edit = null; renderOps(); window.scrollTo(0, 0); };
     $('opsBody').querySelectorAll('[data-fcard]').forEach(function (c) { c.onclick = function (e) { if (e.target.closest && e.target.closest('button')) return; var id = c.getAttribute('data-fcard'); OPS.edit = OPS.edit === id ? null : id; OPS.editForm = false; renderOps(); }; });
@@ -1533,15 +1607,25 @@
     $('refBack').href = REF.from || '#day';
     $('refBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>';
     busy(true);
-    var card = await sb.rpc('ref_card', { p_name: name });
-    var notes = await sb.from('observations').select('date,observer,rater_role,final_note,cleaned_note,field,cleanup_status,area').eq('ref_name', name).in('cleanup_status', ['approved', 'edited']).order('date', { ascending: false }).limit(20);
+    var staff = iCan('command_center') || iCan('scheduling') || iCan('people');
+    var rr = await Promise.all([
+      sb.rpc('ref_card', { p_name: name }),
+      sb.from('observations').select('date,observer,rater_role,final_note,cleaned_note,field,cleanup_status,area').eq('ref_name', name).in('cleanup_status', ['approved', 'edited']).order('date', { ascending: false }).limit(20),
+      staff ? sb.rpc('ref_contact', { p_name: name }) : Promise.resolve({ data: null })
+    ]);
+    var card = rr[0], notes = rr[1], ct = rr[2].data;
     busy(false);
     var c = card.data;
+    var contact = !ct ? '' : '<div class="card" style="gap:6px;border-color:var(--gold)"><b>' + esc(t('contactTitle')) + (ct.minor ? ' <span class="pill">' + esc(t('contactMinor')) + '</span>' : '') + '</b>' +
+      (ct.phone ? '<div class="actions" style="padding:0"><a class="btn primary" href="sms:' + esc(String(ct.phone).replace(/[^\d+]/g, '')) + '?&body=' + encodeURIComponent(t('smsBody').replace('{venue}', REF.venue || '').replace('{who}', S.me.first_name)) + '">' + esc(t('contactText')) + '</a><a class="btn outline" href="tel:' + esc(String(ct.phone).replace(/[^\d+]/g, '')) + '">' + esc(t('contactCall')) + '</a></div><div class="hint">' + esc(ct.phone) + '</div>' : '<div class="hint">' + esc(t('contactNoPhone')) + '</div>') +
+      (ct.email ? '<div class="hint"><a href="mailto:' + esc(ct.email) + '">' + esc(ct.email) + '</a></div>' : '') +
+      (ct.guardian_email ? '<div class="hint">' + esc(t('contactGuardian')) + ' <a href="mailto:' + esc(ct.guardian_email) + '">' + esc(ct.guardian_email) + '</a></div>' : '') + '</div>';
     if (!c) { $('refBody').innerHTML = '<div class="pad" style="padding-top:16px"><div class="disp" style="font-size:40px">' + esc(name) + '</div></div><div class="card"><div class="hint">' + esc(t('refNoRecord')) + '</div></div>'; return; }
     var titles = (c.titles || []).map(function (x) { return '<span class="pill' + (x.source === 'manual' ? ' ok' : '') + '" style="margin:4px 4px 0 0">' + esc(x.label) + '</span>'; }).join('');
     var stat = function (n, l, cls) { return '<div class="stat' + (cls ? ' ' + cls : '') + '"><b>' + (n == null ? '0' : esc(n)) + '</b><i>' + esc(l) + '</i></div>'; };
     $('refBody').innerHTML =
       '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(t('refCardTitle')) + (c.city ? ', ' + esc(c.city) : '') + (c.green_badge ? ', ' + esc(t('greenBadge')) : '') + '</div><div class="disp" style="font-size:40px">' + esc(name) + '</div><div>' + (titles || '<span class="hint">' + esc(t('noneYet')) + '</span>') + '</div></div>' +
+      contact +
       '<div class="disp h2">' + esc(t('refSeason')) + '</div>' +
       '<div class="stats">' + stat(c.games, t('refGames')) + stat(c.as_center, t('refCenter')) + stat(c.evaluations, t('refEvals')) + '</div>' +
       '<div class="stats">' + stat(c.notes, t('refSeen'), c.notes ? 'green' : 'red') + stat(c.released, t('refReleased')) + stat(c.coaches, t('refCoaches')) + '</div>' +
@@ -1851,6 +1935,7 @@
       LIVE.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'checkins', filter: 'date=eq.' + today }, function () { liveBump(); });
       LIVE.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'staff_messages', filter: 'date=eq.' + today }, function () { liveBump(); });
       LIVE.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'emergencies' }, function () { liveBump(); });
+      LIVE.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'late_notices', filter: 'date=eq.' + today }, function () { liveBump(); });
       LIVE.channel.subscribe();
     } catch (e) { LIVE.channel = null; }
   }
