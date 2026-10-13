@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.13-g';
+  var VERSION = '2026.10.13-h';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -184,7 +184,7 @@
         (inAt ? '<div class="state in"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="currentColor"></circle><path d="M5.5 9.5l2.3 2.3L12.8 6.8" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>' + esc(t('checkedIn').charAt(0) + t('checkedIn').slice(1).toLowerCase()) + '</div>' : '') + '</a>';
     }).join('') : '';
     var up = $('dayUpcoming');
-    if (S.me.previewing) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div><div class="hint">' + esc(t('loadingReview')) + '</div>'; upcomingFor(S.me.first_name + ' ' + S.me.last_name, 90).then(function (list) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div>' + upcomingHtml(list.filter(function (g) { return g.date !== todayStr(); }), S.me.first_name + ' ' + S.me.last_name).replace(/class="card"/g, 'class="card" style="margin:0 0 8px"'); }).catch(function () { up.innerHTML = ''; }); }
+    if (S.me.previewing) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div><div class="hint">' + esc(t('loadingReview')) + '</div>'; upcomingFor(S.me.first_name + ' ' + S.me.last_name, 90).then(function (list) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div>' + upcomingHtml(list.filter(function (g) { return g.date !== todayStr(); }), S.me.first_name + ' ' + S.me.last_name); }).catch(function () { up.innerHTML = ''; }); }
     else up.innerHTML = '';
     var note = S.notes[0];
     if (note) markRead([note]);
@@ -1460,9 +1460,9 @@
     var days = {}, order = [];
     list.forEach(function (g) { if (!days[g.date]) { days[g.date] = []; order.push(g.date); } days[g.date].push(g); });
     return order.map(function (d) {
-      return '<div class="card" style="gap:4px"><b>' + esc(dayLong(d)) + '</b>' + days[d].map(function (g) {
+      return '<div class="pad" style="padding-top:12px"><div class="hint" style="font-weight:700">' + esc(dayLong(d)) + '</div></div><div class="list" style="padding-top:8px">' + days[d].map(function (g) {
         var role = key(g.cr) === k ? 'CR' : key(g.ar1) === k ? 'AR1' : key(g.ar2) === k ? 'AR2' : '4th';
-        return '<a class="item" href="#game/' + esc(g.game_id) + '" style="margin:0"><div class="when"><div class="disp">' + esc(clock(g.kickoff)) + '</div><div class="sub">' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + '</div></div><div class="sub" style="text-align:right">' + esc(role) + '<br>' + esc(g.age_group || '') + (g.competition ? '<br>' + esc(g.competition) : '') + '</div></a>';
+        return '<a class="item" href="#game/' + esc(g.game_id) + '"><div><div class="when"><div class="disp">' + esc(clock(g.kickoff)) + '</div><div class="sub">' + esc(role) + ', ' + esc(g.age_group || '') + '</div></div><div class="hint">' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + (g.competition ? '. ' + esc(g.competition) : '') + '</div></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
       }).join('') + '</div>';
     }).join('');
   }
@@ -1563,10 +1563,24 @@
   }
 
   // ── Game card ────────────────────────────────────────────────────
+  // A game on a later day is not in today's list, so it is fetched on its
+  // own. This is how a referee opens Saturday's game on Tuesday to ask for
+  // an evaluation, and how View as reaches any game on the upcoming list.
+  var OTHER = {};
   function renderGame(id) {
-    var g = S.games.filter(function (x) { return String(x.game_id) === String(id); })[0];
+    var g = S.games.filter(function (x) { return String(x.game_id) === String(id); })[0] || OTHER[String(id)];
     S.game = g || null;
-    if (!g) { show('s-day'); return; }
+    if (!g) {
+      $('gameBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>';
+      busy(true);
+      sb.from('games').select('game_id,date,game_num,kickoff,field,age_group,gender,competition,home,away,cr,ar1,ar2,fourth,venue,status,home_club,away_club,score_url').eq('game_id', id).limit(1).then(function (r) {
+        busy(false);
+        var x = (r.data || [])[0];
+        if (!x) { $('gameBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('gameNotFound')) + '</div></div>'; return; }
+        OTHER[String(id)] = x; renderGame(id);
+      }, function () { busy(false); $('gameBody').innerHTML = '<div class="msg bad">' + esc(t('loadFailed')) + '</div>'; });
+      return;
+    }
     var inAt = S.checkins[String(g.game_id)], mins = Math.round((new Date(g.kickoff).getTime() - Date.now()) / 60000);
     var ev = eventFor(g), r = rulesFor(g), role = myRole(g);
     if (isHQ(g)) {
