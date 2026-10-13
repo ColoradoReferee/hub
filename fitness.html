@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fitness test · Colorado Referees</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<link rel="stylesheet" href="app.css?v=2026.10.13-p">
+<style>
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 20px 0; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .tile b { display: block; font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 30px; line-height: 1; }
+  .tile i { font-style: normal; font-size: 13px; color: var(--muted); }
+  .rule { margin: 10px 20px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+  .rule.gold { border-color: var(--gold); border-width: 2px; }
+  .rule.red { border-color: var(--red); border-width: 2px; }
+  .rule b { display: block; font-size: 17px; margin-bottom: 4px; }
+  .rule p { margin: 0; font-size: 15px; line-height: 1.45; }
+  .rules-h { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 26px; margin: 22px 20px 0; }
+  ul { margin: 8px 20px 0; padding-left: 20px; font-size: 15px; line-height: 1.5; }
+  li { margin-bottom: 6px; }
+  .jump { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 20px 0; }
+  .jump a { font-size: 14px; font-weight: 700; text-decoration: none; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+  table.std { width: 100%; border-collapse: collapse; font-size: 14px; margin: 8px 20px 0; width: calc(100% - 40px); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  table.std th, table.std td { padding: 8px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+  table.std th { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  table.std tr.co td { background: rgba(242,184,0,.18); font-weight: 700; }
+  table.std td.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .pacer { margin: 10px 20px 0; background: var(--surface); border: 2px solid var(--navy); border-radius: 12px; padding: 14px 16px; }
+  .pacer .big { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 72px; line-height: 1; }
+  .pacer .phase { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 28px; }
+  .pacer .phase.run { color: var(--green); } .pacer .phase.walk { color: #8a6500; } .pacer .phase.rest { color: var(--muted); }
+  .diagram { margin: 10px 20px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px; }
+  .diagram svg { width: 100%; height: auto; display: block; }
+  .diagram text { font-family: var(--body); font-size: 11px; fill: var(--ink); }
+  .diagram .lane { fill: none; stroke: var(--muted); stroke-width: 1.5; }
+  .diagram .run { stroke: var(--green); stroke-width: 6; fill: none; }
+  .diagram .walk { stroke: #c9a227; stroke-width: 6; fill: none; stroke-dasharray: 6 5; }
+  .diagram .cone { fill: var(--red); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <a class="backlink" href="index.html#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>Your day</a>
+    <div class="tools">
+      <button class="iconbtn" id="themeBtn" aria-label="Switch between light and dark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
+      <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+  </div>
+
+  <div class="pad" style="padding-top:16px">
+    <div class="lead">Colorado Soccer Referee Program</div>
+    <div class="disp" style="font-size:44px">FITNESS TEST</div>
+    <div class="lead" style="margin-top:6px">The FIFA fitness test for referees: six sprints, then forty runs. Colorado uses two sets of times: the <b>FIFA men's international</b> standard for the National test and the <b>FIFA women's international</b> standard for the Regional test.</div>
+  </div>
+
+  <div class="jump"><a href="#rsa">Test 1: sprints</a><a href="#interval">Test 2: interval</a><a href="#standards">All standards</a><a href="#pacer">Pacer and audio</a><a href="#ar">Assistant referees</a></div>
+
+  <div class="rules-h" id="rsa">TEST 1: REPEATED SPRINT ABILITY (RSA)</div>
+  <div class="diagram"><svg viewBox="0 0 360 110" role="img" aria-label="Six 40 metre sprints with a walk back">
+    <line x1="30" y1="25" x2="30" y2="55" class="lane"/><line x1="330" y1="25" x2="330" y2="55" class="lane"/>
+    <line x1="18" y1="28" x2="18" y2="52" class="lane" stroke-dasharray="3 3"/>
+    <path d="M18 40 H330" class="run"/>
+    <path d="M330 70 H30" class="walk"/>
+    <polygon points="30,52 34,60 26,60" class="cone"/><polygon points="330,52 334,60 326,60" class="cone"/>
+    <text x="4" y="18" font-size="9">Start line, 1.5 m before the gate</text><text x="258" y="18">Gate at 40 m</text>
+    <text x="110" y="86">Walk back within 60 seconds, then go again</text>
+    <text x="44" y="104" font-weight="700">6 sprints. One miss earns a 7th. Two misses is a fail.</text>
+  </svg></div>
+  <div class="rule gold"><b>6 × 40 m, maximum 60 seconds recovery</b><p>Timing gates at 0 and 40 m; the start line is 1.5 m before the first gate. Walk back to the start during the recovery. Every sprint must be at or under the reference time.</p></div>
+  <div class="rule"><b>One missed sprint earns a 7th</b><p>A referee who misses the time on one of the six runs a 7th sprint straight after the 6th. Miss two and the test is failed. A fall or a trip earns an extra trial, not a fail.</p></div>
+  <div class="rule"><b>Colorado reference times</b><p><b>National test: 6.0 s</b> (FIFA men's international). <b>Regional test: 6.4 s</b> (FIFA women's international).</p></div>
+
+  <div class="rules-h" id="interval">TEST 2: INTERVAL TEST</div>
+  <div class="diagram"><svg viewBox="0 0 360 170" role="img" aria-label="A 400 metre track with 75 metre runs and 25 metre walks">
+    <path d="M100 25 H260 A60 60 0 0 1 320 85 A60 60 0 0 1 260 145 H100 A60 60 0 0 1 40 85 A60 60 0 0 1 100 25 Z" class="lane"/>
+    <path d="M100 25 H260 A60 60 0 0 1 320 85 A60 60 0 0 1 260 145 H100 A60 60 0 0 1 40 85 A60 60 0 0 1 100 25 Z" class="run" pathLength="400" style="stroke-dasharray:75 25"/>
+    <path d="M100 25 H260 A60 60 0 0 1 320 85 A60 60 0 0 1 260 145 H100 A60 60 0 0 1 40 85 A60 60 0 0 1 100 25 Z" class="walk" pathLength="400" style="stroke-dasharray:0 75 25 0"/>
+    <polygon points="100,18 104,26 96,26" class="cone"/>
+    <text x="104" y="16">Start. Run 75 m</text><text x="262" y="16" font-size="10">Walk 25 m</text>
+    <text x="118" y="78">4 runs and 4 walks per lap</text><text x="110" y="96" font-weight="700">10 laps. 40 runs. 4,000 m.</text>
+    <line x1="120" y1="112" x2="150" y2="112" class="run"/><text x="156" y="116">run</text><line x1="190" y1="112" x2="220" y2="112" class="walk" style="stroke-dasharray:none"/><text x="226" y="116">walk</text>
+  </svg></div>
+  <div class="rule gold"><b>40 × 75 m run, 25 m walk</b><p>Ten laps of a 400 m track. An audio signal starts each run and marks the end of each run and walk. Every run ends inside the walking area: a line 1.5 m before and 1.5 m after the 75 m mark.</p></div>
+  <div class="rule"><b>One warning, then out</b><p>A foot late into the walking area once earns a clear warning. A second time and the test leader stops the referee: the test is failed.</p></div>
+  <div class="rule"><b>Colorado reference times</b><p><b>National test: 15 s run, 18 s walk</b> (FIFA men's international). <b>Regional test: 17 s run, 20 s walk</b> (FIFA women's international).</p></div>
+  <div class="rule"><b>Between the tests</b><p>Test 1 to Test 2: 6 to 8 minutes. Warm up before Test 1 as you would for a match.</p></div>
+
+  <div class="rules-h" id="standards">ALL STANDARDS, FOR REFERENCE</div>
+  <div class="pad hint">FIFA Fitness Tests for Referees, 2016 edition. The two Colorado rows are highlighted. Other categories are listed for knowledge; a federation may set its own.</div>
+  <table class="std"><thead><tr><th>Category</th><th>RSA, 6 × 40 m</th><th>Interval run</th><th>Interval walk</th></tr></thead><tbody>
+    <tr class="co"><td>Men, international. <b>Colorado National test, FIFA test</b></td><td class="n">6.0 s</td><td class="n">15 s</td><td class="n">18 s</td></tr>
+    <tr><td>Men, category 1</td><td class="n">6.0 s</td><td class="n">15 s</td><td class="n">20 s</td></tr>
+    <tr><td>Men, category 2</td><td class="n">6.1 s</td><td class="n">15 s</td><td class="n">22 s</td></tr>
+    <tr><td>Men, category 3</td><td class="n">6.2 s</td><td class="n">16 s</td><td class="n">24 s</td></tr>
+    <tr class="co"><td>Women, international. <b>Colorado Regional test</b></td><td class="n">6.4 s</td><td class="n">17 s</td><td class="n">20 s</td></tr>
+    <tr><td>Women, category 1</td><td class="n">6.4 s</td><td class="n">17 s</td><td class="n">22 s</td></tr>
+    <tr><td>Women, category 2</td><td class="n">6.5 s</td><td class="n">17 s</td><td class="n">24 s</td></tr>
+    <tr><td>Women, category 3</td><td class="n">6.6 s</td><td class="n">18 s</td><td class="n">26 s</td></tr>
+  </tbody></table>
+
+  <div class="rules-h" id="ar">ASSISTANT REFEREES</div>
+  <div class="pad hint">The AR test has three parts. Colorado runs the referee test above for everyone; this is here for referees heading to National AR or FIFA.</div>
+  <div class="rule"><b>Test 1: CODA (change of direction)</b><p>10 m forward, 8 m sideways left, 8 m sideways right, 10 m forward. International reference: men 10.0 s, women 11.0 s. Two failed trials is a fail.</p></div>
+  <div class="rule"><b>Test 2: RSA, 5 × 30 m</b><p>Maximum 30 seconds recovery. International reference: men 4.7 s, women 5.1 s. One miss earns a 6th trial; two misses is a fail.</p></div>
+  <div class="rule"><b>Test 3: Interval, 40 × 75 m run and 25 m walk</b><p>Same track as the referees. International reference: men 15 s run, 20 s walk; women 17 s run, 22 s walk.</p></div>
+
+  <div class="rules-h" id="pacer">PACER AND AUDIO</div>
+  <div class="pad hint">The interval test runs to a signal. This pacer plays it: a long tone to start each run, a short tone at the end of the run, a short tone at the end of the walk. Pick the standard, turn the phone up or plug in a speaker, and tap Start. The screen stays on while it runs. Works offline once the page has loaded.</div>
+  <div class="pacer">
+    <div class="chips" id="pacerPick">
+      <button class="chip-btn on" data-run="15" data-walk="18">National 15 / 18</button>
+      <button class="chip-btn" data-run="17" data-walk="20">Regional 17 / 20</button>
+      <button class="chip-btn" data-run="15" data-walk="20">15 / 20</button>
+      <button class="chip-btn" data-run="17" data-walk="22">17 / 22</button>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:10px"><div><div class="hint" id="pacerLabel">Run 15 s, walk 18 s. 40 runs, about 22 minutes.</div><div class="phase rest" id="pacerPhase">Ready</div></div><div class="big" id="pacerCount">0</div></div>
+    <div class="hint" style="text-align:right">of 40 runs</div>
+    <div class="actions" style="padding:12px 0 0"><button class="btn primary" id="pacerStart">START</button><button class="btn outline" id="pacerStop" disabled>Stop</button></div>
+    <div class="hint" style="margin-top:8px">Start plays a 10-second countdown first. Lap 10 ends after run 40.</div>
+  </div>
+
+  <div class="pad hint" style="margin-top:18px">Standards from FIFA Fitness Tests for Referees (2016). Colorado's choice of the men's and women's international times for the National and Regional tests is set by the Referee Department. Questions: refeducation@coloradoreferees.com.</div>
+  <div class="foot" style="flex-direction:column"><a class="btn help" href="index.html#help">I NEED HELP</a></div>
+  <div class="credit"><span class="chip"><img src="assets/jareferee-mark.png" alt=""></span><a href="https://jareferee.com">Built with JAReferee</a><span class="ver">v2026.10.13-p</span></div>
+</div>
+<script>
+(function () {
+  var run = 15, walk = 18, ctx = null, timer = null, count = 0, wake = null;
+  var $ = function (id) { return document.getElementById(id); };
+  function tone(freq, ms) { if (!ctx) return; var o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = freq; g.gain.value = 0.6; o.connect(g); g.connect(ctx.destination); var t = ctx.currentTime; o.start(t); g.gain.setValueAtTime(0.6, t + ms / 1000 - 0.03); g.gain.linearRampToValueAtTime(0, t + ms / 1000); o.stop(t + ms / 1000); }
+  function phase(cls, text) { var p = $('pacerPhase'); p.className = 'phase ' + cls; p.textContent = text; }
+  function label() { $('pacerLabel').textContent = 'Run ' + run + ' s, walk ' + walk + ' s. 40 runs, about ' + Math.round(40 * (run + walk) / 60) + ' minutes.'; }
+  document.querySelectorAll('#pacerPick [data-run]').forEach(function (b) { b.onclick = function () { if (timer) return; run = +b.getAttribute('data-run'); walk = +b.getAttribute('data-walk'); document.querySelectorAll('#pacerPick .chip-btn').forEach(function (c) { c.classList.toggle('on', c === b); }); label(); }; });
+  async function keepAwake() { try { if (navigator.wakeLock) wake = await navigator.wakeLock.request('screen'); } catch (e) {} }
+  function stop() { clearTimeout(timer); timer = null; $('pacerStart').disabled = false; $('pacerStop').disabled = true; phase('rest', count >= 40 ? 'Done' : 'Stopped'); if (wake) { try { wake.release(); } catch (e) {} wake = null; } }
+  // Scheduled on the audio clock, not setTimeout alone, so the beeps stay exact.
+  function start() {
+    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctx.resume(); count = 0; $('pacerCount').textContent = '0'; $('pacerStart').disabled = true; $('pacerStop').disabled = false; keepAwake();
+    var t0 = Date.now() + 10000; phase('rest', 'Get ready');
+    for (var i = 3; i >= 1; i--) setTimeout(tone.bind(null, 660, 150), 10000 - i * 1000);
+    var step = function () {
+      var now = Date.now(), elapsed = now - t0;
+      if (elapsed < 0) { timer = setTimeout(step, 50); return; }
+      var cycle = (run + walk) * 1000, n = Math.floor(elapsed / cycle), inCycle = elapsed - n * cycle;
+      if (n >= 40) { tone(880, 900); $('pacerCount').textContent = '40'; count = 40; stop(); return; }
+      var running = inCycle < run * 1000;
+      if (n + 1 !== count) { count = n + 1; $('pacerCount').textContent = String(count); tone(880, 600); }
+      if (running) phase('run', 'RUN ' + Math.ceil((run * 1000 - inCycle) / 1000));
+      else { if (inCycle - run * 1000 < 60) tone(523, 250); phase('walk', 'WALK ' + Math.ceil((cycle - inCycle) / 1000)); }
+      timer = setTimeout(step, 50);
+    };
+    step();
+  }
+  $('pacerStart').onclick = start; $('pacerStop').onclick = stop;
+  try { var th = localStorage.getItem('hub-theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}
+  document.getElementById('themeBtn').onclick = function () { var cur = document.documentElement.getAttribute('data-theme'); var dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches; var next = dark ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', next); try { localStorage.setItem('hub-theme', next); } catch (e) {} };
+})();
+</script>
+</body>
+</html>

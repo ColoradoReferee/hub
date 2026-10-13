@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.13-o';
+  var VERSION = '2026.10.13-p';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -93,7 +93,7 @@
   function show(id) {
     document.querySelectorAll('.screen').forEach(function (s) { s.classList.toggle('on', s.id === id); });
     // The State view is read on a desktop; it gets the width. Everything else is a phone.
-    document.body.classList.toggle('wide', id === 's-state');
+    document.body.classList.toggle('wide', id === 's-state' || id === 's-setup');
     window.scrollTo(0, 0);
   }
 
@@ -173,12 +173,34 @@
   async function loadSessions_() {
     var today = todayStr();
     var r = await Promise.all([
-      sb.from('sessions').select('id,kind,title,date,start_time,end_time,venue,address,capacity,open_to,notes,active').gte('date', today).eq('active', true).order('date').order('start_time'),
+      sb.from('sessions').select('id,kind,title,date,start_time,end_time,venue,address,capacity,open_to,notes,active,standard').gte('date', today).eq('active', true).order('date').order('start_time'),
       sb.from('session_signups').select('id,session_id,status,result').eq('person_id', S.me.person_id),
       sb.rpc('session_counts')
     ]);
     SES.list = r[0].data || []; SES.mine = r[1].data || [];
     SES.counts = {}; (r[2].data || []).forEach(function (c) { SES.counts[String(c.session_id)] = Number(c.signed); });
+  }
+  // FIFA standards Colorado runs to: National = men's international, Regional = women's international.
+  var FIT = { national: { rsa: 6.0, run: 15, walk: 18 }, regional: { rsa: 6.4, run: 17, walk: 20 } };
+  function fitStd(x) { return FIT[x.standard] || FIT.national; }
+  function stdLine(x) { var f = fitStd(x); return t('fitStd.' + (FIT[x.standard] ? x.standard : 'national')) + ': ' + t('fitStdLine').replace('{rsa}', f.rsa.toFixed(1)).replace('{run}', f.run).replace('{walk}', f.walk); }
+  // RSA verdict from up to seven times: 'pass', 'fail', 'seventh' (one miss, 7th still to run) or '' (not finished).
+  function rsaVerdict(times, std) {
+    var six = (times || []).slice(0, 6), miss = 0, done = 0;
+    six.forEach(function (v) { if (v != null && v !== '') { done++; if (Number(v) > std) miss++; } });
+    if (miss >= 2) return 'fail';
+    if (done < 6) return '';
+    if (miss === 0) return 'pass';
+    var s7 = (times || [])[6];
+    if (s7 == null || s7 === '') return 'seventh';
+    return Number(s7) > std ? 'fail' : 'pass';
+  }
+  function fitOverall(r, std) {
+    if (r.status === 'no_show' || r.status === 'withdrawn' || r.status === 'waitlist') return r.status;
+    var v = rsaVerdict(r.rsa, std);
+    if (v === 'fail' || r.interval_result === 'fail') return 'failed';
+    if (v === 'pass' && r.interval_result === 'pass') return 'passed';
+    return 'signed';
   }
   function mySignup(sid) { return SES.mine.filter(function (x) { return String(x.session_id) === String(sid); })[0]; }
   function sessionLine(x) { return esc(dayLong(x.date)) + (x.start_time ? ', ' + esc(hhmm(x.start_time)) + (x.end_time ? ' to ' + esc(hhmm(x.end_time)) : '') : '') + (x.venue ? ', ' + esc(x.venue) : ''); }
@@ -189,7 +211,7 @@
     return '<div class="card" style="gap:8px;border-color:var(--gold)"><b>' + esc(t('sesTitle')) + '</b>' + list.map(function (x) {
       var me = mySignup(x.id), n = SES.counts[String(x.id)] || 0, full = x.capacity && n >= x.capacity && !me;
       var state = me ? (me.status === 'passed' ? t('sesPassed') : me.status === 'failed' ? t('sesFailed') : me.status === 'no_show' ? t('sesNoShow') : me.status === 'waitlist' ? t('sesWaitlisted') : t('sesIn')) : (full ? t('sesFull') : (x.capacity ? t('sesSpots').replace('{n}', x.capacity - n) : ''));
-      return '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><div><b>' + esc(t('sesKind.' + x.kind)) + ': ' + esc(x.title) + '</b><br><span class="hint">' + sessionLine(x) + (state ? '. ' + esc(state) : '') + '</span>' + (x.notes ? '<br><span class="hint">' + esc(x.notes) + '</span>' : '') + '</div>' +
+      return '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><div><b>' + esc(t('sesKind.' + x.kind)) + ': ' + esc(x.title) + '</b><br><span class="hint">' + sessionLine(x) + (state ? '. ' + esc(state) : '') + '</span>' + (x.notes ? '<br><span class="hint">' + esc(x.notes) + '</span>' : '') + (x.kind === 'fitness' ? '<br><span class="hint">' + esc(stdLine(x)) + '</span><br><a href="fitness.html" class="chip-btn small" style="display:inline-block;margin-top:6px;text-decoration:none">' + esc(t('fitOpen')) + '</a>' : '') + '</div>' +
         (me && ['signed', 'waitlist'].indexOf(me.status) >= 0 ? '<button class="btn outline small" data-ses-out="' + me.id + '">' + esc(t('sesWithdraw')) + '</button>' : (!me && !full ? '<button class="btn primary small" data-ses-in="' + x.id + '">' + esc(t('sesSignUp')) + '</button>' : '')) + '</div>';
     }).join('') + '<div class="msg" id="sesMsg" hidden></div></div>';
   }
@@ -209,6 +231,38 @@
       await loadSessions_(); renderDay();
     }; });
   }
+  // The results sheet for a fitness test: bib, six RSA times, a 7th when earned, interval pass/fail, verdict.
+  function fitSheetHtml(x, roster) {
+    var std = fitStd(x), live = roster.filter(function (r) { return r.status !== 'withdrawn'; });
+    if (!live.length) return '<div class="card"><div class="hint">' + esc(t('sesNobody')) + '</div></div>';
+    var statusWord = function (k) { return k === 'passed' ? t('sesPassed') : k === 'failed' ? t('sesFailed') : k === 'no_show' ? t('sesNoShow') : k === 'waitlist' ? t('sesWaitlisted') : ''; };
+    var rows = live.map(function (r) {
+      var times = r.rsa || [], v = rsaVerdict(times, std.rsa), ov = fitOverall(r, std.rsa), off = r.status === 'no_show';
+      var cell = function (i) { var val = times[i]; var bad = val != null && val !== '' && Number(val) > std.rsa; return '<td class="n"><input type="number" step="0.01" min="3" max="20" inputmode="decimal" class="fit-t' + (bad ? ' bad' : '') + '" data-fit-rsa="' + r.id + '" data-i="' + i + '" value="' + (val == null ? '' : esc(val)) + '"' + (off ? ' disabled' : '') + ' aria-label="' + esc(t('fitSprint')) + ' ' + (i + 1) + '"></td>'; };
+      var seventh = v === 'seventh' || (times[6] != null && times[6] !== '') ? cell(6) : '<td class="n hint">' + (v === 'fail' ? esc(t('fitTwoMisses')) : '') + '</td>';
+      var intv = function (k, label) { return '<button class="chip-btn small' + (r.interval_result === k ? ' on' : '') + '" data-fit-int="' + r.id + '" data-k="' + k + '"' + (off ? ' disabled' : '') + '>' + esc(label) + '</button>'; };
+      return '<tr class="' + esc(ov) + '"><td class="n"><input type="number" min="1" max="999" inputmode="numeric" class="fit-t" data-fit-bib="' + r.id + '" value="' + (r.bib == null ? '' : r.bib) + '" aria-label="' + esc(t('fitBib')) + '"></td><td><b>' + refLink(r.name) + '</b></td>' +
+        [0, 1, 2, 3, 4, 5].map(cell).join('') + seventh +
+        '<td class="n">' + esc(v === 'pass' ? t('fitPass') : v === 'fail' ? t('fitFail') : v === 'seventh' ? t('fitSeventh') : '') + '</td>' +
+        '<td><div class="chips no-print" style="flex-wrap:nowrap">' + intv('pass', t('fitPass')) + intv('fail', t('fitFail')) + '</div><span class="print-only">' + esc(r.interval_result === 'pass' ? t('fitPass') : r.interval_result === 'fail' ? t('fitFail') : '') + '</span></td>' +
+        '<td class="n"><b>' + esc(statusWord(ov)) + '</b><div class="no-print"><button class="chip-btn small' + (off ? ' on' : '') + '" data-fit-ns="' + r.id + '" style="white-space:nowrap">' + esc(t('sesMarkNoShow')) + '</button></div></td></tr>';
+    }).join('');
+    var passed = live.filter(function (r) { return fitOverall(r, std.rsa) === 'passed'; }).length, failed = live.filter(function (r) { return fitOverall(r, std.rsa) === 'failed'; }).length;
+    return '<div class="pad hint" style="padding-top:0">' + esc(stdLine(x)) + '. ' + esc(t('fitSheetHint')) + '</div>' +
+      '<div class="pad" style="padding-top:6px;overflow-x:auto"><table class="dt fit"><thead><tr><th>' + esc(t('fitBib')) + '</th><th>' + esc(t('fitName')) + '</th>' + [1, 2, 3, 4, 5, 6].map(function (i) { return '<th class="n">' + esc(t('fitSprint')) + ' ' + i + '</th>'; }).join('') + '<th class="n">' + esc(t('fitSeventhCol')) + '</th><th class="n">' + esc(t('fitRsa')) + '</th><th>' + esc(t('fitInterval')) + '</th><th class="n">' + esc(t('fitResult')) + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+      '<div class="pad hint" style="padding-top:6px">' + passed + ' ' + esc(t('sesPassed').toLowerCase()) + ', ' + failed + ' ' + esc(t('sesFailed').toLowerCase()) + ', ' + live.length + ' ' + esc(t('sesSignedUp')) + '</div>' +
+      '<div class="actions no-print"><button class="btn outline small" id="fitEmail">' + esc(t('fitEmail')) + '</button><a class="btn outline small" href="fitness.html">' + esc(t('fitOpen')) + '</a></div><div class="msg" id="fitMsg" hidden></div>';
+  }
+  // Plain-text results for the email to the director.
+  function fitEmailText(x, roster) {
+    var std = fitStd(x), lines = [x.title, sessionLine(x).replace(/&#39;/g, "'"), stdLine(x), ''];
+    roster.filter(function (r) { return r.status !== 'withdrawn'; }).forEach(function (r) {
+      var times = r.rsa || [], ov = fitOverall(r, std.rsa), word = ov === 'passed' ? t('sesPassed') : ov === 'failed' ? t('sesFailed') : ov === 'no_show' ? t('sesNoShow') : t('fitIncomplete');
+      lines.push((r.bib != null ? '#' + r.bib + ' ' : '') + r.name + ': ' + word.toUpperCase() + (ov === 'no_show' ? '' : '. RSA ' + [0, 1, 2, 3, 4, 5, 6].map(function (i) { return times[i] == null || times[i] === '' ? null : Number(times[i]).toFixed(2); }).filter(Boolean).join(' / ') + '. ' + t('fitInterval') + ' ' + (r.interval_result ? t(r.interval_result === 'pass' ? 'fitPass' : 'fitFail') : '')));
+    });
+    lines.push('', t('fitSentBy').replace('{name}', S.me.first_name + ' ' + S.me.last_name));
+    return lines.join('\n');
+  }
   // Setup side: list, create, roster and results.
   function sessionsSetupHtml() {
     if (SES.open) {
@@ -218,12 +272,14 @@
       var res = function (r, k, label) { return '<button class="chip-btn small' + (r.status === k ? ' on' : '') + '" data-ses-res="' + r.id + '" data-res="' + k + '">' + esc(label) + '</button>'; };
       return '<div class="pad no-print" style="padding-top:12px;display:flex;gap:8px"><button class="btn outline small" id="sesBack">' + esc(t('back')) + '</button><button class="btn outline small" id="sesPrint">' + esc(t('print')) + '</button><button class="btn outline small" id="sesClose" style="margin-left:auto">' + esc(x.active ? t('sesCancel') : t('sesReopen')) + '</button></div>' +
         '<div class="pad" style="padding-top:12px"><div class="disp" style="font-size:30px">' + esc(x.title) + '</div><div class="hint">' + esc(t('sesKind.' + x.kind)) + '. ' + sessionLine(x) + (x.address ? '. ' + esc(x.address) : '') + '</div><div class="hint">' + n + (x.capacity ? ' / ' + x.capacity : '') + ' ' + esc(t('sesSignedUp')) + '</div></div>' +
-        (roster.length ? roster.map(function (r) { return '<div class="card" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + refLink(r.name) + '</b><span class="hint">' + esc(r.status === 'waitlist' ? t('sesWaitlisted') : '') + '</span></div><div class="chips no-print">' + res(r, 'passed', t('sesMarkPassed')) + res(r, 'failed', t('sesMarkFailed')) + res(r, 'no_show', t('sesMarkNoShow')) + res(r, 'signed', t('sesMarkClear')) + '</div></div>'; }).join('') : '<div class="card"><div class="hint">' + esc(t('sesNobody')) + '</div></div>');
+        (x.kind === 'fitness' ? fitSheetHtml(x, roster) :
+        (roster.length ? roster.map(function (r) { return '<div class="card" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + refLink(r.name) + '</b><span class="hint">' + esc(r.status === 'waitlist' ? t('sesWaitlisted') : '') + '</span></div><div class="chips no-print">' + res(r, 'passed', t('sesMarkPassed')) + res(r, 'failed', t('sesMarkFailed')) + res(r, 'no_show', t('sesMarkNoShow')) + res(r, 'signed', t('sesMarkClear')) + '</div></div>'; }).join('') : '<div class="card"><div class="hint">' + esc(t('sesNobody')) + '</div></div>'));
     }
     var f = SES.form;
     var inp = function (id, v, type, extra) { return '<input id="' + id + '" type="' + (type || 'text') + '" value="' + esc(v == null ? '' : v) + '" ' + (extra || '') + ' style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">'; };
     var form = !f ? '<div class="pad" style="padding-top:12px"><button class="btn outline" id="sesNew" style="width:100%">' + esc(t('sesNew')) + '</button></div>' :
       '<div class="card" style="gap:8px"><b>' + esc(t('sesNew')) + '</b><div class="chips">' + ['fitness', 'class', 'clinic'].map(function (k) { return '<button class="chip-btn small' + (f.kind === k ? ' on' : '') + '" data-ses-kind="' + k + '">' + esc(t('sesKind.' + k)) + '</button>'; }).join('') + '</div>' +
+      (f.kind === 'fitness' ? '<label class="hint">' + esc(t('fitStandard')) + '</label><div class="chips">' + ['national', 'regional'].map(function (k) { return '<button class="chip-btn small' + (f.standard === k ? ' on' : '') + '" data-ses-std="' + k + '">' + esc(t('fitStd.' + k)) + '</button>'; }).join('') + '</div><div class="hint">' + esc(stdLine({ standard: f.standard })) + '</div>' : '') +
       '<label class="hint" for="sesTitle">' + esc(t('sesFieldTitle')) + '</label>' + inp('sesTitle', f.title) +
       '<div class="grid2"><div><label class="hint" for="sesDate">' + esc(t('eodDate')) + '</label>' + inp('sesDate', f.date, 'date') + '</div><div><label class="hint" for="sesCap">' + esc(t('sesCapacity')) + '</label>' + inp('sesCap', f.capacity, 'number', 'min="1"') + '</div></div>' +
       '<div class="grid2"><div><label class="hint" for="sesStart">' + esc(t('sesStart')) + '</label>' + inp('sesStart', f.start_time, 'time') + '</div><div><label class="hint" for="sesEnd">' + esc(t('sesEnd')) + '</label>' + inp('sesEnd', f.end_time, 'time') + '</div></div>' +
@@ -235,18 +291,19 @@
     return '<div class="disp h2">' + esc(t('sesSetupTitle')) + '</div>' + form + (SES.list.length ? '<div class="list">' + SES.list.map(function (x) { var n = SES.counts[String(x.id)] || 0; return '<a class="item" href="#" data-ses-open="' + x.id + '"><div><b>' + esc(t('sesKind.' + x.kind)) + ': ' + esc(x.title) + '</b><br><span class="hint">' + sessionLine(x) + '. ' + n + (x.capacity ? ' / ' + x.capacity : '') + ' ' + esc(t('sesSignedUp')) + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>' : '<div class="pad hint">' + esc(t('sesNone')) + '</div>');
   }
   function wireSessionsSetup(root) {
-    var nb = $('sesNew'); if (nb) nb.onclick = function () { SES.form = { kind: 'fitness', title: '', date: todayStr(), capacity: '', start_time: '', end_time: '', venue: '', address: '', open_to: 'all', notes: '' }; renderSetup(); };
+    var nb = $('sesNew'); if (nb) nb.onclick = function () { SES.form = { kind: 'fitness', standard: 'national', title: '', date: todayStr(), capacity: '', start_time: '', end_time: '', venue: '', address: '', open_to: 'all', notes: '' }; renderSetup(); };
     var cf = $('sesCancelForm'); if (cf) cf.onclick = function () { SES.form = null; renderSetup(); };
-    root.querySelectorAll('[data-ses-kind]').forEach(function (b) { b.onclick = function () { SES.form.kind = b.getAttribute('data-ses-kind'); root.querySelectorAll('[data-ses-kind]').forEach(function (c) { c.classList.toggle('on', c === b); }); }; });
+    root.querySelectorAll('[data-ses-kind]').forEach(function (b) { b.onclick = function () { SES.form.kind = b.getAttribute('data-ses-kind'); SES.form.title = $('sesTitle').value; renderSetup(); }; });
+    root.querySelectorAll('[data-ses-std]').forEach(function (b) { b.onclick = function () { SES.form.standard = b.getAttribute('data-ses-std'); SES.form.title = $('sesTitle').value; renderSetup(); }; });
     var sv = $('sesSave'); if (sv) sv.onclick = async function () {
       var f = SES.form; f.title = $('sesTitle').value.trim(); f.date = $('sesDate').value; f.capacity = $('sesCap').value ? parseInt($('sesCap').value, 10) : null; f.start_time = $('sesStart').value || null; f.end_time = $('sesEnd').value || null; f.venue = $('sesVenue').value.trim(); f.address = $('sesAddr').value.trim(); f.open_to = $('sesOpen').value; f.notes = $('sesNotes').value.trim();
       if (!f.title || !f.date) { say('sesFormMsg', t('sesNeedTitleDate'), 'bad'); return; }
       sv.disabled = true;
-      var r = await sb.from('sessions').insert({ org_id: S.me.org_id, kind: f.kind, title: f.title, date: f.date, start_time: f.start_time, end_time: f.end_time, venue: f.venue, address: f.address, capacity: f.capacity, open_to: f.open_to, notes: f.notes, created_by: S.me.first_name + ' ' + S.me.last_name });
+      var r = await sb.from('sessions').insert({ org_id: S.me.org_id, kind: f.kind, title: f.title, date: f.date, start_time: f.start_time, end_time: f.end_time, venue: f.venue, address: f.address, capacity: f.capacity, open_to: f.open_to, notes: f.notes, standard: f.kind === 'fitness' ? f.standard : null, created_by: S.me.first_name + ' ' + S.me.last_name });
       if (r.error) { sv.disabled = false; say('sesFormMsg', r.error.message, 'bad'); return; }
       SES.form = null; await loadSessions_(); renderSetup();
     };
-    root.querySelectorAll('[data-ses-open]').forEach(function (a) { a.onclick = async function (e) { e.preventDefault(); SES.open = parseInt(a.getAttribute('data-ses-open'), 10); busy(true); var r = await sb.from('session_signups').select('id,person_id,name,status,result,created_at').eq('session_id', SES.open).order('created_at'); busy(false); SES.roster = r.data || []; renderSetup(); }; });
+    root.querySelectorAll('[data-ses-open]').forEach(function (a) { a.onclick = async function (e) { e.preventDefault(); SES.open = parseInt(a.getAttribute('data-ses-open'), 10); busy(true); var r = await sb.from('session_signups').select('id,person_id,name,status,result,bib,rsa,interval_result,created_at').eq('session_id', SES.open).order('bib', { nullsFirst: false }).order('created_at'); busy(false); SES.roster = r.data || []; renderSetup(); }; });
     var bk = $('sesBack'); if (bk) bk.onclick = function () { SES.open = null; renderSetup(); };
     var pr = $('sesPrint'); if (pr) pr.onclick = function () { window.print(); };
     var cl = $('sesClose'); if (cl) cl.onclick = async function () { var x = SES.list.filter(function (y) { return y.id === SES.open; })[0]; if (!x || !window.confirm(t('sesCancelConfirm'))) return; await sb.from('sessions').update({ active: !x.active }).eq('id', x.id); SES.open = null; await loadSessions_(); renderSetup(); };
@@ -256,6 +313,26 @@
       if (r.error) return;
       SES.roster.forEach(function (x) { if (x.id === id) x.status = st; }); renderSetup();
     }; });
+    // Fitness sheet. Each cell saves on its own; the row's verdict is recomputed and written to status.
+    var ses = SES.list.filter(function (y) { return y.id === SES.open; })[0] || SES.pastOpen, std = ses ? fitStd(ses) : FIT.national;
+    var rowOf = function (id) { return SES.roster.filter(function (y) { return y.id === id; })[0]; };
+    var saveRow = async function (r, patch) {
+      Object.keys(patch).forEach(function (k) { r[k] = patch[k]; });
+      var ov = fitOverall(r, std.rsa); if (ov !== r.status && (ov === 'passed' || ov === 'failed' || (ov === 'signed' && (r.status === 'passed' || r.status === 'failed')))) { patch.status = ov; r.status = ov; }
+      patch.updated_at = new Date().toISOString();
+      var res = await sb.from('session_signups').update(patch).eq('id', r.id);
+      if (res.error) { say('fitMsg', res.error.message, 'bad'); return false; }
+      return true;
+    };
+    root.querySelectorAll('[data-fit-bib]').forEach(function (i) { i.onchange = function () { var r = rowOf(parseInt(i.getAttribute('data-fit-bib'), 10)); if (r) saveRow(r, { bib: i.value ? parseInt(i.value, 10) : null }); }; });
+    root.querySelectorAll('[data-fit-rsa]').forEach(function (i) { i.onchange = async function () {
+      var r = rowOf(parseInt(i.getAttribute('data-fit-rsa'), 10)), k = parseInt(i.getAttribute('data-i'), 10); if (!r) return;
+      var times = (r.rsa || []).slice(); while (times.length < 7) times.push(null); times[k] = i.value === '' ? null : Math.round(Number(i.value) * 100) / 100;
+      if (await saveRow(r, { rsa: times })) renderSetup();
+    }; });
+    root.querySelectorAll('[data-fit-int]').forEach(function (b) { b.onclick = async function () { var r = rowOf(parseInt(b.getAttribute('data-fit-int'), 10)); if (!r) return; var k = b.getAttribute('data-k'); if (await saveRow(r, { interval_result: r.interval_result === k ? null : k })) renderSetup(); }; });
+    root.querySelectorAll('[data-fit-ns]').forEach(function (b) { b.onclick = async function () { var r = rowOf(parseInt(b.getAttribute('data-fit-ns'), 10)); if (!r) return; var st = r.status === 'no_show' ? 'signed' : 'no_show'; r.status = st; var res = await sb.from('session_signups').update({ status: st, updated_at: new Date().toISOString() }).eq('id', r.id); if (res.error) { say('fitMsg', res.error.message, 'bad'); return; } renderSetup(); }; });
+    var em = $('fitEmail'); if (em && ses) em.onclick = function () { location.href = 'mailto:?subject=' + encodeURIComponent(t('fitEmailSubject').replace('{title}', ses.title).replace('{date}', dayLong(ses.date))) + '&body=' + encodeURIComponent(fitEmailText(ses, SES.roster)); };
   }
 
   // ── Your day ─────────────────────────────────────────────────────
