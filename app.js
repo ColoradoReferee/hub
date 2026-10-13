@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.13-k';
+  var VERSION = '2026.10.13-l';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -92,6 +92,8 @@
   async function loadSchedule() { return load(loadSchedule_()); }
   function show(id) {
     document.querySelectorAll('.screen').forEach(function (s) { s.classList.toggle('on', s.id === id); });
+    // The State view is read on a desktop; it gets the width. Everything else is a phone.
+    document.body.classList.toggle('wide', id === 's-state');
     window.scrollTo(0, 0);
   }
 
@@ -151,6 +153,16 @@
     S.coachedVenues = (r[8].data || []).map(function (x) { return typeof x === 'string' ? x : x.coached_venues; });
   }
 
+  // A folded section: one row with a count, tap to open. Native <details>,
+  // so it works the same on iOS and Android with no script, and the open
+  // state is remembered per screen for the session.
+  var FOLD = {};
+  function fold(k, title, count, inner, openDefault) {
+    var open = FOLD[k] != null ? FOLD[k] : !!openDefault;
+    return '<details class="fold" data-fold="' + esc(k) + '"' + (open ? ' open' : '') + '><summary><span class="t">' + esc(title) + '</span><span class="n">' + count + '</span></summary><div class="fold-body">' + inner + '</div></details>';
+  }
+  document.addEventListener('toggle', function (e) { var d = e.target; if (d && d.matches && d.matches('details.fold')) FOLD[d.getAttribute('data-fold')] = d.open; }, true);
+
   // ── Your day ─────────────────────────────────────────────────────
   function nextGame() {
     var now = Date.now();
@@ -183,12 +195,15 @@
       cd.style.display = 'none';
       $('nextCard').innerHTML = '<div class="card"><div class="disp" style="font-size:28px">' + esc(t('noGamesToday')) + '</div><div class="hint">' + esc(t('noGamesHint')) + '</div></div>';
     }
-    var later = S.games.filter(function (x) { return x !== g; });
-    $('laterList').innerHTML = later.length ? '<div class="hint" style="padding-bottom:8px;font-weight:700">' + esc(t('laterToday')) + '</div>' + later.map(function (x) {
+    var laterAll = S.games.filter(function (x) { return x !== g; });
+    var done = laterAll.filter(function (x) { return gameState(x) === 'done'; }), later = laterAll.filter(function (x) { return gameState(x) !== 'done'; });
+    var rowOf = function (x) {
       var inAt = S.checkins[String(x.game_id)];
       return '<a class="item" href="#game/' + esc(x.game_id) + '"><div class="when"><div class="disp">' + esc(clock(x.kickoff)) + '</div><div class="sub">' + (isHQ(x) ? esc(t('refereeHQ')) + ', ' + esc(x.venue || '') : esc(x.field || '') + ', ' + esc(x.age_group || '')) + '</div></div>' +
         (inAt ? '<div class="state in"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="8" fill="currentColor"></circle><path d="M5.5 9.5l2.3 2.3L12.8 6.8" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>' + esc(t('checkedIn').charAt(0) + t('checkedIn').slice(1).toLowerCase()) + '</div>' : '') + '</a>';
-    }).join('') : '';
+    };
+    $('laterList').innerHTML = (later.length ? '<div class="hint" style="padding-bottom:8px;font-weight:700">' + esc(t('laterToday')) + '</div>' + later.map(rowOf).join('') : '') +
+      (done.length ? fold('day-done', t('doneToday'), done.length, done.map(rowOf).join(''), false) : '');
     var up = $('dayUpcoming');
     if (S.me.previewing) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div><div class="hint">' + esc(t('loadingReview')) + '</div>'; upcomingFor(S.me.first_name + ' ' + S.me.last_name, 90).then(function (list) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div>' + upcomingHtml(list.filter(function (g) { return g.date !== todayStr(); }), S.me.first_name + ' ' + S.me.last_name); }).catch(function () { up.innerHTML = ''; }); }
     else up.innerHTML = '';
@@ -370,7 +385,7 @@
       };
     });
     var games = S.coach.games.filter(function (g) { return g.venue === S.coach.venue && !isHQ(g) && !isCoachSlot(g); });
-    $('coachGames').innerHTML = (games.length ? '<div class="pad hint" style="padding-top:12px">' + esc(t('redMeans')) + ((S.coach.mine || []).length ? ' ' + esc(t('goldMeans')) : '') + '</div>' : '') + '<div class="list">' + games.map(function (g) {
+    var rowOfGame = function (g) {
       var crew = ['cr', 'ar1', 'ar2', 'fourth'].filter(function (k) { return g[k]; }).map(function (k) {
         var none = !((S.coach.seen || {})[key(g[k])] || []).length;
         // Plain names here: the whole row opens the game, and a link inside a
@@ -378,7 +393,11 @@
         return (none ? '<span style="color:var(--red);font-weight:700">' : '<span>') + esc(g[k]) + '</span>';
       }).join(', ');
       return '<a class="item' + (isMyField(g) ? ' mine' : '') + '" href="#coach/game/' + esc(g.game_id) + '"><div><div class="when"><div class="disp">' + esc(clock(g.kickoff)) + '</div><div class="sub">' + esc(g.field || '') + ', ' + esc(g.age_group || '') + (isMyField(g) ? ', <b>' + esc(t('yours')) + '</b>' : '') + '</div></div><div class="hint">' + crew + '</div></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
-    }).join('') + '</div>';
+    };
+    var played = games.filter(function (g) { return gameState(g) === 'done'; }), ahead = games.filter(function (g) { return gameState(g) !== 'done'; });
+    $('coachGames').innerHTML = (games.length ? '<div class="pad hint" style="padding-top:12px">' + esc(t('redMeans')) + ((S.coach.mine || []).length ? ' ' + esc(t('goldMeans')) : '') + '</div>' : '') +
+      '<div class="list">' + ahead.map(rowOfGame).join('') + '</div>' +
+      (played.length ? fold('coach-played', t('playedGames'), played.length, '<div class="list" style="padding-top:0">' + played.map(rowOfGame).join('') + '</div>', !ahead.length) : '');
   }
   function renderCoachGame(id) {
     var g = S.coach.games.filter(function (x) { return String(x.game_id) === String(id); })[0];
@@ -428,14 +447,17 @@
     }).join('') + '</div>';
   }
   function renderMyNotes() {
-    $('myNotesList').innerHTML = S.coach.notes.length ? S.coach.notes.map(function (n) {
+    var cut = shiftDate(todayStr(), -14);
+    var myCard = function (n) {
       var st = n.cleanup_status || 'pending', ok = st === 'approved' || st === 'edited';
       var label = t('status.' + st); if (label === 'status.' + st) label = t('status.pending');
       var readAt = (S.coach.reads || {})[String(n.id)];
       if (ok && readAt) label = t('readBy') + ' ' + dayLong(readAt.slice(0, 10));
       return '<div class="card" style="gap:8px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div><b>' + refLink(n.ref_name || '') + '</b> <span class="hint">' + esc(dayLong(n.date)) + (n.field ? ', ' + esc(n.field) : '') + (n.area ? ', ' + esc(t('areas.' + n.area)) : '') + '</span></div><span class="pill' + (ok ? ' ok' : '') + '">' + esc(label) + '</span></div>' +
         '<div class="side three"><div class="col"><b>' + esc(t('rawLabel')) + '</b>' + esc(n.public_notes || '') + '</div><div class="col"><b>' + esc(t('aiLabel')) + '</b>' + (n.cleaned_note ? esc(n.cleaned_note) : '<span class="hint">' + esc(t('notCleaned')) + '</span>') + '</div><div class="col"><b>' + esc(t('releasedLabel')) + '</b>' + (ok ? esc(n.final_note || n.cleaned_note || '') : '<span class="hint">' + esc(t('notReleased')) + '</span>') + '</div></div></div>';
-    }).join('') : '<div class="card"><div class="hint">' + esc(t('noMyNotes')) + '</div></div>';
+    };
+    var recent = S.coach.notes.filter(function (n) { return !n.date || n.date >= cut; }), older = S.coach.notes.filter(function (n) { return n.date && n.date < cut; });
+    $('myNotesList').innerHTML = S.coach.notes.length ? recent.map(myCard).join('') + (older.length ? fold('mynotes-older', t('olderNotes'), older.length, older.map(myCard).join(''), !recent.length) : '') : '<div class="card"><div class="hint">' + esc(t('noMyNotes')) + '</div></div>';
   }
 
   // ── Review (Scheduling): clean, read both, approve ───────────────
@@ -464,16 +486,21 @@
     var counts = { pending: 0, cleaned: 0, approved: 0, rejected: 0 };
     REV.notes.forEach(function (n) { counts[revStatus(n)]++; });
     var lbl = function (k, n) { return t('filter' + k.charAt(0).toUpperCase() + k.slice(1)) + ' ' + n; };
-    var list = REV.notes.filter(function (n) { return revStatus(n) === REV.filter; });
+    var coaches = {}; REV.notes.forEach(function (n) { if (n.observer) coaches[n.observer] = (coaches[n.observer] || 0) + 1; });
+    var coachList = Object.keys(coaches).sort();
+    var listAll = REV.notes.filter(function (n) { return revStatus(n) === REV.filter && (!REV.coach || n.observer === REV.coach); });
+    var pageN = REV.page || 20, list = listAll.slice(0, pageN);
     $('reviewTools').innerHTML = '<div class="filters">' + ['pending', 'cleaned', 'approved', 'rejected'].map(function (k) {
       return '<button class="chip-btn' + (REV.filter === k ? ' on' : '') + '" data-filter="' + k + '">' + esc(lbl(k, counts[k])) + '</button>';
     }).join('') + '</div>' +
       (REV.filter === 'pending' && counts.pending ? '<div class="pad" style="padding-top:10px"><button class="btn outline small" id="cleanAll">' + esc(t('cleanAll')) + '</button></div>' : '') +
       (REV.filter === 'cleaned' && counts.cleaned ? '<div class="pad" style="padding-top:10px"><button class="btn go small" id="approveAll">' + esc(t('approveAll')) + '</button></div>' : '') +
+      (coachList.length > 1 ? '<div class="pad" style="padding-top:10px"><select id="revCoach" style="font:inherit;width:100%;padding:10px;border:2px solid var(--navy);border-radius:8px;background:var(--surface);color:var(--ink)"><option value="">' + esc(t('allCoaches')) + '</option>' + coachList.map(function (c) { return '<option value="' + esc(c) + '"' + (REV.coach === c ? ' selected' : '') + '>' + esc(c) + ' (' + coaches[c] + ')</option>'; }).join('') + '</select></div>' : '') +
       '<div class="msg bad" id="revMsg" hidden style="margin:10px 20px 0"></div>';
-    $('reviewTools').querySelectorAll('[data-filter]').forEach(function (b) { b.onclick = function () { REV.filter = b.getAttribute('data-filter'); renderReview(); }; });
-    var ca = $('cleanAll'); if (ca) ca.onclick = function () { runOn(list.filter(function (n) { return !n.flagged; }), 'clean'); };
-    var aa = $('approveAll'); if (aa) aa.onclick = function () { runOn(list.filter(function (n) { return !n.flagged; }), 'approve'); };
+    $('reviewTools').querySelectorAll('[data-filter]').forEach(function (b) { b.onclick = function () { REV.filter = b.getAttribute('data-filter'); REV.page = 20; renderReview(); }; });
+    var rc = $('revCoach'); if (rc) rc.onchange = function () { REV.coach = rc.value; REV.page = 20; renderReview(); };
+    var ca = $('cleanAll'); if (ca) ca.onclick = function () { runOn(listAll.filter(function (n) { return !n.flagged; }), 'clean'); };
+    var aa = $('approveAll'); if (aa) aa.onclick = function () { runOn(listAll.filter(function (n) { return !n.flagged; }), 'approve'); };
     $('reviewList').innerHTML = list.length ? list.map(function (n) {
       var st = revStatus(n);
       return '<div class="card' + (n.flagged ? ' flagged' : '') + '" style="gap:8px" id="rev-' + n.rowNum + '">' +
@@ -492,7 +519,8 @@
         '<div class="msg bad" id="revmsg-' + n.rowNum + '" hidden></div>' +
         (st === 'rejected' ? '<div class="actions" style="padding:0"><button class="btn outline small" data-restore="' + n.rowNum + '">' + esc(t('restoreNote')) + '</button></div>' : '') +
         '</div>';
-    }).join('') : '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>';
+    }).join('') + (listAll.length > list.length ? '<div class="pad"><button class="btn outline" id="revMore" style="width:100%">' + esc(t('showMore').replace('{n}', Math.min(20, listAll.length - list.length)).replace('{left}', listAll.length - list.length)) + '</button></div>' : '') : '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>';
+    var rm = $('revMore'); if (rm) rm.onclick = function () { REV.page = pageN + 20; renderReview(); };
     $('reviewList').querySelectorAll('[data-restore]').forEach(function (b) { b.onclick = function () { runOn([byRow(b.getAttribute('data-restore'))], 'restore', b); }; });
     $('reviewList').querySelectorAll('[data-clean]').forEach(function (b) { b.onclick = function () { runOn([byRow(b.getAttribute('data-clean'))], 'clean', b); }; });
     $('reviewList').querySelectorAll('[data-approve]').forEach(function (b) { b.onclick = function () { runOn([byRow(b.getAttribute('data-approve'))], 'approve', b); }; });
@@ -757,7 +785,7 @@
       slots[k].push(g);
     });
     if (!order.length) return '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>';
-    return order.map(function (k) {
+    var slotHtml = function (k) {
       var list = slots[k].sort(function (a, b) { return String(a.field).localeCompare(String(b.field), undefined, { numeric: true }); });
       return '<div class="slot"><div class="disp">' + esc(k) + '</div><div class="hint">' + list.length + ' ' + esc(t(list.length === 1 ? 'fieldOne' : 'fieldMany')) + '</div></div><div class="fields">' + list.map(function (g) {
         var open = OPS.edit === String(g.game_id) && !OPS.editForm, st = gameState(g);
@@ -769,7 +797,11 @@
           (iCan('scheduling') ? '<button class="btn outline small" data-switch="' + esc(g.game_id) + '">' + esc(t('change')) + '</button>' : '') + '</div>';
         return '<div class="fcard' + (st === 'live' ? ' live' : '') + (open ? ' open' : '') + '" data-fcard="' + esc(g.game_id) + '"><div class="fname">' + esc(g.field || '') + '</div><div class="dots">' + dots + '</div><div class="fstate' + (st === 'live' ? ' live' : '') + '">' + esc(t('state_' + st)) + '</div>' + body + '</div>';
       }).join('') + '</div>';
-    }).join('');
+    };
+    // Finished time slots fold away so the live and next ones are at the top.
+    var finished = order.filter(function (k) { return slots[k].every(function (g) { return gameState(g) === 'done'; }); });
+    var active = order.filter(function (k) { return finished.indexOf(k) < 0; });
+    return active.map(slotHtml).join('') + (finished.length ? fold('ops-finished-' + OPS.date, t('finishedSlots'), finished.length, finished.map(slotHtml).join(''), !active.length) : '');
   }
   function inSet() { var s = {}; OPS.checkins.forEach(function (c) { s[key(c.ref_name)] = c.created_at; }); return s; }
   function renderOps() {
@@ -851,10 +883,12 @@
         '<div class="card" style="gap:10px"><b>' + esc(t('newBulletin')) + '</b><label class="hint" for="bulTitle">' + esc(t('bulTitle')) + '</label><input id="bulTitle" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><label class="hint" for="bulBody">' + esc(t('bulBody')) + '</label><textarea id="bulBody" style="min-height:90px"></textarea>' +
         '<div class="grid2"><div><label class="hint" for="bulFrom">' + esc(t('bulFrom')) + '</label><input id="bulFrom" type="date" value="' + today + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div><div><label class="hint" for="bulTo">' + esc(t('bulTo')) + '</label><input id="bulTo" type="date" value="' + today + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div></div>' +
         '<button class="btn primary" id="bulPost">' + esc(t('bulPost')) + '</button><div class="msg" id="bulMsg" hidden></div></div>' +
-        OPS.bulletins.map(function (b) {
+        (function () { var past = [], now = []; OPS.bulletins.forEach(function (b) { var over = !b.active || (b.end_date && b.end_date < today); (over ? past : now).push(b); }); return now.map(bulCard).join('') + (past.length ? fold('bul-past', t('pastBulletins'), past.length, past.map(bulCard).join(''), false) : ''); })();
+    }
+    function bulCard(b) {
+          var today = todayStr();
           var state = !b.active ? 'over' : (b.end_date && b.end_date < today) ? 'over' : (b.start_date && b.start_date > today) ? 'future' : 'live';
           return '<div class="card" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + esc(b.title || '') + '</b><span class="pill' + (state === 'live' ? ' ok' : '') + '">' + esc(t(state === 'live' ? 'bulletinLive' : state === 'future' ? 'bulletinFuture' : 'bulletinOver')) + '</span></div><div style="font-size:15px">' + esc(b.body || '') + '</div><div class="hint">' + esc(b.start_date || '') + (b.end_date && b.end_date !== b.start_date ? ' to ' + esc(b.end_date) : '') + (b.venue ? ', ' + esc(b.venue) : '') + (b.posted_by ? ', ' + esc(b.posted_by) : '') + '</div>' + (b.active && state !== 'over' ? '<button class="btn outline small" data-clear="' + esc(b.src_key) + '">' + esc(t('bulClear')) + '</button>' : '') + '</div>';
-        }).join('');
     }
     $('opsBody').innerHTML = head + body;
     $('opsBody').querySelectorAll('[data-otab]').forEach(function (b) { b.onclick = function () { OPS.tab = b.getAttribute('data-otab'); if (OPS.tab === 'retain' && !CC.cov.length) loadCenter().then(renderOps); else renderOps(); }; });
@@ -1311,7 +1345,7 @@
       vnames.map(function (v) { var c = ST.venues[v]; return '<g class="venue-pin"><circle cx="' + px(c[1]) + '" cy="' + py(c[0]) + '" r="' + (radius / 69 / (R - L) * W).toFixed(1) + '" class="ring"/><path d="M' + px(c[1]) + ' ' + py(c[0]) + ' l-4 -9 a4 4 0 1 1 8 0 z" class="pin"><title>' + esc(v) + '</title></path></g>'; }).join('') + (focus ? '<circle cx="' + px(focus[1]) + '" cy="' + py(focus[0]) + '" r="' + (radius / 69 / (R - L) * W).toFixed(1) + '" class="focusring"/><circle cx="' + px(focus[1]) + '" cy="' + py(focus[0]) + '" r="3" class="focusdot"/>' : '') + cityLabels + '</svg>';
     var top = pts.slice(0, 8);
     var vlist = vnames.map(function (v) { return { v: v, n: byVenue[v] }; }).sort(function (a, b) { return b.n - a.n; });
-    return '<div class="card chartcard"><b>' + esc(t('stMapTitle')) + '</b><div class="hint">' + esc(t('stMapHint').replace('{y}', Y)) + '</div>' +
+    return '<div class="card chartcard wide"><b>' + esc(t('stMapTitle')) + '</b><div class="hint">' + esc(t('stMapHint').replace('{y}', Y)) + '</div>' +
       '<div class="go"><input id="stQ" placeholder="' + esc(t('stSearchPh')) + '" value="' + esc(q) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn outline" id="stQGo">' + esc(t('go')) + '</button></div>' + svg +
       '<div class="legend"><span><i class="sw" style="background:var(--c1)"></i>' + esc(t('stMapRefs')) + '</span><span><i class="sw" style="background:var(--c2)"></i>' + esc(t('stMapNear')) + '</span><span><i class="sw" style="background:var(--c3)"></i>' + esc(t('stMapField')) + '</span></div>' +
       '<div class="chips" style="margin-top:6px">' + [10, 25, 50].map(function (m) { return '<button class="chip-btn' + (radius === m ? ' on' : '') + '" data-radius="' + m + '">' + m + ' ' + esc(t('stMiles')) + '</button>'; }).join('') + '</div>' +
@@ -1708,9 +1742,10 @@
   }
   function renderNotes() {
     markRead(S.notes);
-    $('notesList').innerHTML = S.notes.length ? S.notes.map(function (n) {
-      return '<div class="note"><div class="who">' + esc(n.observer || '') + (n.rater_role ? ', ' + esc(n.rater_role) : '') + (n.date ? ', ' + esc(dayLong(n.date)) : '') + (n.field ? ', ' + esc(n.field) : '') + '</div><div class="text">' + esc(n.final_note || n.cleaned_note || '') + '</div></div>';
-    }).join('') : '<div class="note"><div class="text hint">' + esc(t('noNotes')) + '</div></div>';
+    var cut = shiftDate(todayStr(), -30);
+    var noteCard = function (n) { return '<div class="note"><div class="who">' + esc(n.observer || '') + (n.rater_role ? ', ' + esc(n.rater_role) : '') + (n.date ? ', ' + esc(dayLong(n.date)) : '') + (n.field ? ', ' + esc(n.field) : '') + '</div><div class="text">' + esc(n.final_note || n.cleaned_note || '') + '</div></div>'; };
+    var recent = S.notes.filter(function (n) { return !n.date || n.date >= cut; }), older = S.notes.filter(function (n) { return n.date && n.date < cut; });
+    $('notesList').innerHTML = S.notes.length ? recent.map(noteCard).join('') + (older.length ? fold('notes-older', t('olderNotes'), older.length, older.map(noteCard).join(''), !recent.length) : '') : '<div class="note"><div class="text hint">' + esc(t('noNotes')) + '</div></div>';
   }
 
   // ── Help ─────────────────────────────────────────────────────────
