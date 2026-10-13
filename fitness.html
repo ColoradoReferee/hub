@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Fitness test · Colorado Referees</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
-<link rel="stylesheet" href="app.css?v=2026.10.13-p">
+<link rel="stylesheet" href="app.css?v=2026.10.13-q">
 <style>
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 20px 0; }
   .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
@@ -82,6 +82,18 @@
     <text x="118" y="78">4 runs and 4 walks per lap</text><text x="110" y="96" font-weight="700">10 laps. 40 runs. 4,000 m.</text>
     <line x1="120" y1="112" x2="150" y2="112" class="run"/><text x="156" y="116">run</text><line x1="190" y1="112" x2="220" y2="112" class="walk" style="stroke-dasharray:none"/><text x="226" y="116">walk</text>
   </svg></div>
+  <div class="pad hint" style="padding-top:8px">On a field instead of a track: the 75 m run goes from one penalty area line to the other, and the 25 m walk is split into 12.5 m at each end, turning around before the next run. Same times, same count.</div>
+  <div class="diagram"><svg viewBox="0 0 360 130" role="img" aria-label="The interval test laid out on a soccer field">
+    <rect x="20" y="10" width="320" height="110" rx="4" style="fill:rgba(39,174,96,.12);stroke:var(--muted);stroke-width:1.5"/>
+    <line x1="180" y1="10" x2="180" y2="120" class="lane"/><circle cx="180" cy="55" r="14" class="lane"/>
+    <rect x="20" y="32" width="46" height="66" class="lane"/><rect x="294" y="32" width="46" height="66" class="lane"/>
+    <path d="M66 80 H294" class="run"/><path d="M294 96 H66" class="run"/>
+    <path d="M66 80 H34" class="walk" style="stroke-dasharray:none"/><path d="M294 80 H326" class="walk" style="stroke-dasharray:none"/>
+    <path d="M294 96 H326" class="walk" style="stroke-dasharray:none"/><path d="M66 96 H34" class="walk" style="stroke-dasharray:none"/>
+    <text x="100" y="74" font-size="10">Run 75 m</text><text x="230" y="110" font-size="10">Run 75 m</text>
+    <text x="24" y="22" font-size="9">Walk 12.5 m</text><text x="288" y="22" font-size="9">Walk 12.5 m</text>
+    <text x="40" y="128" font-size="9" font-weight="700">Start / finish</text><text x="280" y="128" font-size="9" font-weight="700">Start / finish</text>
+  </svg></div>
   <div class="rule gold"><b>40 × 75 m run, 25 m walk</b><p>Ten laps of a 400 m track. An audio signal starts each run and marks the end of each run and walk. Every run ends inside the walking area: a line 1.5 m before and 1.5 m after the 75 m mark.</p></div>
   <div class="rule"><b>One warning, then out</b><p>A foot late into the walking area once earns a clear warning. A second time and the test leader stops the referee: the test is failed.</p></div>
   <div class="rule"><b>Colorado reference times</b><p><b>National test: 15 s run, 18 s walk</b> (FIFA men's international). <b>Regional test: 17 s run, 20 s walk</b> (FIFA women's international).</p></div>
@@ -123,7 +135,7 @@
 
   <div class="pad hint" style="margin-top:18px">Standards from FIFA Fitness Tests for Referees (2016). Colorado's choice of the men's and women's international times for the National and Regional tests is set by the Referee Department. Questions: refeducation@coloradoreferees.com.</div>
   <div class="foot" style="flex-direction:column"><a class="btn help" href="index.html#help">I NEED HELP</a></div>
-  <div class="credit"><span class="chip"><img src="assets/jareferee-mark.png" alt=""></span><a href="https://jareferee.com">Built with JAReferee</a><span class="ver">v2026.10.13-p</span></div>
+  <div class="credit"><span class="chip"><img src="assets/jareferee-mark.png" alt=""></span><a href="https://jareferee.com">Built with JAReferee</a><span class="ver">v2026.10.13-q</span></div>
 </div>
 <script>
 (function () {

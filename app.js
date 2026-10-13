@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.13-p';
+  var VERSION = '2026.10.13-q';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -168,16 +168,18 @@
   document.addEventListener('toggle', function (e) { var d = e.target; if (d && d.matches && d.matches('details.fold')) FOLD[d.getAttribute('data-fold')] = d.open; }, true);
 
   // ── Sessions: fitness tests, classes, clinics ────────────────────
-  var SES = { list: [], mine: [], counts: {}, open: null, roster: [], form: null };
+  var SES = { list: [], mine: [], counts: {}, open: null, roster: [], form: null, badge: null };
   function runsSessions() { return iCan('setup') || iCan('review'); }
   async function loadSessions_() {
     var today = todayStr();
     var r = await Promise.all([
       sb.from('sessions').select('id,kind,title,date,start_time,end_time,venue,address,capacity,open_to,notes,active,standard').gte('date', today).eq('active', true).order('date').order('start_time'),
       sb.from('session_signups').select('id,session_id,status,result').eq('person_id', S.me.person_id),
-      sb.rpc('session_counts')
+      sb.rpc('session_counts'),
+      sb.from('session_signups').select('status,sessions!inner(kind,date,standard)').eq('person_id', S.me.person_id).eq('status', 'passed').eq('sessions.kind', 'fitness').gte('sessions.date', todayStr().slice(0, 4) + '-01-01')
     ]);
     SES.list = r[0].data || []; SES.mine = r[1].data || [];
+    SES.badge = ((r[3] && r[3].data) || []).map(function (x) { return x.sessions; }).filter(Boolean).sort(function (a, b) { return a.date < b.date ? 1 : -1; })[0] || null;
     SES.counts = {}; (r[2].data || []).forEach(function (c) { SES.counts[String(c.session_id)] = Number(c.signed); });
   }
   // FIFA standards Colorado runs to: National = men's international, Regional = women's international.
@@ -202,13 +204,14 @@
     if (v === 'pass' && r.interval_result === 'pass') return 'passed';
     return 'signed';
   }
+  function fitBadgeHtml(f) { return f ? '<span class="pill ok fitbadge">' + esc(t('fitBadge').replace('{std}', t('fitStd.' + (FIT[f.standard] ? f.standard : 'national'))).replace('{date}', dayLong(f.date))) + '</span>' : ''; }
   function mySignup(sid) { return SES.mine.filter(function (x) { return String(x.session_id) === String(sid); })[0]; }
   function sessionLine(x) { return esc(dayLong(x.date)) + (x.start_time ? ', ' + esc(hhmm(x.start_time)) + (x.end_time ? ' to ' + esc(hhmm(x.end_time)) : '') : '') + (x.venue ? ', ' + esc(x.venue) : ''); }
   // The sign-up card on Your day: upcoming sessions a referee may join.
   function signupCardHtml() {
     var list = SES.list.filter(function (x) { return x.open_to !== 'invite' || mySignup(x.id); });
-    if (!list.length) return '';
-    return '<div class="card" style="gap:8px;border-color:var(--gold)"><b>' + esc(t('sesTitle')) + '</b>' + list.map(function (x) {
+    if (!list.length) return SES.badge ? '<div class="card" style="gap:8px;border-color:var(--gold)">' + fitBadgeHtml(SES.badge) + '</div>' : '';
+    return '<div class="card" style="gap:8px;border-color:var(--gold)">' + fitBadgeHtml(SES.badge) + '<b>' + esc(t('sesTitle')) + '</b>' + list.map(function (x) {
       var me = mySignup(x.id), n = SES.counts[String(x.id)] || 0, full = x.capacity && n >= x.capacity && !me;
       var state = me ? (me.status === 'passed' ? t('sesPassed') : me.status === 'failed' ? t('sesFailed') : me.status === 'no_show' ? t('sesNoShow') : me.status === 'waitlist' ? t('sesWaitlisted') : t('sesIn')) : (full ? t('sesFull') : (x.capacity ? t('sesSpots').replace('{n}', x.capacity - n) : ''));
       return '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><div><b>' + esc(t('sesKind.' + x.kind)) + ': ' + esc(x.title) + '</b><br><span class="hint">' + sessionLine(x) + (state ? '. ' + esc(state) : '') + '</span>' + (x.notes ? '<br><span class="hint">' + esc(x.notes) + '</span>' : '') + (x.kind === 'fitness' ? '<br><span class="hint">' + esc(stdLine(x)) + '</span><br><a href="fitness.html" class="chip-btn small" style="display:inline-block;margin-top:6px;text-decoration:none">' + esc(t('fitOpen')) + '</a>' : '') + '</div>' +
@@ -241,27 +244,18 @@
       var cell = function (i) { var val = times[i]; var bad = val != null && val !== '' && Number(val) > std.rsa; return '<td class="n"><input type="number" step="0.01" min="3" max="20" inputmode="decimal" class="fit-t' + (bad ? ' bad' : '') + '" data-fit-rsa="' + r.id + '" data-i="' + i + '" value="' + (val == null ? '' : esc(val)) + '"' + (off ? ' disabled' : '') + ' aria-label="' + esc(t('fitSprint')) + ' ' + (i + 1) + '"></td>'; };
       var seventh = v === 'seventh' || (times[6] != null && times[6] !== '') ? cell(6) : '<td class="n hint">' + (v === 'fail' ? esc(t('fitTwoMisses')) : '') + '</td>';
       var intv = function (k, label) { return '<button class="chip-btn small' + (r.interval_result === k ? ' on' : '') + '" data-fit-int="' + r.id + '" data-k="' + k + '"' + (off ? ' disabled' : '') + '>' + esc(label) + '</button>'; };
+      var warn = '<button class="chip-btn small warn' + (r.interval_warnings ? ' on' : '') + '" data-fit-warn="' + r.id + '"' + (off ? ' disabled' : '') + ' title="' + esc(t('fitWarnHint')) + '">' + esc(t('fitWarn')) + (r.interval_warnings ? ' ' + r.interval_warnings : '') + '</button>';
       return '<tr class="' + esc(ov) + '"><td class="n"><input type="number" min="1" max="999" inputmode="numeric" class="fit-t" data-fit-bib="' + r.id + '" value="' + (r.bib == null ? '' : r.bib) + '" aria-label="' + esc(t('fitBib')) + '"></td><td><b>' + refLink(r.name) + '</b></td>' +
         [0, 1, 2, 3, 4, 5].map(cell).join('') + seventh +
         '<td class="n">' + esc(v === 'pass' ? t('fitPass') : v === 'fail' ? t('fitFail') : v === 'seventh' ? t('fitSeventh') : '') + '</td>' +
-        '<td><div class="chips no-print" style="flex-wrap:nowrap">' + intv('pass', t('fitPass')) + intv('fail', t('fitFail')) + '</div><span class="print-only">' + esc(r.interval_result === 'pass' ? t('fitPass') : r.interval_result === 'fail' ? t('fitFail') : '') + '</span></td>' +
+        '<td><div class="chips no-print" style="flex-wrap:nowrap">' + warn + intv('pass', t('fitPass')) + intv('fail', t('fitFail')) + '</div><span class="print-only">' + esc((r.interval_result === 'pass' ? t('fitPass') : r.interval_result === 'fail' ? t('fitFail') : '') + (r.interval_warnings ? ' (' + t('fitWarn').toLowerCase() + ')' : '')) + '</span></td>' +
         '<td class="n"><b>' + esc(statusWord(ov)) + '</b><div class="no-print"><button class="chip-btn small' + (off ? ' on' : '') + '" data-fit-ns="' + r.id + '" style="white-space:nowrap">' + esc(t('sesMarkNoShow')) + '</button></div></td></tr>';
     }).join('');
     var passed = live.filter(function (r) { return fitOverall(r, std.rsa) === 'passed'; }).length, failed = live.filter(function (r) { return fitOverall(r, std.rsa) === 'failed'; }).length;
     return '<div class="pad hint" style="padding-top:0">' + esc(stdLine(x)) + '. ' + esc(t('fitSheetHint')) + '</div>' +
       '<div class="pad" style="padding-top:6px;overflow-x:auto"><table class="dt fit"><thead><tr><th>' + esc(t('fitBib')) + '</th><th>' + esc(t('fitName')) + '</th>' + [1, 2, 3, 4, 5, 6].map(function (i) { return '<th class="n">' + esc(t('fitSprint')) + ' ' + i + '</th>'; }).join('') + '<th class="n">' + esc(t('fitSeventhCol')) + '</th><th class="n">' + esc(t('fitRsa')) + '</th><th>' + esc(t('fitInterval')) + '</th><th class="n">' + esc(t('fitResult')) + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
       '<div class="pad hint" style="padding-top:6px">' + passed + ' ' + esc(t('sesPassed').toLowerCase()) + ', ' + failed + ' ' + esc(t('sesFailed').toLowerCase()) + ', ' + live.length + ' ' + esc(t('sesSignedUp')) + '</div>' +
-      '<div class="actions no-print"><button class="btn outline small" id="fitEmail">' + esc(t('fitEmail')) + '</button><a class="btn outline small" href="fitness.html">' + esc(t('fitOpen')) + '</a></div><div class="msg" id="fitMsg" hidden></div>';
-  }
-  // Plain-text results for the email to the director.
-  function fitEmailText(x, roster) {
-    var std = fitStd(x), lines = [x.title, sessionLine(x).replace(/&#39;/g, "'"), stdLine(x), ''];
-    roster.filter(function (r) { return r.status !== 'withdrawn'; }).forEach(function (r) {
-      var times = r.rsa || [], ov = fitOverall(r, std.rsa), word = ov === 'passed' ? t('sesPassed') : ov === 'failed' ? t('sesFailed') : ov === 'no_show' ? t('sesNoShow') : t('fitIncomplete');
-      lines.push((r.bib != null ? '#' + r.bib + ' ' : '') + r.name + ': ' + word.toUpperCase() + (ov === 'no_show' ? '' : '. RSA ' + [0, 1, 2, 3, 4, 5, 6].map(function (i) { return times[i] == null || times[i] === '' ? null : Number(times[i]).toFixed(2); }).filter(Boolean).join(' / ') + '. ' + t('fitInterval') + ' ' + (r.interval_result ? t(r.interval_result === 'pass' ? 'fitPass' : 'fitFail') : '')));
-    });
-    lines.push('', t('fitSentBy').replace('{name}', S.me.first_name + ' ' + S.me.last_name));
-    return lines.join('\n');
+      '<div class="actions no-print"><button class="btn primary small" id="fitPrint">' + esc(t('fitPrint')) + '</button><a class="btn outline small" href="fitness.html">' + esc(t('fitOpen')) + '</a></div><div class="msg" id="fitMsg" hidden></div>';
   }
   // Setup side: list, create, roster and results.
   function sessionsSetupHtml() {
@@ -287,23 +281,26 @@
       '<label class="hint" for="sesAddr">' + esc(t('sesAddress')) + '</label>' + inp('sesAddr', f.address) +
       '<label class="hint" for="sesOpen">' + esc(t('sesOpenTo')) + '</label><select id="sesOpen" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' + ['all', 'regional', 'invite'].map(function (k) { return '<option value="' + k + '"' + (f.open_to === k ? ' selected' : '') + '>' + esc(t('sesOpen.' + k)) + '</option>'; }).join('') + '</select>' +
       '<label class="hint" for="sesNotes">' + esc(t('sesNotes')) + '</label><textarea id="sesNotes" style="min-height:70px">' + esc(f.notes || '') + '</textarea>' +
+      '<label style="display:flex;gap:10px;align-items:center;min-height:44px"><input type="checkbox" id="sesBul"' + (f.bulletin ? ' checked' : '') + ' style="width:22px;height:22px"> ' + esc(t('sesBulletin')) + '</label>' +
       '<div class="actions" style="padding:0"><button class="btn primary" id="sesSave">' + esc(t('sesSave')) + '</button><button class="btn outline" id="sesCancelForm">' + esc(t('neverMind')) + '</button></div><div class="msg" id="sesFormMsg" hidden></div></div>';
     return '<div class="disp h2">' + esc(t('sesSetupTitle')) + '</div>' + form + (SES.list.length ? '<div class="list">' + SES.list.map(function (x) { var n = SES.counts[String(x.id)] || 0; return '<a class="item" href="#" data-ses-open="' + x.id + '"><div><b>' + esc(t('sesKind.' + x.kind)) + ': ' + esc(x.title) + '</b><br><span class="hint">' + sessionLine(x) + '. ' + n + (x.capacity ? ' / ' + x.capacity : '') + ' ' + esc(t('sesSignedUp')) + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>' : '<div class="pad hint">' + esc(t('sesNone')) + '</div>');
   }
   function wireSessionsSetup(root) {
-    var nb = $('sesNew'); if (nb) nb.onclick = function () { SES.form = { kind: 'fitness', standard: 'national', title: '', date: todayStr(), capacity: '', start_time: '', end_time: '', venue: '', address: '', open_to: 'all', notes: '' }; renderSetup(); };
+    var nb = $('sesNew'); if (nb) nb.onclick = function () { SES.form = { kind: 'fitness', standard: 'national', bulletin: true, title: '', date: todayStr(), capacity: '', start_time: '', end_time: '', venue: '', address: '', open_to: 'all', notes: '' }; renderSetup(); };
     var cf = $('sesCancelForm'); if (cf) cf.onclick = function () { SES.form = null; renderSetup(); };
     root.querySelectorAll('[data-ses-kind]').forEach(function (b) { b.onclick = function () { SES.form.kind = b.getAttribute('data-ses-kind'); SES.form.title = $('sesTitle').value; renderSetup(); }; });
     root.querySelectorAll('[data-ses-std]').forEach(function (b) { b.onclick = function () { SES.form.standard = b.getAttribute('data-ses-std'); SES.form.title = $('sesTitle').value; renderSetup(); }; });
     var sv = $('sesSave'); if (sv) sv.onclick = async function () {
-      var f = SES.form; f.title = $('sesTitle').value.trim(); f.date = $('sesDate').value; f.capacity = $('sesCap').value ? parseInt($('sesCap').value, 10) : null; f.start_time = $('sesStart').value || null; f.end_time = $('sesEnd').value || null; f.venue = $('sesVenue').value.trim(); f.address = $('sesAddr').value.trim(); f.open_to = $('sesOpen').value; f.notes = $('sesNotes').value.trim();
+      var f = SES.form; f.title = $('sesTitle').value.trim(); f.date = $('sesDate').value; f.capacity = $('sesCap').value ? parseInt($('sesCap').value, 10) : null; f.start_time = $('sesStart').value || null; f.end_time = $('sesEnd').value || null; f.venue = $('sesVenue').value.trim(); f.address = $('sesAddr').value.trim(); f.open_to = $('sesOpen').value; f.notes = $('sesNotes').value.trim(); f.bulletin = $('sesBul').checked;
       if (!f.title || !f.date) { say('sesFormMsg', t('sesNeedTitleDate'), 'bad'); return; }
       sv.disabled = true;
       var r = await sb.from('sessions').insert({ org_id: S.me.org_id, kind: f.kind, title: f.title, date: f.date, start_time: f.start_time, end_time: f.end_time, venue: f.venue, address: f.address, capacity: f.capacity, open_to: f.open_to, notes: f.notes, standard: f.kind === 'fitness' ? f.standard : null, created_by: S.me.first_name + ' ' + S.me.last_name });
       if (r.error) { sv.disabled = false; say('sesFormMsg', r.error.message, 'bad'); return; }
+      // A bulletin so referees hear about it on Your day without anyone sending an email.
+      if (f.bulletin) { try { await post({ action: 'postAnnouncement', title: t('sesKind.' + f.kind) + ': ' + f.title, bodyText: t('sesBulletinBody').replace('{when}', sessionLine(f).replace(/&#39;/g, "'").replace(/&amp;/g, '&')) + (f.kind === 'fitness' ? ' ' + stdLine(f) + '.' : ''), startDate: todayStr(), endDate: f.date, severity: 'info', postedBy: S.me.first_name + ' ' + S.me.last_name }); } catch (e) {} }
       SES.form = null; await loadSessions_(); renderSetup();
     };
-    root.querySelectorAll('[data-ses-open]').forEach(function (a) { a.onclick = async function (e) { e.preventDefault(); SES.open = parseInt(a.getAttribute('data-ses-open'), 10); busy(true); var r = await sb.from('session_signups').select('id,person_id,name,status,result,bib,rsa,interval_result,created_at').eq('session_id', SES.open).order('bib', { nullsFirst: false }).order('created_at'); busy(false); SES.roster = r.data || []; renderSetup(); }; });
+    root.querySelectorAll('[data-ses-open]').forEach(function (a) { a.onclick = async function (e) { e.preventDefault(); SES.open = parseInt(a.getAttribute('data-ses-open'), 10); busy(true); var r = await sb.from('session_signups').select('id,person_id,name,status,result,bib,rsa,interval_result,interval_warnings,created_at').eq('session_id', SES.open).order('bib', { nullsFirst: false }).order('created_at'); busy(false); SES.roster = r.data || []; renderSetup(); }; });
     var bk = $('sesBack'); if (bk) bk.onclick = function () { SES.open = null; renderSetup(); };
     var pr = $('sesPrint'); if (pr) pr.onclick = function () { window.print(); };
     var cl = $('sesClose'); if (cl) cl.onclick = async function () { var x = SES.list.filter(function (y) { return y.id === SES.open; })[0]; if (!x || !window.confirm(t('sesCancelConfirm'))) return; await sb.from('sessions').update({ active: !x.active }).eq('id', x.id); SES.open = null; await loadSessions_(); renderSetup(); };
@@ -331,8 +328,16 @@
       if (await saveRow(r, { rsa: times })) renderSetup();
     }; });
     root.querySelectorAll('[data-fit-int]').forEach(function (b) { b.onclick = async function () { var r = rowOf(parseInt(b.getAttribute('data-fit-int'), 10)); if (!r) return; var k = b.getAttribute('data-k'); if (await saveRow(r, { interval_result: r.interval_result === k ? null : k })) renderSetup(); }; });
+    root.querySelectorAll('[data-fit-warn]').forEach(function (b) { b.onclick = async function () {
+      var r = rowOf(parseInt(b.getAttribute('data-fit-warn'), 10)); if (!r) return;
+      var n = r.interval_warnings || 0, patch;
+      if (n === 0) patch = { interval_warnings: 1 };
+      else if (n === 1) patch = { interval_warnings: 2, interval_result: 'fail' };
+      else patch = { interval_warnings: 0, interval_result: r.interval_result === 'fail' ? null : r.interval_result };
+      if (await saveRow(r, patch)) renderSetup();
+    }; });
     root.querySelectorAll('[data-fit-ns]').forEach(function (b) { b.onclick = async function () { var r = rowOf(parseInt(b.getAttribute('data-fit-ns'), 10)); if (!r) return; var st = r.status === 'no_show' ? 'signed' : 'no_show'; r.status = st; var res = await sb.from('session_signups').update({ status: st, updated_at: new Date().toISOString() }).eq('id', r.id); if (res.error) { say('fitMsg', res.error.message, 'bad'); return; } renderSetup(); }; });
-    var em = $('fitEmail'); if (em && ses) em.onclick = function () { location.href = 'mailto:?subject=' + encodeURIComponent(t('fitEmailSubject').replace('{title}', ses.title).replace('{date}', dayLong(ses.date))) + '&body=' + encodeURIComponent(fitEmailText(ses, SES.roster)); };
+    var fp = $('fitPrint'); if (fp) fp.onclick = function () { window.print(); };
   }
 
   // ── Your day ─────────────────────────────────────────────────────
@@ -1551,6 +1556,7 @@
     ST.rows = r.data || [];
     // Live season numbers from the same view the Coverage tab uses.
     try { var cov = await sb.rpc('coverage_rows'); ST.cov = cov.data || []; } catch (e) { ST.cov = []; }
+    try { var fs = await sb.rpc('fitness_summary'); ST.fit = fs.data || []; } catch (e) { ST.fit = []; }
     // ZIP centroids and the fields we use, static files in this folder.
     if (!ST.zips) { try { var z = await Promise.all([fetch('zips.json?v=' + VERSION).then(function (x) { return x.json(); }), fetch('venues.json?v=' + VERSION).then(function (x) { return x.json(); })]); ST.zips = z[0]; ST.venues = z[1]; delete ST.venues._note; } catch (e) { ST.zips = {}; ST.venues = {}; } }
   }
@@ -1721,6 +1727,9 @@
       ST.cov.forEach(function (r) { rel += r.released || 0; rd += r.read || 0; });
       html += '<div class="disp h2">' + esc(t('stSeason')) + '</div><div class="stats two">' + tile(fmtN(worked), t('stWorked'), tot ? '<span class="hint">' + pct(worked, tot) + '% ' + esc(t('stOfLicensed')) + '</span>' : '') + tile(fmtN(seen), t('stSeen'), '<span class="hint">' + pct(seen, worked) + '% ' + esc(t('stOfWorking')) + '</span>') + tile(fmtN(rel), t('stReleased'), '') + tile(rel ? pct(rd, rel) + '%' : '0%', t('stReadShare'), '') + '</div><div class="pad hint" style="padding-top:8px">' + esc(t('stSeasonHint')) + '</div>';
     }
+    // Fitness tests, by standard, for the year in view
+    var fitRows = (ST.fit || []).filter(function (r) { return Number(r.year) === Number(Y); });
+    if (fitRows.length) html += '<div class="card" style="gap:6px"><b>' + esc(t('stFitness')) + '</b>' + hbars(fitRows.map(function (r) { return { l: t('fitStd.' + (FIT[r.standard] ? r.standard : 'national')) + ', ' + t('sesPassed').toLowerCase() + (Number(r.tested) ? ' (' + pct(Number(r.passed), Number(r.tested)) + '% ' + t('stOfTested').replace('{n}', r.tested) + ')' : ''), v: Number(r.passed) }; }), Number(Y)) + '</div>';
     // Where they are, experience, ethnicity, compliance, registration month
     var regions = [['denver', t('regDenver')], ['north', t('regNorth')], ['springs', t('regSprings')], ['foothills', t('regFoothills')], ['west', t('regWest')], ['mountains', t('regMountains')], ['boulder', t('regBoulder')], ['pueblo', t('regPueblo')], ['south', t('regSouth')], ['southwest', t('regSouthwest')], ['plains', t('regPlains')], ['outside', t('regOutside')]];
     var regItems = regions.map(function (b) { return { l: b[1], v: stVal(Y, 'region', b[0]) || 0, d: d('region', b[0]) }; }).filter(function (i) { return i.v; }).sort(function (a, b) { return b.v - a.v; });
@@ -1797,7 +1806,7 @@
     var titles = (c.titles || []).map(function (x) { return '<span class="pill' + (x.source === 'manual' ? ' ok' : '') + '" style="margin:4px 4px 0 0">' + esc(x.label) + '</span>'; }).join('');
     var stat = function (n, l, cls) { return '<div class="stat' + (cls ? ' ' + cls : '') + '"><b>' + (n == null ? '0' : esc(n)) + '</b><i>' + esc(l) + '</i></div>'; };
     $('refBody').innerHTML =
-      '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(t('refCardTitle')) + (c.city ? ', ' + esc(c.city) : '') + (c.green_badge ? ', ' + esc(t('greenBadge')) : '') + '</div><div class="disp" style="font-size:40px">' + esc(name) + '</div><div>' + (titles || '<span class="hint">' + esc(t('noneYet')) + '</span>') + '</div></div>' +
+      '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(t('refCardTitle')) + (c.city ? ', ' + esc(c.city) : '') + (c.green_badge ? ', ' + esc(t('greenBadge')) : '') + '</div><div class="disp" style="font-size:40px">' + esc(name) + '</div><div>' + fitBadgeHtml(c.fitness) + (titles || '<span class="hint">' + esc(t('noneYet')) + '</span>') + '</div></div>' +
       contact +
       '<div class="disp h2">' + esc(t('refSeason')) + '</div>' +
       '<div class="stats">' + stat(c.games, t('refGames')) + stat(c.as_center, t('refCenter')) + stat(c.evaluations, t('refEvals')) + '</div>' +
