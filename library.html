@@ -1179,6 +1179,27 @@ var MODULES = [
     }
   },
 
+  {
+    id:"career-fitness", cat:"career", icon:"&#127939;",
+    iconBg:"rgba(39,174,96,.12)",
+    title:"Fitness Test",
+    sub:"FIFA standards, diagrams, pacer audio",
+    eyebrow:"Career Resources",
+    keywords:"fitness test FIFA RSA sprint interval pacer audio beep national regional",
+    build: function() {
+      return ds("Two Tests, One Morning",
+        dt("The Colorado fitness test follows the FIFA test for referees: six 40 m sprints, then forty 75 m runs with a 25 m walk between each, to an audio signal.") +
+        bul("<strong>National test</strong> uses the FIFA men's international times: sprints under 6.0 s, runs in 15 s, walks in 18 s") +
+        bul("<strong>Regional test</strong> uses the FIFA women's international times: sprints under 6.4 s, runs in 17 s, walks in 20 s") +
+        bul("One missed sprint earns a 7th. Two misses is a fail. One late run earns a warning, the second ends the test")) +
+      ds("Standards, Diagrams and Pacer",
+        dt("The full page has every FIFA category, a diagram of each test, and a pacer that plays the interval signal from your phone, so you can train to the real cadence.") +
+        "<a class=\"btn\" href=\"fitness.html\" style=\"display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:10px;background:var(--navy);color:#fff;font-weight:700;text-decoration:none\">Open the fitness test page &#8250;</a>") +
+      ds("Sign Up",
+        dt("Test dates appear on Your day in the Hub when the Referee Department schedules one. Sign up there; the sign-up card links back to this page."));
+    }
+  },
+
   /* ══════════ POLICY ══════════ */
   {
     id:"policy-rap", cat:"policy", icon:"&#128737;",
