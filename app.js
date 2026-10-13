@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.13-h';
+  var VERSION = '2026.10.13-i';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -450,15 +450,16 @@
   function revStatus(n) {
     var s = String(n.cleanupStatus || 'pending').toLowerCase();
     if (s === 'approved' || s === 'edited') return 'approved';
+    if (s === 'rejected') return 'rejected';
     if (s === 'cleaned' && n.cleanedNote) return 'cleaned';
     return 'pending';
   }
   function renderReview() {
-    var counts = { pending: 0, cleaned: 0, approved: 0 };
+    var counts = { pending: 0, cleaned: 0, approved: 0, rejected: 0 };
     REV.notes.forEach(function (n) { counts[revStatus(n)]++; });
     var lbl = function (k, n) { return t('filter' + k.charAt(0).toUpperCase() + k.slice(1)) + ' ' + n; };
     var list = REV.notes.filter(function (n) { return revStatus(n) === REV.filter; });
-    $('reviewTools').innerHTML = '<div class="filters">' + ['pending', 'cleaned', 'approved'].map(function (k) {
+    $('reviewTools').innerHTML = '<div class="filters">' + ['pending', 'cleaned', 'approved', 'rejected'].map(function (k) {
       return '<button class="chip-btn' + (REV.filter === k ? ' on' : '') + '" data-filter="' + k + '">' + esc(lbl(k, counts[k])) + '</button>';
     }).join('') + '</div>' +
       (REV.filter === 'pending' && counts.pending ? '<div class="pad" style="padding-top:10px"><button class="btn outline small" id="cleanAll">' + esc(t('cleanAll')) + '</button></div>' : '') +
@@ -474,21 +475,24 @@
         (st === 'approved' ? '<span class="pill ok">' + esc(t('approved')) + (n.reviewedBy ? ' ' + esc(t('approvedBy')) + ' ' + esc(n.reviewedBy) : '') + '</span>' : '') + '</div>' +
         (n.flagged ? '<div class="hint" style="color:var(--red);font-weight:700">' + esc(t('flaggedNote')) + '</div>' : '') +
         '<div class="side three"><div class="col"><b>' + esc(t('rawLabel')) + '</b>' + esc(n.notesPublic || '') + '</div><div class="col"><b>' + esc(t('aiLabel')) + '</b>' + (n.cleanedNote ? esc(n.cleanedNote) : '<span class="hint">' + esc(t('notCleaned')) + '</span>') + '</div><div class="col"><b>' + esc(t('releasedLabel')) + '</b>' + (st === 'approved' ? esc(n.finalNote || n.cleanedNote || '') : '<span class="hint">' + esc(t('notReleased')) + '</span>') + '</div></div>' +
-        (REV.editing === n.rowNum ? '<label class="hint" style="font-weight:700" for="revEdit">' + esc(t('editLabel')) + '</label><textarea id="revEdit" style="min-height:140px">' + esc(n.finalNote || n.cleanedNote || n.notesPublic || '') + '</textarea><div class="actions" style="padding:0"><button class="btn go small" data-release-edit="' + n.rowNum + '">' + esc(t('releaseEdited')) + '</button><button class="btn outline small" data-cancel-edit="1">' + esc(t('neverMind')) + '</button></div>' :
+        (REV.editing === n.rowNum ? '<label class="hint" style="font-weight:700" for="revEdit">' + esc(t('editLabel')) + '</label><textarea id="revEdit" style="min-height:140px">' + esc(REV.draft || n.finalNote || (n.flagged ? n.notesPublic : n.cleanedNote) || n.notesPublic || '') + '</textarea><div class="actions" style="padding:0"><button class="btn go small" data-release-edit="' + n.rowNum + '">' + esc(t('releaseEdited')) + '</button><button class="btn outline small" data-cancel-edit="1">' + esc(t('neverMind')) + '</button></div>' :
           (st !== 'approved' ? '<div class="actions" style="padding:0;flex-wrap:wrap">' +
             (st === 'pending' ? '<button class="btn outline small" data-clean="' + n.rowNum + '">' + esc(t('cleanBtn')) + '</button>' : '') +
-            (st === 'cleaned' ? '<button class="btn go small" data-approve="' + n.rowNum + '">' + esc(t('releaseCleaned')) + '</button>' : '') +
+            (st === 'cleaned' && !n.flagged ? '<button class="btn go small" data-approve="' + n.rowNum + '">' + esc(t('releaseCleaned')) + '</button>' : '') +
             '<button class="btn outline small" data-approve-raw="' + n.rowNum + '">' + esc(t('releaseRaw')) + '</button>' +
             '<button class="btn outline small" data-edit="' + n.rowNum + '">' + esc(t('editRelease')) + '</button>' +
             '<button class="linkbtn" style="color:var(--red)" data-reject="' + n.rowNum + '">' + esc(t('rejectNote')) + '</button>' +
           '</div>' : '')) +
+        '<div class="msg bad" id="revmsg-' + n.rowNum + '" hidden></div>' +
+        (st === 'rejected' ? '<div class="actions" style="padding:0"><button class="btn outline small" data-restore="' + n.rowNum + '">' + esc(t('restoreNote')) + '</button></div>' : '') +
         '</div>';
     }).join('') : '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>';
+    $('reviewList').querySelectorAll('[data-restore]').forEach(function (b) { b.onclick = function () { runOn([byRow(b.getAttribute('data-restore'))], 'restore', b); }; });
     $('reviewList').querySelectorAll('[data-clean]').forEach(function (b) { b.onclick = function () { runOn([byRow(b.getAttribute('data-clean'))], 'clean', b); }; });
     $('reviewList').querySelectorAll('[data-approve]').forEach(function (b) { b.onclick = function () { runOn([byRow(b.getAttribute('data-approve'))], 'approve', b); }; });
     $('reviewList').querySelectorAll('[data-approve-raw]').forEach(function (b) { b.onclick = function () { runOn([byRow(b.getAttribute('data-approve-raw'))], 'approve_raw', b); }; });
     $('reviewList').querySelectorAll('[data-edit]').forEach(function (b) { b.onclick = function () { REV.editing = parseInt(b.getAttribute('data-edit'), 10); renderReview(); var ta = $('revEdit'); if (ta) ta.focus(); }; });
-    $('reviewList').querySelectorAll('[data-cancel-edit]').forEach(function (b) { b.onclick = function () { REV.editing = null; renderReview(); }; });
+    $('reviewList').querySelectorAll('[data-cancel-edit]').forEach(function (b) { b.onclick = function () { REV.editing = null; REV.draft = ''; renderReview(); }; });
     $('reviewList').querySelectorAll('[data-release-edit]').forEach(function (b) { b.onclick = function () { var n = byRow(b.getAttribute('data-release-edit')); n._text = $('revEdit').value.trim(); if (!n._text) return; runOn([n], 'edit', b); }; });
     $('reviewList').querySelectorAll('[data-reject]').forEach(function (b) { b.onclick = function () { runOn([byRow(b.getAttribute('data-reject'))], 'reject', b); }; });
   }
@@ -503,24 +507,36 @@
     try {
       var by = S.me.first_name + ' ' + S.me.last_name;
       if (what === 'approve') {
-        await post({ action: 'approveBatch', reviewedBy: by, items: notes.map(function (n) { return { rowNum: n.rowNum, use: 'ai' }; }) });
+        var ab = await post({ action: 'approveBatch', reviewedBy: by, items: notes.map(function (n) { return { rowNum: n.rowNum, use: 'ai' }; }) });
+        if (ab && ab.skipped && ab.skipped.length && notes.length === 1) throw new Error(t('flaggedSkip'));
       } else if (what === 'approve_raw') {
         await post({ action: 'approveBatch', reviewedBy: by, items: notes.map(function (n) { return { rowNum: n.rowNum, use: 'original' }; }) });
       } else if (what === 'edit') {
-        for (var e2 = 0; e2 < notes.length; e2++) await post({ action: 'updateNoteStatus', rowNum: notes[e2].rowNum, status: 'edited', finalNote: notes[e2]._text, reviewedBy: by });
-        REV.editing = null;
+        // A reviewer who rewrote a flagged note has cleared the flag by hand;
+        // the backend records who and why on the row.
+        for (var e2 = 0; e2 < notes.length; e2++) await post({ action: 'updateNoteStatus', rowNum: notes[e2].rowNum, status: 'edited', finalNote: notes[e2]._text, reviewedBy: by, overrideReason: notes[e2].flagged ? 'Rewritten by ' + by + ' before release; the released text is theirs, not the flagged cleanup.' : '' });
+        REV.editing = null; REV.draft = '';
       } else if (what === 'reject') {
         for (var r2 = 0; r2 < notes.length; r2++) await post({ action: 'updateNoteStatus', rowNum: notes[r2].rowNum, status: 'rejected', reviewedBy: by });
+      } else if (what === 'restore') {
+        for (var r3 = 0; r3 < notes.length; r3++) await post({ action: 'updateNoteStatus', rowNum: notes[r3].rowNum, status: 'pending', reviewedBy: by });
       } else {
         for (var i = 0; i < notes.length; i++) await post({ action: 'cleanNote', rowNum: notes[i].rowNum });
       }
       await loadReview();
       if ((what === 'approve' || what === 'approve_raw' || what === 'edit') && REV.filter !== 'approved') REV.filter = 'approved';
       if (what === 'clean' && REV.filter === 'pending') REV.filter = 'cleaned';
+      if (what === 'restore') REV.filter = 'pending';
       renderReview();
+      if (notes.length === 1) { var done = $('rev-' + notes[0].rowNum); if (done) done.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
     } catch (e) {
+      // Keep the editor and its text; say what went wrong on the card itself.
+      if (what === 'edit' && notes.length === 1) REV.draft = notes[0]._text;
       renderReview();
-      var mm = $('revMsg'); if (mm) { mm.hidden = false; mm.textContent = t('reviewFailed') + ' ' + (e && e.message ? e.message : ''); }
+      var msg = t('reviewFailed') + ' ' + (e && e.message ? e.message : '');
+      var cm = notes.length === 1 ? $('revmsg-' + notes[0].rowNum) : null;
+      if (cm) { cm.hidden = false; cm.textContent = msg; cm.scrollIntoView({ block: 'center' }); }
+      else { var mm = $('revMsg'); if (mm) { mm.hidden = false; mm.textContent = msg; } }
     }
     REV.busy = false;
   }
