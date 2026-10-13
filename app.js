@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.13-a';
+  var VERSION = '2026.10.13-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -115,27 +115,40 @@
     who.data.nameKeys = (names.data || []).map(function (r) { return typeof r === 'string' ? r : r.my_name_keys; });
     return who.data;
   }
+  // The crew columns hold Assignr's spelling; my name keys are lower-cased
+  // and space-collapsed, and ilike is case-insensitive, so this asks the
+  // server for my rows only instead of every game in the state that day.
+  function mineOr() {
+    var ks = (S.me.nameKeys || []).map(function (k) { return k.replace(/[,()]/g, ' ').trim(); }).filter(Boolean);
+    if (!ks.length) ks = [((S.me.first_name || '') + ' ' + (S.me.last_name || '')).trim()];
+    var parts = [];
+    ks.forEach(function (k) { ['cr', 'ar1', 'ar2', 'fourth'].forEach(function (c) { parts.push(c + '.ilike.' + k); }); });
+    return parts.join(',');
+  }
   async function loadDay_() {
-    var today = todayStr();
-    var g = await fetchAll(function () { return sb.from('games').select('game_id,date,game_num,kickoff,field,age_group,gender,competition,home,away,cr,ar1,ar2,fourth,venue,status,home_club,away_club,score_url')
-      .eq('date', today).not('status', 'in', '(C,X,canceled_no_pay)').order('kickoff'); });
-    var keys = S.me.nameKeys || [];
-    S.games = (g.data || []).filter(function (x) { return ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(x[k])) >= 0; }); });
-    var ev = await sb.from('events').select('id,name,game_prefix,venues,blurb,tools,rules_url');
-    S.events = ev.data || [];
-    var ci = await sb.from('checkins').select('game_id,created_at,ref_name').eq('date', today);
+    var today = todayStr(), keys = S.me.nameKeys || [];
+    var wide = iCan('command_center') || iCan('scheduling');
+    var r = await Promise.all([
+      fetchAll(function () { return sb.from('games').select('game_id,date,game_num,kickoff,field,age_group,gender,competition,home,away,cr,ar1,ar2,fourth,venue,status,home_club,away_club,score_url')
+        .eq('date', today).not('status', 'in', '(C,X,canceled_no_pay)').or(mineOr()).order('kickoff'); }),
+      sb.from('events').select('id,name,game_prefix,venues,blurb,tools,rules_url'),
+      sb.from('checkins').select('game_id,created_at,ref_name').eq('date', today),
+      sb.from('observations').select('id,date,observer,rater_role,final_note,cleaned_note,game_id,field').order('date', { ascending: false }).limit(50),
+      sb.from('announcements').select('title,body,severity,created_at,venue,event_id,start_date,end_date').lte('start_date', today).gte('end_date', today).order('created_at', { ascending: false }).limit(5),
+      sb.from('scores').select('game_id,home_score,away_score,status,entered_by,created_at').eq('date', today),
+      loadEvalRequests(),
+      wide ? sb.from('staff_messages').select('id,from_name,to_venue,body,created_at').eq('date', today).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [] }),
+      sb.rpc('coached_venues', { p_date: today })
+    ]);
+    S.games = (r[0].data || []).filter(function (x) { return ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(x[k])) >= 0; }); });
+    S.events = r[1].data || [];
     S.checkins = {};
-    (ci.data || []).forEach(function (r) { if (r.game_id && keys.indexOf(key(r.ref_name)) >= 0) S.checkins[String(r.game_id)] = r.created_at; });
-    var n = await sb.from('observations').select('id,date,observer,rater_role,final_note,cleaned_note,game_id,field').order('date', { ascending: false }).limit(50);
-    S.notes = n.data || [];
-    var b = await sb.from('announcements').select('title,body,severity,created_at,venue,event_id,start_date,end_date').lte('start_date', today).gte('end_date', today).order('created_at', { ascending: false }).limit(5);
-    S.bulletins = b.data || [];
-    var sc = await sb.from('scores').select('game_id,home_score,away_score,status,entered_by,created_at').eq('date', today);
-    S.scores = {}; (sc.data || []).forEach(function (r) { S.scores[String(r.game_id)] = r; });
-    await loadEvalRequests();
-    if (iCan('command_center') || iCan('scheduling')) { var smd = await sb.from('staff_messages').select('id,from_name,to_venue,body,created_at').eq('date', today).order('created_at', { ascending: false }).limit(20); S.staffMsgs = smd.data || []; } else S.staffMsgs = [];
-    var cv = await sb.rpc('coached_venues', { p_date: today });
-    S.coachedVenues = (cv.data || []).map(function (r) { return typeof r === 'string' ? r : r.coached_venues; });
+    (r[2].data || []).forEach(function (c) { if (c.game_id && keys.indexOf(key(c.ref_name)) >= 0) S.checkins[String(c.game_id)] = c.created_at; });
+    S.notes = r[3].data || [];
+    S.bulletins = r[4].data || [];
+    S.scores = {}; (r[5].data || []).forEach(function (x) { S.scores[String(x.game_id)] = x; });
+    S.staffMsgs = r[7].data || [];
+    S.coachedVenues = (r[8].data || []).map(function (x) { return typeof x === 'string' ? x : x.coached_venues; });
   }
 
   // ── Your day ─────────────────────────────────────────────────────
@@ -264,47 +277,40 @@
   function iCan(section) { return !!(S.me && (S.me.unlocks || []).indexOf(section) >= 0); }
   var AREAS = ['laws', 'reading', 'fitness', 'presence'];
   async function loadCoach_() {
-    var today = todayStr();
-    var g = await fetchAll(function () { return sb.from('games').select('game_id,date,game_num,kickoff,field,age_group,gender,competition,home,away,cr,ar1,ar2,fourth,venue,status')
-      .eq('date', today).not('status', 'in', '(C,X,canceled_no_pay)').order('venue').order('kickoff'); });
-    S.coach.games = g.data || [];
-    var mine = await sb.from('coach_assignments').select('venue,block,fields,note').eq('date', today);
-    S.coach.mine = mine.data || [];
-    if (S.coach.mine.length && !S.coach.venue) S.coach.venue = S.coach.mine[0].venue;
-    var ea = await sb.from('eval_requests').select('id,game_id,game_date,venue,purpose,status,ref_name').eq('coach_person_id', S.me.person_id).eq('status', 'assigned').gte('game_date', today).order('game_date');
-    S.coach.evals = ea.data || [];
-    // Coaching slots Assignr gave me, today and the next ten days.
-    var keys = S.me.nameKeys || [];
-    var slots = await fetchAll(function () { return sb.from('games').select('game_id,date,kickoff,venue,field,age_group,hq_role,cr,ar1,ar2,fourth').gte('date', today).lte('date', shiftDate(today, 10)).not('status', 'in', '(C,X,canceled_no_pay)').order('date').order('kickoff'); });
-    S.coach.assignr = (slots.data || []).filter(function (g) { return isCoachSlot(g) && ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(g[k])) >= 0; }); });
+    var today = todayStr(), keys = S.me.nameKeys || [], until = shiftDate(today, 10);
+    var r = await Promise.all([
+      fetchAll(function () { return sb.from('games').select('game_id,date,game_num,kickoff,field,age_group,gender,competition,home,away,cr,ar1,ar2,fourth,venue,status')
+        .eq('date', today).not('status', 'in', '(C,X,canceled_no_pay)').order('venue').order('kickoff'); }),
+      sb.from('coach_assignments').select('venue,block,fields,note').eq('date', today),
+      sb.from('eval_requests').select('id,game_id,game_date,venue,purpose,status,ref_name').eq('coach_person_id', S.me.person_id).eq('status', 'assigned').gte('game_date', today).order('game_date'),
+      // Coaching slots Assignr gave me, today and the next ten days: my rows only.
+      fetchAll(function () { return sb.from('games').select('game_id,date,kickoff,venue,field,age_group,hq_role,cr,ar1,ar2,fourth').gte('date', today).lte('date', until).not('status', 'in', '(C,X,canceled_no_pay)').or(mineOr()).order('date').order('kickoff'); }),
+      // Days ahead with games, for saying when I am free. One row per day is enough.
+      fetchAll(function () { return sb.from('games').select('date').gte('date', today).lte('date', until).not('status', 'in', '(C,X,canceled_no_pay)').order('date'); }),
+      sb.from('coach_availability').select('date,block').gte('date', today),
+      sb.from('observations').select('id,date,ref_name,observer,rater_role,public_notes,cleaned_note,final_note,cleanup_status,area,field,game_id,created_at').order('created_at', { ascending: false }).limit(100)
+    ]);
+    S.coach.games = r[0].data || [];
+    S.coach.mine = r[1].data || [];
+    S.coach.evals = r[2].data || [];
+    S.coach.assignr = (r[3].data || []).filter(function (g) { return isCoachSlot(g) && ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(g[k])) >= 0; }); });
     S.coach.assignr.filter(function (g) { return g.date === today; }).forEach(function (g) {
       if (!S.coach.mine.some(function (m) { return m.venue === g.venue; })) S.coach.mine.push({ venue: g.venue, block: 'all', fields: g.field ? [g.field] : [], note: t('fromAssignr') + (g.kickoff ? ', ' + clock(g.kickoff) : '') });
     });
     if (S.coach.mine.length && !S.coach.venue) S.coach.venue = S.coach.mine[0].venue;
-    // Days ahead with games, for saying when I am free.
-    var ahead = await fetchAll(function () { return sb.from('games').select('date').gte('date', today).lte('date', shiftDate(today, 10)).not('status', 'in', '(C,X,canceled_no_pay)').order('date'); });
-    var days = {}; (ahead.data || []).forEach(function (x) { days[x.date] = 1; }); S.coach.days = Object.keys(days).sort();
-    var av = await sb.from('coach_availability').select('date,block').gte('date', today);
-    S.coach.avail = {}; (av.data || []).forEach(function (x) { S.coach.avail[x.date + x.block] = 1; });
-    var n = await sb.from('observations').select('id,date,ref_name,observer,rater_role,public_notes,cleaned_note,final_note,cleanup_status,area,field,game_id,created_at')
-      .order('created_at', { ascending: false }).limit(100);
-    S.coach.notes = (n.data || []).filter(function (x) { return (S.me.nameKeys || []).indexOf(key(x.observer)) >= 0; });
+    var days = {}; (r[4].data || []).forEach(function (x) { days[x.date] = 1; }); S.coach.days = Object.keys(days).sort();
+    S.coach.avail = {}; (r[5].data || []).forEach(function (x) { S.coach.avail[x.date + x.block] = 1; });
+    S.coach.notes = (r[6].data || []).filter(function (x) { return keys.indexOf(key(x.observer)) >= 0; });
     var mine = S.coach.notes.map(function (x) { return x.id; }).filter(Boolean);
-    S.coach.reads = {};
-    if (mine.length) {
-      var rd = await sb.from('note_reads').select('observation_id,read_at').in('observation_id', mine);
-      (rd.data || []).forEach(function (r) { S.coach.reads[String(r.observation_id)] = r.read_at; });
-    }
-    // What has already been said about every referee working today (released notes only).
     var names = {};
     S.coach.games.forEach(function (g) { ['cr', 'ar1', 'ar2', 'fourth'].forEach(function (k) { if (g[k]) names[g[k]] = 1; }); });
     var list = Object.keys(names);
-    S.coach.seen = {};
-    if (list.length) {
-      var seen = await sb.from('observations').select('ref_name,date,observer,rater_role,final_note,cleaned_note,area')
-        .in('ref_name', list).in('cleanup_status', ['approved', 'edited']).order('date', { ascending: false }).limit(500);
-      (seen.data || []).forEach(function (o) { var k = key(o.ref_name); (S.coach.seen[k] = S.coach.seen[k] || []).push(o); });
-    }
+    var r2 = await Promise.all([
+      mine.length ? sb.from('note_reads').select('observation_id,read_at').in('observation_id', mine) : Promise.resolve({ data: [] }),
+      list.length ? sb.from('observations').select('ref_name,date,observer,rater_role,final_note,cleaned_note,area').in('ref_name', list).in('cleanup_status', ['approved', 'edited']).order('date', { ascending: false }).limit(500) : Promise.resolve({ data: [] })
+    ]);
+    S.coach.reads = {}; (r2[0].data || []).forEach(function (x) { S.coach.reads[String(x.observation_id)] = x.read_at; });
+    S.coach.seen = {}; (r2[1].data || []).forEach(function (o) { var k = key(o.ref_name); (S.coach.seen[k] = S.coach.seen[k] || []).push(o); });
   }
   function inBlock(g, block) {
     if (!block || block === 'all') return true;
@@ -357,11 +363,13 @@
         }
       };
     });
-    var games = S.coach.games.filter(function (g) { return g.venue === S.coach.venue && !isHQ(g); });
+    var games = S.coach.games.filter(function (g) { return g.venue === S.coach.venue && !isHQ(g) && !isCoachSlot(g); });
     $('coachGames').innerHTML = (games.length ? '<div class="pad hint" style="padding-top:12px">' + esc(t('redMeans')) + ((S.coach.mine || []).length ? ' ' + esc(t('goldMeans')) : '') + '</div>' : '') + '<div class="list">' + games.map(function (g) {
       var crew = ['cr', 'ar1', 'ar2', 'fourth'].filter(function (k) { return g[k]; }).map(function (k) {
         var none = !((S.coach.seen || {})[key(g[k])] || []).length;
-        return (none ? '<span style="color:var(--red);font-weight:700">' : '<span>') + refLink(g[k]) + '</span>';
+        // Plain names here: the whole row opens the game, and a link inside a
+        // link breaks the row into pieces. Names are tappable on the next screen.
+        return (none ? '<span style="color:var(--red);font-weight:700">' : '<span>') + esc(g[k]) + '</span>';
       }).join(', ');
       return '<a class="item' + (isMyField(g) ? ' mine' : '') + '" href="#coach/game/' + esc(g.game_id) + '"><div><div class="when"><div class="disp">' + esc(clock(g.kickoff)) + '</div><div class="sub">' + esc(g.field || '') + ', ' + esc(g.age_group || '') + (isMyField(g) ? ', <b>' + esc(t('yours')) + '</b>' : '') + '</div></div><div class="hint">' + crew + '</div></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
     }).join('') + '</div>';
@@ -521,17 +529,17 @@
   var CC = { tab: 'coverage', cov: [], obs: [], reads: {}, drafts: null, from: '', to: '', sdate: '', coaches: [], assigns: [], venues: [], pick: null };
   function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   async function loadCenter_() {
-    var cov = await sb.rpc('coverage_rows');
-    CC.cov = (cov.data || []).sort(function (a, b) { return b.games - a.games; });
     var since = iso(new Date(Date.now() - 30 * 86400000));
-    var obs = await sb.from('observations').select('id,observer,rater_role,ref_name,date,cleanup_status').gte('date', since).limit(2000);
-    CC.obs = obs.data || [];
-    var ids = CC.obs.map(function (o) { return o.id; });
+    var r = await Promise.all([
+      sb.rpc('coverage_rows'),
+      sb.from('observations').select('id,observer,rater_role,ref_name,date,cleanup_status').gte('date', since).limit(2000)
+    ]);
+    CC.cov = (r[0].data || []).sort(function (a, b) { return b.games - a.games; });
+    CC.obs = r[1].data || [];
+    var ids = CC.obs.map(function (o) { return o.id; }), qs = [];
+    for (var i = 0; i < ids.length; i += 200) qs.push(sb.from('note_reads').select('observation_id').in('observation_id', ids.slice(i, i + 200)));
     CC.reads = {};
-    for (var i = 0; i < ids.length; i += 200) {
-      var rd = await sb.from('note_reads').select('observation_id').in('observation_id', ids.slice(i, i + 200));
-      (rd.data || []).forEach(function (r) { CC.reads[String(r.observation_id)] = 1; });
-    }
+    (await Promise.all(qs)).forEach(function (rd) { (rd.data || []).forEach(function (x) { CC.reads[String(x.observation_id)] = 1; }); });
     if (!CC.from) { var d = new Date(); var dow = d.getDay(); var sat = new Date(d.getTime() - ((dow + 1) % 7) * 86400000); CC.from = iso(sat); CC.to = iso(new Date(sat.getTime() + 86400000)); }
   }
   async function loadSchedule_() {
@@ -676,26 +684,27 @@
   function shiftDate(iso, n) { var d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return iso.length ? iso.slice(0, 0) + d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') : iso; }
   async function loadOps_() {
     if (!OPS.date) OPS.date = todayStr();
-    var g = await fetchAll(function () { return sb.from('games').select('game_id,kickoff,field,age_group,competition,cr,ar1,ar2,fourth,venue,status,game_num,hq_role,hq_staff,home,away').eq('date', OPS.date).not('status', 'in', '(C,X,canceled_no_pay)').order('venue').order('kickoff'); });
-    if (g.error) { OPS.error = g.error.message || String(g.error); return; }   // keep what we have, say why
+    var r = await Promise.all([
+      fetchAll(function () { return sb.from('games').select('game_id,kickoff,field,age_group,competition,cr,ar1,ar2,fourth,venue,status,game_num,hq_role,hq_staff,home,away').eq('date', OPS.date).not('status', 'in', '(C,X,canceled_no_pay)').order('venue').order('kickoff'); }),
+      fetchAll(function () { return sb.from('checkins').select('ref_name,game_id,created_at').eq('date', OPS.date).order('created_at'); }),
+      sb.from('emergencies').select('id,src_key,created_at,ref_name,venue,field,reason,status,ack_by').gte('created_at', OPS.date + 'T00:00:00').lte('created_at', OPS.date + 'T23:59:59').order('created_at', { ascending: false }),
+      sb.from('announcements').select('id,src_key,created_at,start_date,end_date,venue,event_id,title,body,severity,active,posted_by').order('created_at', { ascending: false }).limit(40),
+      sb.from('staff_messages').select('id,from_name,to_venue,date,body,created_at').eq('date', OPS.date).order('created_at', { ascending: false }).limit(100),
+      sb.from('alerts').select('id,kind,game_id,ref_name,position,game_date,venue,field,kickoff,age_group,detail,status,seen_by').gte('game_date', todayStr()).order('game_date').order('kickoff').limit(300)
+    ]);
+    if (r[0].error) { OPS.error = r[0].error.message || String(r[0].error); return; }   // keep what we have, say why
     OPS.error = '';
-    OPS.games = g.data || [];
-    var ci = await fetchAll(function () { return sb.from('checkins').select('ref_name,game_id,created_at').eq('date', OPS.date).order('created_at'); });
-    OPS.checkins = ci.data || [];
-    var h = await sb.from('emergencies').select('id,src_key,created_at,ref_name,venue,field,reason,status,ack_by').gte('created_at', OPS.date + 'T00:00:00').lte('created_at', OPS.date + 'T23:59:59').order('created_at', { ascending: false });
-    OPS.help = h.data || [];
-    var b = await sb.from('announcements').select('id,src_key,created_at,start_date,end_date,venue,event_id,title,body,severity,active,posted_by').order('created_at', { ascending: false }).limit(40);
-    OPS.bulletins = b.data || [];
+    OPS.games = r[0].data || [];
+    OPS.checkins = r[1].data || [];
+    OPS.help = r[2].data || [];
+    OPS.bulletins = r[3].data || [];
+    OPS.msgs = r[4].data || [];
+    OPS.alerts = r[5].data || [];
     var namesHere = {}; OPS.games.forEach(function (g) { ['cr', 'ar1', 'ar2', 'fourth'].forEach(function (k) { if (g[k]) namesHere[g[k]] = 1; }); });
-    var nl = Object.keys(namesHere); OPS.seen = {};
-    for (var i = 0; i < nl.length; i += 200) {
-      var sn = await sb.from('observations').select('ref_name').in('ref_name', nl.slice(i, i + 200)).in('cleanup_status', ['approved', 'edited']).limit(1000);
-      (sn.data || []).forEach(function (o) { OPS.seen[key(o.ref_name)] = 1; });
-    }
-    var sm = await sb.from('staff_messages').select('id,from_name,to_venue,date,body,created_at').eq('date', OPS.date).order('created_at', { ascending: false }).limit(100);
-    OPS.msgs = sm.data || [];
-    var al = await sb.from('alerts').select('id,kind,game_id,ref_name,position,game_date,venue,field,kickoff,age_group,detail,status,seen_by').gte('game_date', todayStr()).order('game_date').order('kickoff').limit(300);
-    OPS.alerts = al.data || [];
+    var nl = Object.keys(namesHere), qs = [];
+    for (var i = 0; i < nl.length; i += 200) qs.push(sb.from('observations').select('ref_name').in('ref_name', nl.slice(i, i + 200)).in('cleanup_status', ['approved', 'edited']).limit(1000));
+    OPS.seen = {};
+    (await Promise.all(qs)).forEach(function (sn) { (sn.data || []).forEach(function (o) { OPS.seen[key(o.ref_name)] = 1; }); });
   }
   function isHQ(g) { return /ref(eree)?\s*hq|site coordinator|standby/i.test(String(g.field || '') + ' ' + String(g.age_group || '')) || (g.hq_role && g.hq_role !== ''); }
   function hqCardHtml(games) {
@@ -748,9 +757,13 @@
     var body = '';
     if (OPS.tab === 'board') {
       var ins = inSet(), venues = {};
+      // Referee HQ and coach slots are staff, not games: they count on the
+      // Staff tab, never in a venue's game or crew numbers.
+      var realGames = 0;
       OPS.games.forEach(function (g) {
         var v = venues[g.venue] = venues[g.venue] || { name: g.venue, games: 0, slots: 0, in: 0, help: 0 };
-        v.games++;
+        if (isHQ(g) || isCoachSlot(g)) return;
+        v.games++; realGames++;
         ['cr', 'ar1', 'ar2', 'fourth'].forEach(function (k) { if (g[k]) { v.slots++; if (ins[key(g[k])]) v.in++; } });
       });
       OPS.help.forEach(function (h) { if (h.status === 'open' && venues[h.venue]) venues[h.venue].help++; });
@@ -758,7 +771,7 @@
       var totIn = 0, totSlots = 0; vlist.forEach(function (v) { totIn += v.in; totSlots += v.slots; });
       var open = OPS.help.filter(function (h) { return h.status === 'open'; }).length;
       body = (OPS.error ? '<div class="msg bad" style="margin:10px 20px 0">' + esc(t('loadFailed')) + ' ' + esc(OPS.error) + '</div>' : '') + '<div class="datebar"><button class="iconbtn" data-day="-1" aria-label="Previous day">&#8249;</button><div class="d">' + esc(dayLong(OPS.date)) + '</div><button class="iconbtn" data-day="1" aria-label="Next day">&#8250;</button></div>' +
-        '<div class="stats" style="grid-template-columns:repeat(4,1fr)"><div class="stat"><b>' + vlist.length + '</b><i>' + esc(t('stVenues')) + '</i></div><div class="stat"><b>' + OPS.games.length + '</b><i>' + esc(t('stGames')) + '</i></div><div class="stat green"><b>' + totIn + '</b><i>' + esc(t('stCheckedIn')) + ' / ' + totSlots + '</i></div><div class="stat' + (open ? ' red' : '') + '"><b>' + open + '</b><i>' + esc(t('stHelpOpen')) + '</i></div></div>';
+        '<div class="stats" style="grid-template-columns:repeat(4,1fr)"><div class="stat"><b>' + vlist.length + '</b><i>' + esc(t('stVenues')) + '</i></div><div class="stat"><b>' + realGames + '</b><i>' + esc(t('stGames')) + '</i></div><div class="stat green"><b>' + totIn + '</b><i>' + esc(t('stCheckedIn')) + ' / ' + totSlots + '</i></div><div class="stat' + (open ? ' red' : '') + '"><b>' + open + '</b><i>' + esc(t('stHelpOpen')) + '</i></div></div>';
       if (!vlist.length) body += '<div class="card"><div class="hint">' + esc(t('noGamesDay')) + '</div></div>';
       else if (!OPS.venue && vlist.length > 8) {
         body += '<div class="pad" style="padding-top:12px"><select id="opsVenueSel" style="font:inherit;width:100%;padding:12px;border:2px solid var(--navy);border-radius:8px;background:var(--surface);color:var(--ink)"><option value="">' + esc(t('allVenuesPick')) + '</option>' + vlist.map(function (v) { return '<option value="' + esc(v.name) + '">' + esc(v.name) + ' (' + v.in + '/' + v.slots + (v.help ? ', ' + v.help + ' ' + esc(t('helpOpenAt')) : '') + ')</option>'; }).join('') + '</select></div>' +
@@ -1169,7 +1182,7 @@
       '<div class="card no-print" style="gap:10px">' +
       (e ? '<div class="msg good" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>' + esc(t('eodEditing')) + ' <b>' + esc(e.staff_name) + '</b>, ' + esc(dayLong(e.date)) + '</span><button class="btn outline small" id="eodEditCancel">' + esc(t('cancel')) + '</button></div>' : '') +
       '<div class="hint" style="font-weight:700">' + esc(t('eodRole')) + '</div><div class="chips">' + roles.map(function (k) { return '<button class="chip-btn' + (EOD.role === k ? ' on' : '') + '" data-role="' + k + '">' + esc(t('roles.' + k)) + '</button>'; }).join('') + '</div>' +
-      '<label class="hint" style="font-weight:700" for="eodDate">' + esc(t('evDates')) + '</label><input id="eodDate" type="date" value="' + esc(e ? e.date : (EOD.date || today)) + '" style="' + inp + '">' +
+      '<label class="hint" style="font-weight:700" for="eodDate">' + esc(t('eodDate')) + '</label><input id="eodDate" type="date" value="' + esc(e ? e.date : (EOD.date || today)) + '" style="' + inp + '">' +
       '<label class="hint" style="font-weight:700" for="eodVenue">' + esc(t('eodVenue')) + '</label>' + venueField + '<div class="hint" id="eodVenueHint">' + esc(t('eodVenueHint')) + '</div>' +
       '<div class="grid2"><div><label class="hint" style="font-weight:700" for="eodIn">' + esc(t('eodIn')) + '</label><input id="eodIn" type="time" value="' + esc(e ? hhmm(e.time_in) : '') + '" style="' + inp + '"></div><div><label class="hint" style="font-weight:700" for="eodOut">' + esc(t('eodOut')) + '</label><input id="eodOut" type="time" value="' + esc(e ? hhmm(e.time_out) : '') + '" style="' + inp + '"></div></div>' +
       '<div class="hint">' + esc(t('eodCounted')) + '</div>' +
