@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- Evaluator v2026.10.14-i · 2026-10-14 · the coach's live log, post-match ratings and PDF. The formal evaluation is written by the coach in the Hub. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -121,41 +122,10 @@
 }
 
 /* ── SEQUENTIAL EMAIL FLOW ── */
-.email-ov{position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:900;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;}
-.email-ov.open{display:flex;}
-.email-ov-header{width:100%;max-width:400px;margin-bottom:20px;}
-.email-ov-title{font-family:var(--bebas);font-size:28px;letter-spacing:.06em;color:#fff;margin-bottom:4px;}
-.email-ov-sub{font-size:12px;color:rgba(255,255,255,.4);letter-spacing:.08em;text-transform:uppercase;}
-.email-progress{width:100%;max-width:400px;margin-bottom:20px;}
-.email-progress-bar{height:3px;background:rgba(255,255,255,.08);border-radius:2px;margin-bottom:12px;overflow:hidden;}
-.email-progress-fill{height:100%;background:var(--red);border-radius:2px;transition:width .4s ease;}
-.email-recipients-list{display:flex;flex-direction:column;gap:6px;width:100%;max-width:400px;margin-bottom:20px;}
-.email-rec-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:9px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03);text-align:left;}
-.email-rec-item.done{border-color:rgba(230,57,70,.3);background:rgba(230,57,70,.06);}
-.email-rec-item.current{border-color:var(--red);background:rgba(230,57,70,.1);animation:pulse-border 1.5s infinite;}
-.email-rec-item.pending{opacity:.4;}
 @keyframes pulse-border{0%,100%{border-color:var(--red);}50%{border-color:rgba(230,57,70,.4);}}
-.email-rec-icon{font-size:18px;flex-shrink:0;width:24px;text-align:center;}
-.email-rec-info{flex:1;min-width:0;}
-.email-rec-name{font-size:13px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.email-rec-role{font-size:10px;color:rgba(255,255,255,.4);font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
-.email-rec-addr{font-size:10px;color:rgba(255,255,255,.35);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.email-current-card{width:100%;max-width:400px;background:#111;border:1px solid var(--red);border-radius:14px;padding:20px;margin-bottom:16px;}
-.email-current-label{font-size:10px;font-weight:800;letter-spacing:.15em;color:var(--red);text-transform:uppercase;margin-bottom:8px;}
-.email-current-name{font-family:var(--bebas);font-size:32px;letter-spacing:.04em;color:#fff;margin-bottom:2px;}
-.email-current-role{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:10px;}
-.email-current-addr{font-size:13px;color:rgba(255,255,255,.6);background:rgba(255,255,255,.05);padding:6px 10px;border-radius:6px;font-family:'Courier New',monospace;}
-.email-step-info{font-size:12px;color:rgba(255,255,255,.35);margin-bottom:16px;}
-.btn-open-email{width:100%;max-width:400px;background:var(--red);color:#fff;font-family:var(--bebas);font-size:18px;letter-spacing:.08em;padding:16px;border-radius:10px;border:none;cursor:pointer;margin-bottom:10px;transition:all .15s;}
-.btn-open-email:active{transform:scale(.98);}
 .btn-email-sent{width:100%;max-width:400px;background:#111;color:var(--red);border:2px solid var(--red);font-family:var(--bebas);font-size:16px;letter-spacing:.08em;padding:14px;border-radius:10px;cursor:pointer;margin-bottom:10px;transition:all .15s;}
 .btn-email-sent:active{transform:scale(.98);}
 .btn-email-cancel{background:none;border:none;color:rgba(255,255,255,.3);font-size:12px;font-weight:700;cursor:pointer;padding:8px;font-family:var(--font);}
-.email-done-card{width:100%;max-width:400px;text-align:center;}
-.email-done-icon{font-size:56px;margin-bottom:12px;}
-.email-done-title{font-family:var(--bebas);font-size:32px;letter-spacing:.06em;color:#fff;margin-bottom:6px;}
-.email-done-sub{font-size:13px;color:rgba(255,255,255,.4);margin-bottom:24px;}
-.btn-email-close{width:100%;max-width:400px;background:var(--red);color:#fff;font-family:var(--bebas);font-size:18px;letter-spacing:.08em;padding:16px;border-radius:10px;border:none;cursor:pointer;}
 
 /* ── ROUND 1: STRUCTURED NOTES ── */
 .note-quick-section { margin-top: 14px; }
@@ -367,10 +337,6 @@ body{font-family:var(--font);background:var(--nv3);color:#fff;min-height:100vh;o
 .bclk.gray{background:rgba(255,255,255,.12);color:#fff;}
 
 /* ── SESSION BAR ── */
-.sess-bar{display:flex;gap:6px;padding:8px 14px;background:var(--nv2);border-bottom:1px solid rgba(255,255,255,.06);overflow-x:auto;flex-shrink:0;}
-.sbtn{padding:4px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--g6);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font);}
-.sbtn.active{background:var(--gold);color:var(--nv);border-color:var(--gold);}
-.sadd{padding:4px 12px;border-radius:20px;border:1px dashed rgba(255,255,255,.18);background:none;color:var(--g6);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:var(--font);}
 
 /* ── EVENT BUTTONS ── */
 .evt-btns{padding:12px 12px 6px;}
@@ -549,6 +515,12 @@ body{font-family:var(--font);background:var(--nv3);color:#fff;min-height:100vh;o
 .btn-add-inc:active{background:rgba(200,146,26,.08);}
 /* tev for linked events */
 .tev{background:rgba(255,255,255,.03);border-radius:6px;padding:6px 9px;font-size:11px;color:var(--g6);font-family:'Courier New',monospace;margin-bottom:4px;border-left:3px solid rgba(255,255,255,.1);}
+.deb-item{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 12px 12px 44px;margin-bottom:8px;position:relative;cursor:pointer;font-size:13px;line-height:1.45;}
+.deb-item::before{content:'';position:absolute;left:12px;top:13px;width:20px;height:20px;border-radius:6px;border:2px solid rgba(255,255,255,.25);}
+.deb-item.on{border-color:rgba(200,146,26,.5);background:rgba(200,146,26,.08);}
+.deb-item.on::before{background:var(--gold);border-color:var(--gold);content:'\2713';color:#000;font-size:14px;font-weight:800;text-align:center;line-height:20px;}
+.deb-item b{color:#fff;display:block;}
+.deb-item small{display:block;color:var(--g6);margin-top:2px;}
 .sumbox{background:rgba(200,146,26,.06);border:1px solid rgba(200,146,26,.15);border-radius:var(--r);padding:12px;margin-bottom:12px;}
 .sumrow{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;color:var(--g6);border-bottom:1px solid rgba(255,255,255,.04);}
 .sumrow:last-child{border-bottom:none;}
@@ -739,10 +711,6 @@ body { background:#0E1E3F !important; }
 .dir-toggle { color:rgba(255,255,255,.3) !important; }
 #ds-r { border-color:rgba(230,57,70,.4) !important; color:#ff4d5a !important; }
 /* Session bar */
-.sess-bar { background:#000 !important; border-bottom:1px solid rgba(230,57,70,.15) !important; }
-.sbtn { background:#111 !important; border-color:rgba(255,255,255,.1) !important; color:#888 !important; }
-.sbtn.active { background:#e63946 !important; color:#fff !important; border-color:#e63946 !important; }
-.sadd { border-color:rgba(230,57,70,.25) !important; color:#888 !important; }
 /* Event buttons */
 .btn-foul { background:#111 !important; border:2px solid #e63946 !important; }
 .btn-foul:active { background:#1a0000 !important; }
@@ -1065,10 +1033,6 @@ body { background:#0E1E3F !important; }
       </div>
     </div>
   </div>
-  <div class="sess-bar" id="sess-bar">
-    <button class="sbtn active" onclick="switchSess(0,this)">Game 1</button>
-    <button class="sadd" onclick="addSess()">+ New Game</button>
-  </div>
   <div style="flex:1;overflow-y:auto;padding-bottom:70px">
     <div class="evt-btns">
       <button class="btn-foul" onclick="haptic(true);tapFoul()">
@@ -1141,6 +1105,7 @@ body { background:#0E1E3F !important; }
     <div class="pm-tab" onclick="pmTab('ar2',this)">AR2</div>
     <div class="pm-tab" onclick="pmTab('fourth',this)">4th</div>
     <div class="pm-tab" onclick="pmTab('crew',this)">Crew</div>
+    <div class="pm-tab" onclick="pmTab('debrief',this)">Debrief</div>
   </div>
 
   <!-- REFEREE TAB -->
@@ -1303,6 +1268,12 @@ body { background:#0E1E3F !important; }
     <div class="slbl">Flagged Events</div><div id="flagged-ov"></div>
   </div>
 
+  <div class="pm-c" id="pm-debrief">
+    <div class="sumbox" style="font-size:13px;line-height:1.5">Pick two or three items to talk through with the referee after the game. Tap an item to mark it. <b id="deb-count">0 picked</b></div>
+    <div class="slbl">Incidents</div><div id="deb-inc"></div>
+    <div class="slbl">Events flagged Discuss during the game</div><div id="deb-ev"></div>
+  </div>
+
   <div class="bnav">
     <button class="nb" onclick="showScreen('live')"><span class="ni">&#9917;</span><span class="nl">Live</span></button>
     <button class="nb active" onclick="showScreen('postmatch')"><span class="ni">&#128203;</span><span class="nl">Post-Match</span></button>
@@ -1317,19 +1288,12 @@ body { background:#0E1E3F !important; }
     <div class="exp-hero-title">Export Evaluation</div>
     <div class="gold-bar" style="margin-top:12px;margin-left:-18px;margin-right:-18px;position:relative"></div>
   </div>
-  <div class="tagline-strip"><span class="ts-l">Evaluation Report</span><small class="ts-r" id="exp-sub">Generate PDF or send by email</small></div>
+  <div class="tagline-strip"><span class="ts-l">Evaluation Report</span><small class="ts-r" id="exp-sub">Print the PDF, then write the evaluation in the Hub</small></div>
   <div class="exp-body">
-    <div class="xcard"><h3>Email Recipients</h3>
-      <div class="rrow"><span class="rlbl">Referee</span><input class="ri" type="email" id="em-ref" autocomplete="off" placeholder="referee@email.com"></div>
-      <div class="rrow"><span class="rlbl">AR1</span><input class="ri" type="email" id="em-ar1" autocomplete="off" placeholder="ar1@email.com"></div>
-      <div class="rrow"><span class="rlbl">AR2</span><input class="ri" type="email" id="em-ar2" autocomplete="off" placeholder="ar2@email.com"></div>
-      <div class="rrow"><span class="rlbl">4th</span><input class="ri" type="email" id="em-4th" autocomplete="off" placeholder="4th@email.com"></div>
-      <div class="rrow" style="border-top:1px dashed rgba(255,255,255,.15);padding-top:8px;margin-top:4px"><span class="rlbl" style="color:var(--gold,#C8921A)">Coach</span><input class="ri" type="email" id="em-coach" autocomplete="off" placeholder="coach@email.com (consolidated summary)"></div>
-    </div>
     <div class="xcard"><h3>Final Notes</h3><textarea class="taf" id="exp-notes" placeholder="Any final observations..."></textarea></div>
     <button class="bexp pdf" onclick="genPDF()">&#128196; Generate PDF Report</button>
-    <button class="bexp email" onclick="sendEmail()">&#9993; Email Evaluation to Crew</button>
-    <button class="bexp new" onclick="newSessPrompt()">+ Start New Game Session</button>
+    <div class="xcard" style="margin-top:14px"><h3>Next: the formal evaluation</h3><p style="margin:0;font-size:14px;line-height:1.5;opacity:.85">Debrief two or three items with the referee, then take the PDF and your notes home and write the formal evaluation yourself. Paste it into the Hub under Coaching, My evaluations.</p><p style="margin:10px 0 0"><a href="index.html#coaching" style="font-weight:700">Open the Hub &rsaquo;</a></p></div>
+    <div style="text-align:center;font-size:11px;opacity:.55;margin-top:16px">Evaluator <span class="ver"></span> &nbsp;&middot;&nbsp; Built with JAReferee</div>
   </div>
   <div class="bnav" style="position:relative">
     <button class="nb" onclick="showScreen('live')"><span class="ni">&#9917;</span><span class="nl">Live</span></button>
@@ -1718,6 +1682,8 @@ body { background:#0E1E3F !important; }
 // ═══════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════
+var EVAL_VERSION = '2026.10.14-i';
+document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v' + EVAL_VERSION; });
 var MD = {};
 var OT = { active:false, half:0, len:10, otStarted:false };
 var KFTM = { active:false, round:1, homeFirst:true, currentTeam:'home', kicks:[], homeScore:0, awayScore:0, phase:'normal' };
@@ -3251,6 +3217,7 @@ function pmTab(tab, el) {
   document.querySelectorAll('.pm-c').forEach(function(c) { c.classList.remove('active'); });
   document.getElementById('pm-' + tab).classList.add('active');
   if (tab === 'crew') { populateFlagged(); updateOVSummary(); }
+  if (tab === 'debrief') renderDebrief();
   populateMetrics();
   // Render incidents for this tab
   if (tab !== 'crew') renderIncidents(tab);
@@ -3327,6 +3294,37 @@ function populateFlagged() {
 }
 
 // ═══════════════════════════════════════
+// DEBRIEF: the two or three items to talk through after the game
+// ═══════════════════════════════════════
+var DEB_NAMES = { ref:'Referee', ar1:'AR1', ar2:'AR2', fourth:'4th' };
+function debriefItems() {
+  var out = [];
+  Object.keys(incidents).forEach(function(off) { ['cmi','cre'].forEach(function(type) {
+    (incidents[off][type]||[]).forEach(function(inc, i) { if (inc.discuss) out.push({ off:off, type:type, inc:inc }); });
+  }); });
+  return out;
+}
+function renderDebrief() {
+  var n = 0, html = '';
+  Object.keys(incidents).forEach(function(off) { ['cmi','cre'].forEach(function(type) {
+    (incidents[off][type]||[]).forEach(function(inc, i) {
+      if (inc.discuss) n++;
+      html += '<div class="deb-item'+(inc.discuss?' on':'')+'" onclick="debToggle(\''+off+'\',\''+type+'\','+i+')"><b>'+(inc.time?inc.time+' ':'')+DEB_NAMES[off]+', '+type.toUpperCase()+(inc.type?': '+inc.type:'')+'</b>'+(inc.involvement||'')+(inc.difficulty?' / '+inc.difficulty:'')+(inc.brief?'<small>'+inc.brief+'</small>':'')+'</div>';
+    });
+  }); });
+  document.getElementById('deb-inc').innerHTML = html || '<div style="font-size:12px;color:var(--g6);padding:6px 0">No incidents yet. Add them on each official\'s tab.</div>';
+  var flagged = cur().events.filter(function(e){return e.flag===1;});
+  document.getElementById('deb-ev').innerHTML = flagged.length ? flagged.map(function(e){
+    return '<div class="tev" style="border-left-color:var(--amber)">'+[e.time,e.code,e.official,e.team,e.reason,e.notes].filter(Boolean).join(' ')+'</div>';
+  }).join('') : '<div style="font-size:12px;color:var(--g6);padding:6px 0">None flagged.</div>';
+  var c = document.getElementById('deb-count'); c.textContent = n + ' picked'; c.style.color = n > 3 ? 'var(--red)' : 'var(--gold)';
+}
+function debToggle(off, type, i) {
+  var inc = incidents[off] && incidents[off][type] && incidents[off][type][i]; if (!inc) return;
+  inc.discuss = !inc.discuss; renderDebrief(); saveState();
+}
+
+// ═══════════════════════════════════════
 // INCIDENTS (CMI / CRE)
 // ═══════════════════════════════════════
 function renderIncidents(official) {
@@ -3377,35 +3375,7 @@ function incUpdate(official, type, i, field, value) {
   }
 }
 
-// ═══════════════════════════════════════
-// SESSIONS
-// ═══════════════════════════════════════
-function addSess() {
-  sessions.push(newSess());
-  var idx = sessions.length - 1;
-  var bar = document.getElementById('sess-bar'), add = bar.querySelector('.sadd');
-  var btn = document.createElement('button');
-  btn.className = 'sbtn'; btn.textContent = 'Game ' + (idx+1);
-  btn.onclick = function() { switchSess(idx, btn); };
-  bar.insertBefore(btn, add);
-  switchSess(idx, btn);
-}
-
-function switchSess(idx, el) {
-  curIdx = idx; clearInterval(clockInt); clockStartedAt = null;
-  document.querySelectorAll('.sbtn').forEach(function(b) { b.classList.remove('active'); });
-  el.classList.add('active');
-  var s = cur();
-  document.getElementById('btn-ss').textContent = s.running ? 'PAUSE' : (s.secs > 0 ? 'RESUME' : 'START');
-  document.getElementById('btn-ss').className = s.running ? 'bclk gray' : 'bclk go';
-  renderClock(); renderLog();
-  if (MD.hName) initLiveUI();
-  updateInjDisplay();
-}
-
-function newSessPrompt() {
-  if (confirm('Start a new game session?')) { addSess(); saveState(); showScreen('live'); }
-}
+// One session per evaluation: a formal evaluation is one referee on one game.
 
 // ═══════════════════════════════════════
 // PDF EXPORT
@@ -3581,11 +3551,12 @@ function genPDF() {
   // Crew
   body += '<div class="pb"></div><h2>Crew &amp; Overview</h2>';
   var cc = document.getElementById('crew-chem'); if(cc&&cc.value) body += '<h3>Crew Chemistry</h3><div class="nb">'+cc.value+'</div>';
+  var deb = debriefItems(); if (deb.length) { body += '<h3>Debrief</h3>'; deb.forEach(function(d){ var inc = d.inc; body += '<div class="nb"><strong>'+(inc.time?inc.time+' ':'')+DEB_NAMES[d.off]+', '+d.type.toUpperCase()+(inc.type?': '+inc.type:'')+'</strong> &mdash; '+(inc.involvement||'')+(inc.difficulty?' | '+inc.difficulty:'')+(inc.brief?'<br>'+inc.brief:'')+'</div>'; }); }
   var en = document.getElementById('exp-notes'); if(en&&en.value) body += '<h3>Final Notes</h3><div class="nb">'+en.value+'</div>';
   // Footer
   body += '<div class="foot"><div><div class="fb">Colorado Referees &nbsp;·&nbsp; Built with JAReferee &nbsp;·&nbsp; Evaluator</div>';
   body += '<div>Generated: '+new Date().toLocaleString()+'</div>';
-  body += '<div style="font-size:8px;color:#999;margin-top:2px">Built with JAReferee</div></div>';
+  body += '<div style="font-size:8px;color:#999;margin-top:2px">Built with JAReferee &nbsp;&middot;&nbsp; Evaluator v'+EVAL_VERSION+'</div></div>';
   body += '<div style="text-align:right"><div>Ref Coach: '+(MD.coach||'')+'</div>';
   body += '<div style="color:#e63946;font-style:italic">For the Love of the Game</div></div></div>';
 
@@ -3611,302 +3582,6 @@ function genPDF() {
   }
 }
 
-function sendEmail() {
-  var s = cur();
-  // Build recipient list from filled email fields
-  var allOfficials = [
-    { id:'em-ref',   name:MD.ref    ||'Referee',      role:'Referee',       scoreId:'ref-score'    },
-    { id:'em-ar1',   name:MD.ar1    ||'AR1',           role:'AR1',           scoreId:'ar1-score'    },
-    { id:'em-ar2',   name:MD.ar2    ||'AR2',           role:'AR2',           scoreId:'ar2-score'    },
-    { id:'em-4th',   name:MD.fourth ||'4th Official',  role:'4th Official',  scoreId:'fourth-score' },
-    { id:'em-coach', name:MD.coach  ||'Ref Coach',     role:'Ref Coach',     scoreId:''             , isCoach:true },
-  ];
-  var recipients = allOfficials.filter(function(o){
-    var el = document.getElementById(o.id);
-    return el && el.value.trim() !== '';
-  }).map(function(o){
-    var el = document.getElementById(o.id);
-    o.email = el.value.trim();
-    // Get their feeling score
-    var scoreEl = document.getElementById(o.scoreId);
-    o.score = scoreEl ? scoreEl.value : '';
-    return o;
-  });
-
-  if (!recipients.length) {
-    alert('Enter at least one email address first.');
-    return;
-  }
-
-  // Store in emailFlow state
-  emailFlow.recipients = recipients;
-  emailFlow.currentIdx = 0;
-  emailFlow.sent = [];
-
-  startEmailFlow();
-}
-
-var emailFlow = { recipients:[], currentIdx:0, sent:[] };
-
-function startEmailFlow() {
-  var ov = document.getElementById('email-ov');
-  var stepView = document.getElementById('email-step-view');
-  var doneView = document.getElementById('email-done-view');
-  stepView.style.display = 'flex';
-  stepView.style.flexDirection = 'column';
-  stepView.style.alignItems = 'center';
-  doneView.style.display = 'none';
-  ov.classList.add('open');
-  updateEmailFlowUI();
-}
-
-function updateEmailFlowUI() {
-  var recs = emailFlow.recipients;
-  var idx = emailFlow.currentIdx;
-  var total = recs.length;
-  var current = recs[idx];
-
-  // Progress bar
-  var pct = (idx / total) * 100;
-  document.getElementById('email-progress-fill').style.width = pct + '%';
-
-  // Step info
-  document.getElementById('email-ov-sub').textContent = 'One at a time — your email app opens for each';
-  document.getElementById('email-step-info').textContent = 'Step ' + (idx+1) + ' of ' + total;
-
-  // Recipients list
-  var listEl = document.getElementById('email-recipients-list');
-  listEl.innerHTML = recs.map(function(r, i) {
-    var cls = i < idx ? 'done' : i === idx ? 'current' : 'pending';
-    var icon = i < idx ? '✅' : i === idx ? '📧' : '○';
-    return '<div class="email-rec-item ' + cls + '">' +
-      '<span class="email-rec-icon">' + icon + '</span>' +
-      '<div class="email-rec-info">' +
-        '<div class="email-rec-name">' + r.name + '</div>' +
-        '<div class="email-rec-role">' + r.role + '</div>' +
-        '<div class="email-rec-addr">' + r.email + '</div>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-
-  // Current card
-  document.getElementById('email-current-name').textContent = current.name.toUpperCase();
-  document.getElementById('email-current-role').textContent = current.role;
-  document.getElementById('email-current-addr').textContent = current.email;
-}
-
-
-// ═══ ROUND 4: Ref Coach consolidated summary ═══
-function buildCoachSummaryBody(recipient, s, matchInfo) {
-  function fv(id) { var el = document.getElementById(id); return el && el.value ? el.value : '—'; }
-  function tv(id) { var el = document.getElementById(id); return el && el.value ? el.value : ''; }
-
-  var body = 'Ref Coach Summary — Match Evaluation\n';
-  body += '====================================\n\n';
-  body += 'Match: ' + matchInfo + '\n';
-  body += 'Competition: ' + (MD.comp||'—') + '\n';
-  body += 'Date: ' + (MD.date||'—') + '\n';
-  body += 'Venue: ' + (MD.venue||'—') + '\n';
-  body += 'Ref Coach: ' + (MD.coach||'—') + '\n';
-  body += 'Purpose: ' + (MD.purpose||'—') + '\n\n';
-
-  // Each official\u0027s feeling score + their pos/dev areas
-  var officials = [
-    { role:'Referee',      name:MD.ref    ||'Referee',     scoreId:'ref-score',    posId:'ref-pos',    devId:'ref-dev'    },
-    { role:'AR1',          name:MD.ar1    ||'AR1',         scoreId:'ar1-score',    posId:'ar1-pos',    devId:'ar1-dev'    },
-    { role:'AR2',          name:MD.ar2    ||'AR2',         scoreId:'ar2-score',    posId:'ar2-pos',    devId:'ar2-dev'    },
-    { role:'4th Official', name:MD.fourth ||'4th Official',scoreId:'fourth-score', posId:'fourth-pos', devId:'fourth-dev' },
-  ];
-  officials.forEach(function(o) {
-    body += '── ' + o.role + ': ' + o.name + ' ──\n';
-    body += 'Feeling Score: ' + fv(o.scoreId) + '\n';
-    var pos = tv(o.posId); if (pos) body += 'Positive Areas: ' + pos + '\n';
-    var dev = tv(o.devId); if (dev) body += 'Areas for Development: ' + dev + '\n';
-    body += '\n';
-  });
-
-  // CMI / CRE list
-  if (typeof incidents !== 'undefined' && incidents && incidents.length) {
-    body += '=== CRITICAL MATCH INCIDENTS / CRE ===\n';
-    incidents.forEach(function(ic) {
-      body += '\u2022 ' + (ic.type||'') + ' [' + (ic.time||'?') + '] ' + (ic.official||'') +
-              (ic.call ? ' \u2014 ' + ic.call : '') +
-              (ic.diff ? ' | ' + ic.diff : '') +
-              (ic.notes ? ' \u2014 ' + ic.notes : '') + '\n';
-    });
-    body += '\n';
-  }
-
-  // Key events
-  var keyEvs = s.events.filter(function(e){
-    return ['C','RC','F+C','F+RC','G','PK','GK','CK'].indexOf(e.code) > -1;
-  });
-  if (keyEvs.length) {
-    body += '=== KEY EVENTS ===\n';
-    keyEvs.forEach(function(e){
-      body += e.time + ' ' + e.code + (e.team?' ('+e.team+')':'') + (e.reason?' - '+e.reason:'') + (e.notes?' \u2014 '+e.notes:'') + '\n';
-    });
-    body += '\n';
-  }
-
-  // Notes filtered by tone — Below Standard is most valuable for follow-up
-  var devNotes = s.events.filter(function(e){ return e.code === 'NOTE' && (e.tone === 'Below Standard' || e.tone === 'Adequate'); });
-  if (devNotes.length) {
-    body += '=== DEVELOPMENT NOTES (Adequate / Below Standard) ===\n';
-    devNotes.forEach(function(e){
-      body += e.time + ' ' + (e.official||'') + ' [' + e.tone + (e.category?' / '+e.category:'') + '] \u2014 ' + (e.notes||'') + '\n';
-    });
-    body += '\n';
-  }
-
-  // Excellent notes (highlights for praise)
-  var goodNotes = s.events.filter(function(e){ return e.code === 'NOTE' && e.tone === 'Excellent'; });
-  if (goodNotes.length) {
-    body += '=== EXCELLENT MOMENTS ===\n';
-    goodNotes.forEach(function(e){
-      body += e.time + ' ' + (e.official||'') + (e.category?' [' +e.category + ']':'') + ' \u2014 ' + (e.notes||'') + '\n';
-    });
-    body += '\n';
-  }
-
-  // Coin toss
-  if (MD.tossWinner) {
-    body += '=== MATCH CONTEXT ===\n';
-    var wn = MD.tossWinner === 'home' ? (MD.hName||'Home') : (MD.aName||'Away');
-    body += 'Coin Toss: ' + wn;
-    if (MD.tossChoice) body += ' \u00b7 ' + (MD.tossChoice === 'kickoff' ? 'Chose Kickoff' : 'Chose End');
-    body += '\n';
-    if (homeAttacksDir) {
-      body += 'Direction 1st Half: ' + (MD.hName||'Home') + ' attacked ' + (homeAttacksDir==='left'?'\u2190':'\u2192') + '\n';
-      body += 'Direction 2nd Half: ' + (MD.hName||'Home') + ' attacked ' + (homeAttacksDir==='left'?'\u2192':'\u2190') + '\n';
-    }
-    body += '\n';
-  }
-
-  // Coach's own notes / crew chemistry
-  var crew = tv('crew-chem'); if (crew) body += '=== CREW CHEMISTRY ===\n' + crew + '\n\n';
-  var en   = tv('exp-notes'); if (en)   body += '=== COACH FINAL NOTES ===\n' + en + '\n\n';
-
-  body += '---\nColorado Referees Evaluator, built with JAReferee';
-  return body;
-}
-// ═══ END ROUND 4 ═══
-
-function buildEmailBody(recipient, s) {
-  var matchInfo = (MD.hName||'Home') + ' ' + s.homeScore + ' \u2013 ' + s.awayScore + ' ' + (MD.aName||'Away');
-  // R4: Coach gets a consolidated summary
-  if (recipient.isCoach) return buildCoachSummaryBody(recipient, s, matchInfo);
-  var evSummary = s.events.filter(function(e){
-    return ['C','RC','F+C','F+RC','G','PK'].indexOf(e.code) > -1;
-  }).map(function(e){
-    return e.time + ' ' + e.code + (e.team?' ('+e.team+')':'') + (e.reason?' - '+e.reason:'');
-  }).join('\n');
-
-  var notes = document.getElementById('exp-notes') ? document.getElementById('exp-notes').value : '';
-
-  var posId = recipient.role.toLowerCase().replace(' ','').replace('referee','ref').replace('4thofficial','fourth').replace('1','1').replace('2','2') + '-pos';
-  var devId = posId.replace('-pos','-dev');
-  var posEl = document.getElementById(posId);
-  var devEl = document.getElementById(devId);
-
-  var body = 'Hi ' + recipient.name + ',\n\n' +
-    'Here is your evaluation from today\'s match.\n\n' +
-    '=== MATCH SUMMARY ===\n' +
-    'Match: ' + matchInfo + '\n' +
-    'Competition: ' + (MD.comp||'') + '\n' +
-    'Date: ' + (MD.date||'') + '\n' +
-    'Venue: ' + (MD.venue||'') + '\n' +
-    'Ref Coach: ' + (MD.coach||'') + '\n\n';
-
-  if (recipient.score) {
-    body += '=== YOUR EVALUATION ===\n';
-    body += 'Feeling Score: ' + recipient.score + '\n';
-  }
-
-  if (posEl && posEl.value) {
-    body += '\nPositive Areas:\n' + posEl.value + '\n';
-  }
-  if (devEl && devEl.value) {
-    body += '\nAreas for Development:\n' + devEl.value + '\n';
-  }
-
-  if (evSummary) {
-    body += '\n=== KEY EVENTS ===\n' + evSummary + '\n';
-  }
-
-  if (notes) body += '\n=== COACH NOTES ===\n' + notes + '\n';
-
-  body += '\n---\nColorado Referees Evaluator, built with JAReferee';
-  return body;
-}
-
-function openCurrentEmail() {
-  var s = cur();
-  var recs = emailFlow.recipients;
-  var idx = emailFlow.currentIdx;
-  var recipient = recs[idx];
-  var matchInfo = (MD.hName||'Home') + ' ' + s.homeScore + ' \u2013 ' + s.awayScore + ' ' + (MD.aName||'Away');
-  var subj = encodeURIComponent((recipient.isCoach ? 'Ref Coach Summary \u2014 ' : 'Referee Evaluation \u2014 ') + recipient.name + ' \u2014 ' + (MD.date||'') + ' \u2014 ' + matchInfo);
-  var body = encodeURIComponent(buildEmailBody(recipient, s));
-  var mailtoLink = 'mailto:' + recipient.email + '?subject=' + subj + '&body=' + body;
-
-  // Update button to show it was opened
-  var btn = document.getElementById('btn-open-email');
-  btn.textContent = '↩ Re-open Email App';
-  btn.style.background = '#333';
-
-  // Open email
-  window.location.href = mailtoLink;
-}
-
-function emailSentNext() {
-  var recs = emailFlow.recipients;
-  emailFlow.sent.push(recs[emailFlow.currentIdx]);
-  emailFlow.currentIdx++;
-
-  // Reset open button
-  var btn = document.getElementById('btn-open-email');
-  btn.textContent = '✉ Open Email App';
-  btn.style.background = 'var(--red)';
-
-  if (emailFlow.currentIdx >= recs.length) {
-    // All done
-    showEmailDone();
-  } else {
-    updateEmailFlowUI();
-  }
-}
-
-function showEmailDone() {
-  var stepView = document.getElementById('email-step-view');
-  var doneView = document.getElementById('email-done-view');
-  stepView.style.display = 'none';
-  doneView.style.display = 'flex';
-  doneView.style.flexDirection = 'column';
-  doneView.style.alignItems = 'center';
-  document.getElementById('email-progress-fill').style.width = '100%';
-  var sent = emailFlow.sent.length;
-  document.getElementById('email-done-sub').textContent =
-    'Sent to ' + sent + ' official' + (sent !== 1 ? 's' : '') + '. Check your email app to confirm delivery.';
-}
-
-function cancelEmailFlow() {
-  var sent = emailFlow.sent.length;
-  var remaining = emailFlow.recipients.length - emailFlow.currentIdx;
-  if (remaining > 0) {
-    if (!confirm('Cancel sending to ' + remaining + ' remaining official' + (remaining !== 1 ? 's' : '') + '?')) return;
-  }
-  if (sent > 0) {
-    showEmailDone();
-  } else {
-    closeEmailFlow();
-  }
-}
-
-function closeEmailFlow() {
-  document.getElementById('email-ov').classList.remove('open');
-  emailFlow = { recipients:[], currentIdx:0, sent:[] };
-}
 
 
 // ═══════════════════════════════════════
@@ -4461,43 +4136,6 @@ checkResumeOnLoad();
 </div>
 
 
-<!-- SEQUENTIAL EMAIL OVERLAY -->
-<div class="email-ov" id="email-ov">
-  <!-- Step view -->
-  <div id="email-step-view" style="width:100%;display:flex;flex-direction:column;align-items:center">
-    <div class="email-ov-header">
-      <div class="email-ov-title">&#9993; Send Evaluations</div>
-      <div class="email-ov-sub" id="email-ov-sub">One at a time &mdash; your email app opens for each</div>
-    </div>
-    <div class="email-progress">
-      <div class="email-progress-bar"><div class="email-progress-fill" id="email-progress-fill" style="width:0%"></div></div>
-    </div>
-    <div class="email-recipients-list" id="email-recipients-list"></div>
-    <div class="email-current-card">
-      <div class="email-current-label">&#9654; Now Sending To</div>
-      <div class="email-current-name" id="email-current-name">-</div>
-      <div class="email-current-role" id="email-current-role">-</div>
-      <div class="email-current-addr" id="email-current-addr">-</div>
-    </div>
-    <div class="email-step-info" id="email-step-info">Step 1 of 1</div>
-    <button class="btn-open-email" id="btn-open-email" onclick="openCurrentEmail()">
-      &#9993; Open Email App
-    </button>
-    <button class="btn-email-sent" onclick="emailSentNext()">
-      &#10003; Sent &mdash; Next Official &#8594;
-    </button>
-    <button class="btn-email-cancel" onclick="cancelEmailFlow()">&#10005; Cancel remaining</button>
-  </div>
-  <!-- Done view -->
-  <div id="email-done-view" style="width:100%;display:flex;flex-direction:column;align-items:center;display:none">
-    <div class="email-done-card">
-      <div class="email-done-icon">&#9989;</div>
-      <div class="email-done-title">All Done!</div>
-      <div class="email-done-sub" id="email-done-sub">Evaluations sent to all officials</div>
-      <button class="btn-email-close" onclick="closeEmailFlow()">&#10003; Close</button>
-    </div>
-  </div>
-</div>
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -4564,7 +4202,7 @@ checkResumeOnLoad();
     if (!r.error) { DIRTY = false; var p = document.getElementById('savedPill'); p.classList.add('on'); setTimeout(function () { p.classList.remove('on'); }, 1500); }
   }
   // Exporting marks the evaluation complete.
-  ['genPDF', 'sendEmail'].forEach(function (fn) { var f = window[fn]; if (typeof f === 'function') window[fn] = function () { var r = f.apply(this, arguments); push(true); return r; }; });
+  ['genPDF'].forEach(function (fn) { var f = window[fn]; if (typeof f === 'function') window[fn] = function () { var r = f.apply(this, arguments); push(true); return r; }; });
   window.addEventListener('beforeunload', function () { if (DIRTY) push(); });
   boot();
 })();

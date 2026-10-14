@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.14-g';
+  var VERSION = '2026.10.14-i';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -167,13 +167,14 @@
   }
   document.addEventListener('toggle', function (e) { var d = e.target; if (d && d.matches && d.matches('details.fold')) FOLD[d.getAttribute('data-fold')] = d.open; }, true);
 
-  // ── An evaluation: the session summary, the draft report, and the Writer ──
-  // The coach (or a reviewer) opens a completed evaluation, asks for a draft
-  // in US Soccer's style, edits it, saves, and copies it into RefEval.
+  // ── An evaluation: the session summary, the debrief list, and the report ──
+  // The coach writes the formal evaluation from the PDF and their notes and
+  // saves it here. The Writer (a draft from the log) is reviewer-only for now:
+  // a coach first shows they can write a formal evaluation themselves.
   var EV = { row: null, busy: false };
   async function renderEval(id) {
     var body = $('evalBody'); body.innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>';
-    var r = await sb.from('evaluations').select('id,coach_person_id,coach_name,ref_name,ref_person_id,game_id,game_date,venue,competition,purpose,license,status,session,final_scores,report,report_at').eq('id', id).limit(1);
+    var r = await sb.from('evaluations').select('id,coach_person_id,coach_name,ref_name,ref_person_id,game_id,game_date,venue,competition,purpose,license,status,session,final_scores,report,report_at,report_status,review_note,reviewed_at').eq('id', id).limit(1);
     var e = (r.data || [])[0]; EV.row = e;
     if (!e) { body.innerHTML = '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>'; return; }
     var S_ = e.session || {}, md = S_.MD || {}, ratings = S_.ratings || e.final_scores || {}, sessions = S_.sessions || [];
@@ -182,14 +183,29 @@
     var nEv = sessions.reduce(function (a, ss) { return a + (ss.events || []).length; }, 0);
     var inc = S_.incidents || {}, nInc = 0; Object.keys(inc).forEach(function (w) { ['cmi', 'cre'].forEach(function (k) { nInc += ((inc[w] || {})[k] || []).length; }); });
     var mine = e.coach_person_id === S.me.person_id;
+    var offs = { ref: t('role.cr'), ar1: 'AR1', ar2: 'AR2', fourth: '4th' }, deb = '';
+    var debItems = []; Object.keys(inc).forEach(function (w) { ['cmi', 'cre'].forEach(function (k) { ((inc[w] || {})[k] || []).forEach(function (x) { debItems.push({ w: w, k: k, x: x }); }); }); });
+    debItems.sort(function (a, b) { return (b.x.discuss ? 1 : 0) - (a.x.discuss ? 1 : 0); });
+    var nDisc = debItems.filter(function (d) { return d.x.discuss; }).length;
+    debItems.forEach(function (d) { var x = d.x; deb += '<div class="rowline"' + (x.discuss ? ' style="background:var(--surface-2,rgba(127,127,127,.08));border-radius:8px"' : '') + '><div>' + (x.discuss ? '<span class="pill ok">' + esc(t('evalDiscussed')) + '</span> ' : '') + esc((x.time ? x.time + ' ' : '') + (offs[d.w] || d.w) + ', ' + d.k.toUpperCase() + (x.type ? ', ' + x.type : '')) + (x.brief ? '<div class="hint">' + esc(x.brief) + '</div>' : '') + '</div><b>' + esc(x.involvement || '') + (x.difficulty ? ' / ' + x.difficulty : '') + '</b></div>'; });
+    var rs = e.report_status || 'draft', isRev = iCan('review');
+    var canEdit = isRev || (mine && (rs === 'draft' || rs === 'returned'));
+    var canSubmit = mine && e.status === 'complete' && (rs === 'draft' || rs === 'returned');
+    var canDraft = isRev && e.status === 'complete';
+    var rsPill = e.report ? ' <span class="pill' + (rs === 'approved' ? ' ok' : rs === 'returned' ? ' bad' : '') + '">' + esc(t('evalRs.' + rs)) + '</span>' : '';
     body.innerHTML = '<div class="pad" style="padding-top:12px"><div class="lead">' + esc(t('evalTitle')) + '</div><div class="disp" style="font-size:34px">' + esc(e.ref_name || '') + '</div><div class="hint">' + esc(e.game_date ? dayLong(e.game_date) : '') + (e.venue ? ', ' + esc(e.venue) : '') + (e.competition ? ', ' + esc(e.competition) : '') + '</div><div class="hint">' + esc(t('evalCoach')) + ' ' + esc(e.coach_name || '') + '. ' + esc(e.purpose || '') + (e.license ? ', ' + esc(e.license) : '') + ' <span class="pill' + (e.status === 'complete' ? ' ok' : '') + '">' + esc(e.status === 'complete' ? t('evalComplete') : t('evalInProgress')) + '</span></div></div>' +
       '<div class="stats">' + '<div class="stat"><b>' + nEv + '</b><i>' + esc(t('evalEvents')) + '</i></div><div class="stat"><b>' + nInc + '</b><i>' + esc(t('evalIncidents')) + '</i></div><div class="stat"><b>' + Object.keys(ratings).length + '</b><i>' + esc(t('evalRatings')) + '</i></div></div>' +
-      (rated ? fold('evratings', t('evalRatings'), Object.keys(ratings).length, '<div class="pad">' + rated + '</div>', false) : '') +
+      (deb ? fold('evdebrief', t('evalDebrief'), nDisc || nInc, '<div class="pad hint" style="padding-top:0">' + esc(t('evalDebriefHint')) + '</div><div class="pad">' + deb + '</div>', false) : '') +
+      (rated ? fold('evratings', t('evalRatingsTitle'), Object.keys(ratings).length, '<div class="pad">' + rated + '</div>', false) : '') +
       (e.game_id ? '<div class="pad" style="padding-top:8px"><a class="btn outline small" href="evaluator.html?game=' + esc(e.game_id) + '">' + esc(t('evalOpenEvaluator')) + '</a></div>' : '') +
-      '<div class="disp h2">' + esc(t('evalReport')) + '</div><div class="pad hint" style="padding-top:0">' + esc(t('evalReportHint')) + '</div>' +
-      '<div class="pad no-print" style="padding-top:10px;display:flex;gap:8px;flex-wrap:wrap">' + (e.status === 'complete' ? '<button class="btn primary small" id="evDraft">' + esc(e.report ? t('evalRedraft') : t('evalDraft')) + '</button>' : '<span class="hint">' + esc(t('evalFinishFirst')) + '</span>') + (e.report ? '<button class="btn outline small" id="evCopy">' + esc(t('evalCopy')) + '</button><button class="btn outline small" id="evPrint">' + esc(t('print')) + '</button>' : '') + '</div>' +
-      '<div class="pad" style="padding-top:8px"><textarea id="evText" style="min-height:360px;font:inherit;width:100%;padding:12px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)" placeholder="' + esc(t('evalEmpty')) + '"' + (mine || iCan('review') ? '' : ' readonly') + '>' + esc(e.report || '') + '</textarea></div>' +
-      '<div class="actions no-print"><button class="btn primary" id="evSave"' + (mine || iCan('review') ? '' : ' disabled') + '>' + esc(t('save')) + '</button></div><div class="msg" id="evMsg" hidden></div>' +
+      '<div class="disp h2">' + esc(t('evalReport')) + rsPill + '</div><div class="pad hint" style="padding-top:0">' + esc(rs === 'approved' ? t('evalApprovedHint') : rs === 'submitted' && !isRev ? t('evalLocked') : t('evalReportHint')) + '</div>' +
+      (rs === 'returned' && e.review_note ? '<div class="pad"><div class="card" style="border-color:var(--bad,#c0392b)"><b>' + esc(t('evalReviewNote')) + '</b><div style="white-space:pre-wrap">' + esc(e.review_note) + '</div></div></div>' : '') +
+      '<div class="pad no-print" style="padding-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' + (e.status !== 'complete' ? '<span class="hint">' + esc(t('evalFinishFirst')) + '</span>' : '') + (canDraft ? '<button class="btn outline small" id="evDraft">' + esc(e.report ? t('evalRedraft') : t('evalDraft')) + '</button><span class="hint">' + esc(t('evalReviewerDraft')) + '</span>' : '') + (e.report ? '<button class="btn outline small" id="evCopy">' + esc(t('evalCopy')) + '</button><button class="btn outline small" id="evPrint">' + esc(t('print')) + '</button>' : '') + '</div>' +
+      '<div class="pad" style="padding-top:8px"><textarea id="evText" style="min-height:360px;font:inherit;width:100%;padding:12px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)" placeholder="' + esc(t('evalEmpty')) + '"' + (canEdit ? '' : ' readonly') + '>' + esc(e.report || '') + '</textarea></div>' +
+      '<div class="pad no-print" style="display:flex;flex-wrap:wrap;gap:8px;padding-top:0">' + (canEdit ? '<button class="btn primary small" id="evSave">' + esc(t('save')) + '</button>' : '') +
+      (canSubmit ? '<button class="btn outline small" id="evSubmit">' + esc(t('evalSubmit')) + '</button>' : '') +
+      (isRev && rs === 'submitted' ? '<button class="btn primary small" id="evApprove">' + esc(t('evalApprove')) + '</button><button class="btn outline small" id="evReturn">' + esc(t('evalReturn')) + '</button>' : '') +
+      '</div><div class="msg" id="evMsg" hidden></div>' +
       (e.report_at ? '<div class="pad hint">' + esc(t('evalDraftedAt')) + ' ' + esc(dayLong(e.report_at.slice(0, 10))) + '</div>' : '');
     var dr = $('evDraft'); if (dr) dr.onclick = async function () {
       if (e.report && !window.confirm(t('evalRedraftConfirm'))) return;
@@ -197,7 +213,11 @@
       try { var j = await post({ action: 'evalWrite', evalId: e.id }); e.report = j.report; e.report_at = j.reportAt; busy(false); renderEval(id); }
       catch (err) { busy(false); dr.disabled = false; dr.textContent = t('evalDraft'); say('evMsg', err.message || String(err), 'bad'); }
     };
-    $('evSave').onclick = async function () { var txt = $('evText').value; var u = await sb.from('evaluations').update({ report: txt, report_at: new Date().toISOString() }).eq('id', e.id); if (u.error) { say('evMsg', u.error.message, 'bad'); return; } e.report = txt; say('evMsg', t('evalSaved'), 'good'); };
+    async function evUpdate(patch, okMsg) { var u = await sb.from('evaluations').update(patch).eq('id', e.id); if (u.error) { say('evMsg', u.error.message, 'bad'); return false; } Object.keys(patch).forEach(function (k) { e[k] = patch[k]; }); if (okMsg) say('evMsg', okMsg, 'good'); return true; }
+    var sv = $('evSave'); if (sv) sv.onclick = function () { evUpdate({ report: $('evText').value, report_at: new Date().toISOString() }, t('evalSaved')); };
+    var sub = $('evSubmit'); if (sub) sub.onclick = async function () { var txt = $('evText').value; if (!txt.trim()) { say('evMsg', t('evalEmpty'), 'bad'); return; } if (!window.confirm(t('evalSubmitConfirm'))) return; if (await evUpdate({ report: txt, report_at: new Date().toISOString(), report_status: 'submitted', review_note: null })) renderEval(id); };
+    var ap = $('evApprove'); if (ap) ap.onclick = async function () { if (await evUpdate({ report: $('evText').value, report_status: 'approved', reviewed_by: S.me.person_id, reviewed_at: new Date().toISOString(), review_note: null })) renderEval(id); };
+    var rt = $('evReturn'); if (rt) rt.onclick = async function () { var note = window.prompt(t('evalReturnPrompt'), ''); if (note === null) return; if (await evUpdate({ report_status: 'returned', reviewed_by: S.me.person_id, reviewed_at: new Date().toISOString(), review_note: note.trim() || null })) renderEval(id); };
     var cp = $('evCopy'); if (cp) cp.onclick = async function () { try { await navigator.clipboard.writeText($('evText').value); say('evMsg', t('evalCopied'), 'good'); } catch (err) { $('evText').select(); } };
     var pr = $('evPrint'); if (pr) pr.onclick = function () { window.print(); };
   }
@@ -827,7 +847,7 @@
     S.coach.games = r[0].data || [];
     S.coach.mine = r[1].data || [];
     S.coach.evals = r[2].data || [];
-    try { var mv = await sb.from('evaluations').select('id,game_date,venue,competition,ref_name,purpose,status,report,updated_at').eq('coach_person_id', S.me.person_id).order('game_date', { ascending: false }).limit(30); S.coach.myEvals = mv.data || []; } catch (e) { S.coach.myEvals = []; }
+    try { var mv = await sb.from('evaluations').select('id,game_date,venue,competition,ref_name,purpose,status,report,report_status,updated_at').eq('coach_person_id', S.me.person_id).order('game_date', { ascending: false }).limit(30); S.coach.myEvals = mv.data || []; } catch (e) { S.coach.myEvals = []; }
     S.coach.assignr = (r[3].data || []).filter(function (g) { return isCoachSlot(g) && ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(g[k])) >= 0; }); });
     S.coach.assignr.filter(function (g) { return g.date === today; }).forEach(function (g) {
       if (!S.coach.mine.some(function (m) { return m.venue === g.venue; })) S.coach.mine.push({ venue: g.venue, block: 'all', fields: g.field ? [g.field] : [], note: t('fromAssignr') + (g.kickoff ? ', ' + clock(g.kickoff) : '') });
@@ -873,7 +893,7 @@
     var evalsCard = (S.coach.evals || []).length ? '<div class="card" style="border-color:var(--red);gap:6px"><b>' + esc(t('evalAssignedTitle')) + '</b>' + S.coach.evals.map(function (r) { return '<div>' + refLink(r.ref_name) + ', ' + esc(dayLong(r.game_date)) + ', ' + esc(r.venue || '') + '. ' + esc(t('evalPurpose.' + r.purpose)) + ' <a class="refname" href="#coach/game/' + esc(r.game_id) + '">' + esc(t('details')) + '</a></div>'; }).join('') + '<div class="hint">' + esc(t('evalAssignedHint')) + '</div></div>' : '';
     var upcoming = (S.coach.assignr || []).filter(function (g) { return g.date > todayStr(); });
     var upcomingCard = upcoming.length ? '<div class="card" style="gap:4px"><b>' + esc(t('comingUp')) + '</b>' + upcoming.map(function (g) { return '<div>' + esc(dayLong(g.date)) + ', ' + esc(clock(g.kickoff)) + ', ' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + ' <span class="hint">' + esc(t('fromAssignr')) + '</span></div>'; }).join('') + '</div>' : '';
-    var myEvalsFold = (S.coach.myEvals || []).length ? fold('myevals', t('myEvalsTitle'), S.coach.myEvals.length, '<div class="list">' + S.coach.myEvals.map(function (e) { return '<a class="item" href="#eval/' + e.id + '"><div><b>' + esc(e.ref_name || '') + '</b> <span class="pill' + (e.status === 'complete' ? ' ok' : '') + '">' + esc(e.status === 'complete' ? (e.report ? t('evalReported') : t('evalComplete')) : t('evalInProgress')) + '</span><br><span class="hint">' + esc(e.game_date ? dayLong(e.game_date) : '') + (e.venue ? ', ' + esc(e.venue) : '') + (e.competition ? ', ' + esc(e.competition) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>', false) : '';
+    var myEvalsFold = (S.coach.myEvals || []).length ? fold('myevals', t('myEvalsTitle'), S.coach.myEvals.length, '<div class="list">' + S.coach.myEvals.map(function (e) { return '<a class="item" href="#eval/' + e.id + '"><div><b>' + esc(e.ref_name || '') + '</b> <span class="pill' + (e.status === 'complete' && (!e.report || e.report_status === 'approved') ? ' ok' : e.report_status === 'returned' ? ' bad' : '') + '">' + esc(e.status === 'complete' ? (e.report ? t('evalRs.' + (e.report_status || 'draft')) : t('evalComplete')) : t('evalInProgress')) + '</span><br><span class="hint">' + esc(e.game_date ? dayLong(e.game_date) : '') + (e.venue ? ', ' + esc(e.venue) : '') + (e.competition ? ', ' + esc(e.competition) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>', false) : '';
     expected = evalsCard + expected + upcomingCard + myEvalsFold;
     var availability = (S.coach.days || []).length ? '<div class="card" style="gap:6px"><div class="hint" style="font-weight:700">' + esc(t('whenFree')) + '</div>' + S.coach.days.map(function (d) {
         return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0"><span style="min-width:0">' + esc(dayLong(d)) + '</span><span class="chips" style="flex-shrink:0"><button class="chip-btn' + (S.coach.avail[d + 'am'] ? ' on' : '') + '" data-av="' + d + '|am">' + esc(t('blockAm')) + '</button><button class="chip-btn' + (S.coach.avail[d + 'pm'] ? ' on' : '') + '" data-av="' + d + '|pm">' + esc(t('blockPm')) + '</button></span></div>';
@@ -1128,6 +1148,7 @@
     var r = await sb.from('eval_requests').select('id,game_id,game_date,venue,purpose,status,coach_person_id,ref_name,ref_person_id,note').in('status', ['requested', 'assigned']).order('game_date');
     CC.evalReqs = r.data || [];
     try { var cand = await sb.rpc('eval_candidates'); CC.cands = cand.data || []; } catch (e) { CC.cands = []; }
+    try { var tr = await sb.from('evaluations').select('id,ref_name,coach_name,game_date,report_at').eq('report_status', 'submitted').order('report_at'); CC.toReview = tr.data || []; } catch (e) { CC.toReview = []; }
   }
   async function loadEvals() { return load(loadEvals_()); }
   function renderCenter() {
@@ -1159,6 +1180,7 @@
       };
       body = '<div class="pad lead" style="padding-top:12px">' + esc(t('evalsLead')) + '</div><div class="disp h2">' + esc(t('evalsOpen')) + ' ' + open.length + '</div>' + (open.length ? open.map(card).join('') : '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>') +
         '<div class="disp h2">' + esc(t('evalsAssigned')) + ' ' + assigned.length + '</div>' + (assigned.length ? assigned.map(card).join('') : '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>') +
+        ((CC.toReview || []).length ? '<div class="disp h2">' + esc(t('evalsToReview')) + ' ' + CC.toReview.length + '</div><div class="list">' + CC.toReview.map(function (e) { return '<a class="item" href="#eval/' + e.id + '"><div><b>' + esc(e.ref_name || '') + '</b><br><span class="hint">' + esc(t('evalCoach')) + ' ' + esc(e.coach_name || '') + (e.game_date ? ', ' + esc(dayLong(e.game_date)) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>' : '') +
         ((CC.cands || []).length ? '<div class="disp h2">' + esc(t('evalCandidates').replace('{y}', new Date().getFullYear())) + '</div><div class="pad hint" style="padding-top:0">' + esc(t('evalCandidatesHint')) + '</div><div class="pad" style="padding-top:6px"><table class="dt" style="width:100%"><thead><tr><th>' + esc(t('fitName')) + '</th><th>' + esc(t('evalPurposeCol')) + '</th><th class="n">' + esc(t('evalDoneCol')) + '</th><th class="n">' + esc(t('evalOpenCol')) + '</th></tr></thead><tbody>' + CC.cands.map(function (c) { var full = Number(c.done) >= Number(c.need); return '<tr class="' + (full ? 'passed' : '') + '"><td>' + refLink(c.name || '') + '</td><td>' + esc(t('evalPurpose.' + c.purpose) || c.purpose) + '</td><td class="n"><b>' + esc(String(c.done)) + ' / ' + esc(String(c.need)) + '</b></td><td class="n">' + esc(String(c.requested)) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '');
     } else if (CC.tab === 'schedule') {
       var todayAss = CC.assigns.filter(function (a) { return a.date === CC.sdate; });
