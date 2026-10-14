@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.13-r';
+  var VERSION = '2026.10.13-t';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -188,9 +188,11 @@
       sb.from('session_signups').select('id,session_id,status,result').eq('person_id', S.me.person_id),
       sb.rpc('session_counts'),
       sb.from('session_signups').select('status,sessions!inner(kind,date,standard)').eq('person_id', S.me.person_id).eq('status', 'passed').eq('sessions.kind', 'fitness').gte('sessions.date', today.slice(0, 4) + '-01-01'),
+      sb.from('licenses').select('season').eq('person_id', S.me.person_id).order('season', { ascending: false }).limit(1),
       runsSessions() ? sb.from('sessions').select(SES_SEL).lt('date', today).gte('date', todayStr(back)).order('date', { ascending: false }) : Promise.resolve({ data: [] })
     ]);
-    SES.list = r[0].data || []; SES.mine = r[1].data || []; SES.past = r[4].data || [];
+    SES.list = r[0].data || []; SES.mine = r[1].data || []; SES.past = r[5].data || [];
+    SES.season = ((r[4] && r[4].data) || [])[0] ? Number(r[4].data[0].season) : null;
     SES.counts = {}; (r[2].data || []).forEach(function (c) { SES.counts[String(c.session_id)] = Number(c.signed); });
     SES.badge = ((r[3] && r[3].data) || []).map(function (x) { return x.sessions; }).filter(Boolean).sort(function (a, b) { return a.date < b.date ? 1 : -1; })[0] || null;
   }
@@ -238,10 +240,18 @@
   function fitWord(k) { return k === 'passed' ? t('sesPassed') : k === 'failed' ? t('sesFailed') : k === 'premium' ? t('fitPremium') : k === 'no_show' ? t('sesNoShow') : k === 'waitlist' ? t('sesWaitlisted') : k === 'signed' ? t('fitIncomplete') : ''; }
 
   // ── The sign-up card on Your day: upcoming sessions a referee may join. Fitness needs the waiver first.
+  // Re-register: from September the coming year is the one that matters. Shown until a licence for it is on file.
+  var LC_URL = 'https://learning.ussoccer.com/';
+  function reregisterHtml() {
+    var d = new Date(), target = d.getMonth() >= 8 ? d.getFullYear() + 1 : d.getFullYear();
+    if (SES.season == null) return '';
+    if (SES.season >= target) return '<div class="card" style="gap:4px"><span class="pill ok" style="align-self:flex-start">' + esc(t('regDone').replace('{y}', target)) + '</span></div>';
+    return '<div class="card" style="gap:8px;border-color:var(--red)"><b>' + esc(t('regTitle').replace('{y}', target)) + '</b><div class="hint">' + esc(t('regBody').replace('{y}', target).replace('{prev}', target - 1)) + '</div><a class="btn primary" href="' + LC_URL + '" target="_blank" rel="noopener">' + esc(t('regGo')) + '</a></div>';
+  }
   function signupCardHtml() {
     var list = SES.list.filter(function (x) { return x.open_to !== 'invite' || mySignup(x.id); });
-    if (!list.length) return SES.badge ? '<div class="card" style="gap:8px;border-color:var(--gold)">' + fitBadgeHtml(SES.badge) + '</div>' : '';
-    return '<div class="card" style="gap:8px;border-color:var(--gold)">' + fitBadgeHtml(SES.badge) + '<b>' + esc(t('sesTitle')) + '</b>' + list.map(function (x) {
+    if (!list.length) return reregisterHtml() + (SES.badge ? '<div class="card" style="gap:8px;border-color:var(--gold)">' + fitBadgeHtml(SES.badge) + '</div>' : '');
+    return reregisterHtml() + '<div class="card" style="gap:8px;border-color:var(--gold)">' + fitBadgeHtml(SES.badge) + '<b>' + esc(t('sesTitle')) + '</b>' + list.map(function (x) {
       var me = mySignup(x.id), n = SES.counts[String(x.id)] || 0, full = x.capacity && n >= x.capacity && !me, fit = x.kind === 'fitness';
       var state = me ? (me.status === 'passed' ? t('sesPassed') : me.status === 'failed' ? t('sesFailed') : me.status === 'premium' ? t('fitPremium') : me.status === 'no_show' ? t('sesNoShow') : me.status === 'waitlist' ? t('sesWaitlisted') : t('sesIn')) : (full ? t('sesFull') : (x.capacity ? t('sesSpots').replace('{n}', x.capacity - n) : ''));
       var join = !me && !full ? (fit ? '<div class="no-print" style="margin-top:8px"><a class="chip-btn small" style="display:inline-block;text-decoration:none" href="' + FIT_WAIVER_URL + '" target="_blank" rel="noopener">' + esc(t('fitWaiverOpen')) + '</a><label style="display:flex;gap:10px;align-items:flex-start;min-height:44px;margin-top:6px"><input type="checkbox" data-waiver="' + x.id + '" style="width:22px;height:22px;flex:none;margin-top:2px"> <span class="hint">' + esc(t('fitWaiverConfirm')) + '</span></label><button class="btn primary small" data-ses-in="' + x.id + '" disabled>' + esc(t('sesSignUp')) + '</button></div>' : '<div style="margin-top:8px"><button class="btn primary small" data-ses-in="' + x.id + '">' + esc(t('sesSignUp')) + '</button></div>') : '';
@@ -1400,8 +1410,11 @@
     var m = [];
     if (!ev.name) m.push(t('evName')); if (!ev.id) m.push(t('evId'));
     if (!ev.start_date || !ev.end_date) m.push(t('evDates'));
-    if (!ev.venues.length) m.push(t('evVenues'));
-    if (!ev.tools.length) m.push(t('evTools'));
+    if (ev.active) {
+      if (!ev.venues.length && ev.type !== 'league') m.push(t('evVenues'));
+      if (!ev.venues.length && ev.type === 'league' && !ev.game_prefix && !ev.league) m.push(t('evLeagueMatch'));
+      if (!ev.tools.length) m.push(t('evTools'));
+    }
     return m;
   }
   function renderSetup() {
@@ -1427,7 +1440,6 @@
       return;
     }
     var inp = function (id, v, type, extra) { return '<input id="' + id + '" type="' + (type || 'text') + '" value="' + esc(v == null ? '' : v) + '" ' + (extra || '') + ' style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">'; };
-    var vlist = SU.venues.filter(function (v) { return !SU.vq || v.toLowerCase().indexOf(SU.vq) >= 0 || ev.venues.indexOf(v) >= 0; }).slice(0, 40);
     var missing = evMissing(ev);
     $('setupBody').innerHTML =
       '<div class="pad" style="padding-top:12px"><button class="linkbtn" id="evBack" style="padding-left:0">&#8249; ' + esc(t('back')) + '</button></div>' +
@@ -1437,8 +1449,9 @@
       '<div class="hint" style="font-weight:700">' + esc(t('evType')) + '</div><div class="chips"><button class="chip-btn' + (ev.type !== 'league' ? ' on' : '') + '" data-type="tournament">' + esc(t('evTournament')) + '</button><button class="chip-btn' + (ev.type === 'league' ? ' on' : '') + '" data-type="league">' + esc(t('evLeague')) + '</button></div>' +
       '<div class="hint" style="font-weight:700">' + esc(t('evDates')) + '</div><div class="grid2">' + inp('evStart', ev.start_date, 'date') + inp('evEnd', ev.end_date, 'date') + '</div>' +
       '</div>' +
-      '<div class="card" style="gap:10px"><div class="hint" style="font-weight:700">' + esc(t('evVenues')) + '</div><div class="hint">' + esc(t('evVenuesHint')) + '</div>' + inp('evVq', SU.vq, 'search', 'placeholder="' + esc(t('evVenueSearch')) + '"') +
-      '<div class="chips">' + vlist.map(function (v) { return '<button class="chip-btn' + (ev.venues.indexOf(v) >= 0 ? ' on' : '') + '" data-venue="' + esc(v) + '">' + esc(v) + '</button>'; }).join('') + '</div>' +
+      '<div class="card" style="gap:10px"><div class="hint" style="font-weight:700">' + esc(t('evVenues')) + '</div><div class="hint">' + esc(t('evVenuesHint')) + '</div>' +
+      (ev.venues.length ? '<div class="chips">' + ev.venues.map(function (v) { return '<button class="chip-btn on" data-venue="' + esc(v) + '" title="' + esc(t('remove')) + '">' + esc(v) + ' &times;</button>'; }).join('') + '</div>' : '<div class="hint">' + esc(t('evNoVenues')) + '</div>') +
+      '<select id="evVenueAdd" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><option value="">' + esc(t('evVenueAdd')) + '</option>' + SU.venues.filter(function (v) { return ev.venues.indexOf(v) < 0; }).map(function (v) { return '<option value="' + esc(v) + '">' + esc(v) + '</option>'; }).join('') + '</select>' +
       '<div class="hint" style="font-weight:700">' + esc(t('evPrefix')) + '</div><div class="hint">' + esc(t('evPrefixHint')) + '</div>' + inp('evPrefix', ev.game_prefix, 'text', 'placeholder="UCH"') + '<div class="chips" id="prefixPicks"></div>' +
       '<label class="hint" style="font-weight:700" for="evLeagueName">' + esc(t('evLeagueName')) + '</label><input id="evLeagueName" list="leagueList" value="' + esc(ev.league || '') + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><datalist id="leagueList">' + SU.leagues.slice(0, 60).map(function (l) { return '<option value="' + esc(l) + '">'; }).join('') + '</datalist>' +
       '<label class="hint" style="font-weight:700" for="evSite">' + esc(t('evSite')) + '</label><select id="evSite" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' + (SU.sites.indexOf(String(ev.site_id)) < 0 && ev.site_id ? '<option value="' + esc(ev.site_id) + '" selected>' + esc(ev.site_id) + '</option>' : '') + SU.sites.map(function (s) { return '<option value="' + esc(s) + '"' + (String(ev.site_id) === s ? ' selected' : '') + '>' + esc(s) + '</option>'; }).join('') + '</select>' +
@@ -1459,7 +1472,7 @@
     $('evName').oninput = function () { if (ev.isNew && !$('evId').dataset.touched) $('evId').value = slug($('evName').value); read(); };
     $('evId').oninput = function () { $('evId').dataset.touched = '1'; read(); };
     ['evStart', 'evEnd', 'evPrefix', 'evLeagueName', 'evSite', 'evAlerts', 'evBlurb', 'evRules'].forEach(function (id) { $(id).oninput = read; $(id).onchange = read; });
-    $('evVq').oninput = function () { read(); SU.vq = $('evVq').value.trim().toLowerCase(); renderSetup(); $('evVq').focus(); var v = $('evVq'); v.setSelectionRange(v.value.length, v.value.length); };
+    $('evVenueAdd').onchange = function () { read(); var v = $('evVenueAdd').value; if (v && ev.venues.indexOf(v) < 0) ev.venues.push(v); SU.check = null; renderSetup(); };
     $('setupBody').querySelectorAll('[data-venue]').forEach(function (b) { b.onclick = function () { read(); var v = b.getAttribute('data-venue'), i = ev.venues.indexOf(v); if (i >= 0) ev.venues.splice(i, 1); else ev.venues.push(v); SU.check = null; renderSetup(); }; });
     $('setupBody').querySelectorAll('[data-tool]').forEach(function (b) { b.onclick = function () { read(); var k = b.getAttribute('data-tool'), i = ev.tools.indexOf(k); if (i >= 0) ev.tools.splice(i, 1); else ev.tools.push(k); renderSetup(); }; });
     $('setupBody').querySelectorAll('[data-type]').forEach(function (b) { b.onclick = function () { read(); ev.type = b.getAttribute('data-type'); renderSetup(); }; });
@@ -1761,10 +1774,10 @@
     out += '</svg><div class="legend">' + series.map(function (s, k) { return '<span><i class="sw c' + (k + 1) + '"></i>' + esc(s.name) + '</span>'; }).join('') + '</div>';
     return out;
   }
-  function hbars(items, total) {
+  function hbars(items, total, suffix) {
     var max = Math.max.apply(null, items.map(function (i) { return i.v || 0; }).concat([1]));
     return '<div class="hbars">' + items.map(function (i) {
-      return '<div class="hb"><div class="hl">' + esc(i.l) + (i.d != null ? ' <span class="delta ' + (i.d > 0 ? 'up' : i.d < 0 ? 'down' : '') + '">' + (i.d > 0 ? '+' : '') + fmtN(i.d) + '</span>' : '') + '</div><div class="ht"><i style="width:' + Math.round(100 * (i.v || 0) / max) + '%"></i></div><div class="hv">' + fmtN(i.v || 0) + (total ? ' <span class="hint">' + pct(i.v || 0, total) + '%</span>' : '') + '</div></div>';
+      return '<div class="hb"><div class="hl">' + esc(i.l) + (i.d != null ? ' <span class="delta ' + (i.d > 0 ? 'up' : i.d < 0 ? 'down' : '') + '">' + (i.d > 0 ? '+' : '') + fmtN(i.d) + '</span>' : '') + '</div><div class="ht"><i style="width:' + Math.round(100 * (i.v || 0) / max) + '%"></i></div><div class="hv">' + fmtN(i.v || 0) + (suffix || '') + (total ? ' <span class="hint">' + pct(i.v || 0, total) + '%</span>' : '') + '</div></div>';
     }).join('') + '</div>';
   }
   function renderState() {
@@ -1791,7 +1804,13 @@
     html += '<div class="disp h2">' + esc(t('stByYear')) + '</div><div class="card chartcard">' + svgBars(trendYears, tv, { label: t('stByYear'), labelsOn: function (i, v) { return i === 0 || i === tv.length - 1 || (v === peak && i < tv.length - 2); }, dim: function (i) { return stVal(trendYears[i], 'source', 'file') == null; } }) + '<div class="hint">' + esc(t('stByYearHint')) + '</div></div>';
     // 2. New vs returning
     var nrYears = full.filter(function (y) { return stVal(y, 'new') != null && stVal(y, 'returning') != null; });
-    if (nrYears.length) html += '<div class="disp h2">' + esc(t('stNewReturning')) + '</div><div class="card chartcard">' + svgStack(nrYears, [{ name: t('stReturning'), values: nrYears.map(function (y) { return stVal(y, 'returning'); }) }, { name: t('stFirstTime'), values: nrYears.map(function (y) { return stVal(y, 'new'); }) }], { label: t('stNewReturning') }) + '</div>';
+    var split = nrYears.length && nrYears.every(function (y) { return stVal(y, 'continuing') != null; });
+    if (nrYears.length) html += '<div class="disp h2">' + esc(t('stNewReturning')) + '</div><div class="card chartcard">' + svgStack(nrYears, split ?
+      [{ name: t('stContinuing'), values: nrYears.map(function (y) { return stVal(y, 'continuing'); }) }, { name: t('stGapReturn'), values: nrYears.map(function (y) { return stVal(y, 'gap_return'); }) }, { name: t('stFirstTime'), values: nrYears.map(function (y) { return stVal(y, 'new'); }) }] :
+      [{ name: t('stReturning'), values: nrYears.map(function (y) { return stVal(y, 'returning'); }) }, { name: t('stFirstTime'), values: nrYears.map(function (y) { return stVal(y, 'new'); }) }], { label: t('stNewReturning') }) + (split ? '<div class="hint">' + esc(t('stGapHint')) + '</div>' : '') + '</div>';
+    // Who comes back: of the referees who left after a year, the share that ever registered again.
+    var lvYears = full.filter(function (y) { return stVal(y, 'leavers') != null && Number(y) <= Number(latest) - 2; });
+    if (lvYears.length) html += '<div class="card" style="gap:6px"><b>' + esc(t('stLeavers')) + '</b>' + hbars(lvYears.map(function (y) { return { l: String(y) + ', ' + fmtN(stVal(y, 'leavers')) + ' ' + t('stLeft') + ', ' + fmtN(stVal(y, 'leavers_back')) + ' ' + t('stCameBack'), v: pct(stVal(y, 'leavers_back'), stVal(y, 'leavers')) }; }), 0, '%') + '<div class="hint">' + esc(t('stLeaversHint')) + '</div></div>';
     // 3. Retention
     var rYears = full.filter(function (y) { return stVal(y, 'prev_total') != null; });
     if (rYears.length) html += '<div class="disp h2">' + esc(t('stRetentionTitle')) + '</div><div class="card chartcard">' + svgLines(rYears, [
