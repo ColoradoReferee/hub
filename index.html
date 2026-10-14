@@ -8,7 +8,7 @@
 <title>Colorado Referees</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
-<link rel="stylesheet" href="app.css?v=2026.10.14-e">
+<link rel="stylesheet" href="app.css?v=2026.10.14-g">
 </head>
 <body>
 <div id="busy" style="display:none" aria-live="polite"><span class="ball">&#9917;</span></div>
@@ -229,6 +229,14 @@
   </section>
 
   <!-- ── A referee's card ────────────────────────────────────── -->
+  <section class="screen" id="s-eval">
+    <div class="top">
+      <a class="backlink" href="#coach"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="back"></span></a>
+      <img id="markEval" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+    <div id="evalBody"></div>
+    <div class="credit" style="margin-top:auto"><span class="chip"><img id="ja17" alt=""></span><span class="ver"></span></div>
+  </section>
   <section class="screen" id="s-map">
     <div class="top">
       <a class="backlink" href="#" onclick="history.back();return false;"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="back"></span></a>
@@ -267,9 +275,9 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="lang.js?v=2026.10.14-e"></script>
-<script src="pacer.js?v=2026.10.14-e"></script>
-<script src="fieldmap.js?v=2026.10.14-e"></script>
-<script src="app.js?v=2026.10.14-e"></script>
+<script src="lang.js?v=2026.10.14-g"></script>
+<script src="pacer.js?v=2026.10.14-g"></script>
+<script src="fieldmap.js?v=2026.10.14-g"></script>
+<script src="app.js?v=2026.10.14-g"></script>
 </body>
 </html>

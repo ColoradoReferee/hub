@@ -4558,8 +4558,9 @@ checkResumeOnLoad();
       game_id: GAME ? GAME.game_id : null, game_date: md.date || (GAME && GAME.date) || null, venue: md.venue || (GAME && GAME.venue) || null,
       competition: md.comp || null, ref_name: md.ref && md.ref !== 'Referee' ? md.ref : (GAME && GAME.cr) || null,
       purpose: md.purpose || null, license: md.license || null, method: md.method || null,
-      status: complete ? 'complete' : 'in_progress', session: raw, final_scores: raw.ratings || {} };
+      status: complete ? 'complete' : 'in_progress', session: raw, final_scores: raw.ratings || {}, request_id: ASSIGN ? ASSIGN.id : null };
     var r = await sb.from('evaluations').upsert(row, { onConflict: 'org_id,session_key' });
+    if (!r.error && complete && ASSIGN) { try { await sb.from('eval_requests').update({ status: 'done' }).eq('id', ASSIGN.id); } catch (e) {} }
     if (!r.error) { DIRTY = false; var p = document.getElementById('savedPill'); p.classList.add('on'); setTimeout(function () { p.classList.remove('on'); }, 1500); }
   }
   // Exporting marks the evaluation complete.

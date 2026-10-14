@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.14-e';
+  var VERSION = '2026.10.14-g';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -167,6 +167,49 @@
   }
   document.addEventListener('toggle', function (e) { var d = e.target; if (d && d.matches && d.matches('details.fold')) FOLD[d.getAttribute('data-fold')] = d.open; }, true);
 
+  // ── An evaluation: the session summary, the draft report, and the Writer ──
+  // The coach (or a reviewer) opens a completed evaluation, asks for a draft
+  // in US Soccer's style, edits it, saves, and copies it into RefEval.
+  var EV = { row: null, busy: false };
+  async function renderEval(id) {
+    var body = $('evalBody'); body.innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>';
+    var r = await sb.from('evaluations').select('id,coach_person_id,coach_name,ref_name,ref_person_id,game_id,game_date,venue,competition,purpose,license,status,session,final_scores,report,report_at').eq('id', id).limit(1);
+    var e = (r.data || [])[0]; EV.row = e;
+    if (!e) { body.innerHTML = '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>'; return; }
+    var S_ = e.session || {}, md = S_.MD || {}, ratings = S_.ratings || e.final_scores || {}, sessions = S_.sessions || [];
+    var areas = { MC: t('evMC'), IP: t('evIP'), GM: t('evGM'), TW: t('evTW'), POS: t('evPOS'), MOV: t('evMOV'), OS: t('evOS'), IA: t('evIA') };
+    var rated = Object.keys(ratings).map(function (k) { var p = k.replace(/^sg-/, '').split('-'); return '<div class="rowline"><div>' + esc((p[0] || '').toUpperCase() === 'REF' ? t('role.cr') : (p[0] || '').toUpperCase()) + ', ' + esc(areas[p[1]] || p[1]) + '</div><b>' + esc(ratings[k]) + '</b></div>'; }).join('');
+    var nEv = sessions.reduce(function (a, ss) { return a + (ss.events || []).length; }, 0);
+    var inc = S_.incidents || {}, nInc = 0; Object.keys(inc).forEach(function (w) { ['cmi', 'cre'].forEach(function (k) { nInc += ((inc[w] || {})[k] || []).length; }); });
+    var mine = e.coach_person_id === S.me.person_id;
+    body.innerHTML = '<div class="pad" style="padding-top:12px"><div class="lead">' + esc(t('evalTitle')) + '</div><div class="disp" style="font-size:34px">' + esc(e.ref_name || '') + '</div><div class="hint">' + esc(e.game_date ? dayLong(e.game_date) : '') + (e.venue ? ', ' + esc(e.venue) : '') + (e.competition ? ', ' + esc(e.competition) : '') + '</div><div class="hint">' + esc(t('evalCoach')) + ' ' + esc(e.coach_name || '') + '. ' + esc(e.purpose || '') + (e.license ? ', ' + esc(e.license) : '') + ' <span class="pill' + (e.status === 'complete' ? ' ok' : '') + '">' + esc(e.status === 'complete' ? t('evalComplete') : t('evalInProgress')) + '</span></div></div>' +
+      '<div class="stats">' + '<div class="stat"><b>' + nEv + '</b><i>' + esc(t('evalEvents')) + '</i></div><div class="stat"><b>' + nInc + '</b><i>' + esc(t('evalIncidents')) + '</i></div><div class="stat"><b>' + Object.keys(ratings).length + '</b><i>' + esc(t('evalRatings')) + '</i></div></div>' +
+      (rated ? fold('evratings', t('evalRatings'), Object.keys(ratings).length, '<div class="pad">' + rated + '</div>', false) : '') +
+      (e.game_id ? '<div class="pad" style="padding-top:8px"><a class="btn outline small" href="evaluator.html?game=' + esc(e.game_id) + '">' + esc(t('evalOpenEvaluator')) + '</a></div>' : '') +
+      '<div class="disp h2">' + esc(t('evalReport')) + '</div><div class="pad hint" style="padding-top:0">' + esc(t('evalReportHint')) + '</div>' +
+      '<div class="pad no-print" style="padding-top:10px;display:flex;gap:8px;flex-wrap:wrap">' + (e.status === 'complete' ? '<button class="btn primary small" id="evDraft">' + esc(e.report ? t('evalRedraft') : t('evalDraft')) + '</button>' : '<span class="hint">' + esc(t('evalFinishFirst')) + '</span>') + (e.report ? '<button class="btn outline small" id="evCopy">' + esc(t('evalCopy')) + '</button><button class="btn outline small" id="evPrint">' + esc(t('print')) + '</button>' : '') + '</div>' +
+      '<div class="pad" style="padding-top:8px"><textarea id="evText" style="min-height:360px;font:inherit;width:100%;padding:12px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)" placeholder="' + esc(t('evalEmpty')) + '"' + (mine || iCan('review') ? '' : ' readonly') + '>' + esc(e.report || '') + '</textarea></div>' +
+      '<div class="actions no-print"><button class="btn primary" id="evSave"' + (mine || iCan('review') ? '' : ' disabled') + '>' + esc(t('save')) + '</button></div><div class="msg" id="evMsg" hidden></div>' +
+      (e.report_at ? '<div class="pad hint">' + esc(t('evalDraftedAt')) + ' ' + esc(dayLong(e.report_at.slice(0, 10))) + '</div>' : '');
+    var dr = $('evDraft'); if (dr) dr.onclick = async function () {
+      if (e.report && !window.confirm(t('evalRedraftConfirm'))) return;
+      dr.disabled = true; dr.textContent = t('evalDrafting'); busy(true);
+      try { var j = await post({ action: 'evalWrite', evalId: e.id }); e.report = j.report; e.report_at = j.reportAt; busy(false); renderEval(id); }
+      catch (err) { busy(false); dr.disabled = false; dr.textContent = t('evalDraft'); say('evMsg', err.message || String(err), 'bad'); }
+    };
+    $('evSave').onclick = async function () { var txt = $('evText').value; var u = await sb.from('evaluations').update({ report: txt, report_at: new Date().toISOString() }).eq('id', e.id); if (u.error) { say('evMsg', u.error.message, 'bad'); return; } e.report = txt; say('evMsg', t('evalSaved'), 'good'); };
+    var cp = $('evCopy'); if (cp) cp.onclick = async function () { try { await navigator.clipboard.writeText($('evText').value); say('evMsg', t('evalCopied'), 'good'); } catch (err) { $('evText').select(); } };
+    var pr = $('evPrint'); if (pr) pr.onclick = function () { window.print(); };
+  }
+  // Progress toward an upgrade or maintenance: one line, with the count that matters.
+  function progressHtml(p) {
+    if (!p) return '';
+    var up = Number(p.upgrade_done || 0), mt = Number(p.maintenance_done || 0);
+    if (!up && !mt && !(p.items || []).length) return '';
+    var line = up ? t('evalProgressUp').replace('{n}', up).replace('{need}', p.upgrade_need).replace('{y}', p.year) : t('evalProgressMaint').replace('{n}', mt).replace('{y}', p.year);
+    var done = up ? up >= Number(p.upgrade_need) : mt >= Number(p.maintenance_need);
+    return '<div class="card" style="gap:6px;border-color:' + (done ? 'var(--green)' : 'var(--gold)') + '"><b>' + esc(line) + '</b><div class="bar"><i style="width:' + Math.min(100, Math.round(100 * (up || mt) / (up ? Number(p.upgrade_need) : Number(p.maintenance_need)))) + '%"></i></div>' + (p.items || []).map(function (it) { return '<div class="hint">' + esc(dayLong(it.date)) + ', ' + esc(it.coach || '') + (it.competition ? ', ' + esc(it.competition) : '') + '</div>'; }).join('') + '</div>';
+  }
   // ── Venues: one table for coordinates (State map) and layouts (venue maps) ──
   var VEN = { rows: null };
   async function loadVenues_() {
@@ -662,7 +705,8 @@
     var myEval = (ER.mine || []).filter(function (r) { return r.ref_person_id === S.me.person_id && r.status === 'assigned' && r.game_date >= todayStr(); })[0];
     $('sessionsLine').innerHTML = signupCardHtml(); wireSignup($('sessionsLine'));
     renderWrap();
-    $('evalLine').innerHTML = myEval ? '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('evalReqTitle')) + '</b><div>' + esc(dayLong(myEval.game_date)) + ', ' + esc(myEval.venue || '') + '. ' + esc(t('evalPurpose.' + myEval.purpose)) + '. ' + esc(t('evalStatus.assigned')) + '</div></div>' : '';
+    if (ER.prog === undefined) { ER.prog = null; sb.rpc('eval_progress').then(function (pr) { ER.prog = pr.data || null; var el = $('evalProg'); if (el) el.innerHTML = progressHtml(ER.prog); }); }
+    $('evalLine').innerHTML = '<div id="evalProg">' + progressHtml(ER.prog) + '</div>' + (myEval ? '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('evalReqTitle')) + '</b><div>' + esc(dayLong(myEval.game_date)) + ', ' + esc(myEval.venue || '') + '. ' + esc(t('evalPurpose.' + myEval.purpose)) + '. ' + esc(t('evalStatus.assigned')) + '</div></div>' : '');
     $('bulletins').innerHTML = (coachedHere ? '<div class="bulletin"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="9" stroke="currentColor" stroke-width="2"></circle><path d="M7 11.5l3 3 5-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><div class="text">' + esc(t('coachHereToday')) + ' <a href="#" id="badgeLink">' + esc(t('lanyard')) + '</a><div id="badgeBox" hidden style="margin-top:8px"><img src="assets/badge.png" alt="" style="width:130px;border-radius:8px"><div class="hint">' + esc(t('badgeCaption')) + '</div></div></div></div>' : '') + S.bulletins.slice(0, 2).map(function (b) {
       return '<div class="bulletin"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="9" stroke="currentColor" stroke-width="2"></circle><path d="M11 6v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><circle cx="11" cy="15.5" r="1.2" fill="currentColor"></circle></svg><div class="text">' + (b.title ? '<b>' + esc(b.title) + '</b> ' : '') + esc(b.body || '') + ' <span>' + esc(t('fromState')) + '.</span></div></div>';
     }).join('');
@@ -783,6 +827,7 @@
     S.coach.games = r[0].data || [];
     S.coach.mine = r[1].data || [];
     S.coach.evals = r[2].data || [];
+    try { var mv = await sb.from('evaluations').select('id,game_date,venue,competition,ref_name,purpose,status,report,updated_at').eq('coach_person_id', S.me.person_id).order('game_date', { ascending: false }).limit(30); S.coach.myEvals = mv.data || []; } catch (e) { S.coach.myEvals = []; }
     S.coach.assignr = (r[3].data || []).filter(function (g) { return isCoachSlot(g) && ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(g[k])) >= 0; }); });
     S.coach.assignr.filter(function (g) { return g.date === today; }).forEach(function (g) {
       if (!S.coach.mine.some(function (m) { return m.venue === g.venue; })) S.coach.mine.push({ venue: g.venue, block: 'all', fields: g.field ? [g.field] : [], note: t('fromAssignr') + (g.kickoff ? ', ' + clock(g.kickoff) : '') });
@@ -828,7 +873,8 @@
     var evalsCard = (S.coach.evals || []).length ? '<div class="card" style="border-color:var(--red);gap:6px"><b>' + esc(t('evalAssignedTitle')) + '</b>' + S.coach.evals.map(function (r) { return '<div>' + refLink(r.ref_name) + ', ' + esc(dayLong(r.game_date)) + ', ' + esc(r.venue || '') + '. ' + esc(t('evalPurpose.' + r.purpose)) + ' <a class="refname" href="#coach/game/' + esc(r.game_id) + '">' + esc(t('details')) + '</a></div>'; }).join('') + '<div class="hint">' + esc(t('evalAssignedHint')) + '</div></div>' : '';
     var upcoming = (S.coach.assignr || []).filter(function (g) { return g.date > todayStr(); });
     var upcomingCard = upcoming.length ? '<div class="card" style="gap:4px"><b>' + esc(t('comingUp')) + '</b>' + upcoming.map(function (g) { return '<div>' + esc(dayLong(g.date)) + ', ' + esc(clock(g.kickoff)) + ', ' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + ' <span class="hint">' + esc(t('fromAssignr')) + '</span></div>'; }).join('') + '</div>' : '';
-    expected = evalsCard + expected + upcomingCard;
+    var myEvalsFold = (S.coach.myEvals || []).length ? fold('myevals', t('myEvalsTitle'), S.coach.myEvals.length, '<div class="list">' + S.coach.myEvals.map(function (e) { return '<a class="item" href="#eval/' + e.id + '"><div><b>' + esc(e.ref_name || '') + '</b> <span class="pill' + (e.status === 'complete' ? ' ok' : '') + '">' + esc(e.status === 'complete' ? (e.report ? t('evalReported') : t('evalComplete')) : t('evalInProgress')) + '</span><br><span class="hint">' + esc(e.game_date ? dayLong(e.game_date) : '') + (e.venue ? ', ' + esc(e.venue) : '') + (e.competition ? ', ' + esc(e.competition) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>', false) : '';
+    expected = evalsCard + expected + upcomingCard + myEvalsFold;
     var availability = (S.coach.days || []).length ? '<div class="card" style="gap:6px"><div class="hint" style="font-weight:700">' + esc(t('whenFree')) + '</div>' + S.coach.days.map(function (d) {
         return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0"><span style="min-width:0">' + esc(dayLong(d)) + '</span><span class="chips" style="flex-shrink:0"><button class="chip-btn' + (S.coach.avail[d + 'am'] ? ' on' : '') + '" data-av="' + d + '|am">' + esc(t('blockAm')) + '</button><button class="chip-btn' + (S.coach.avail[d + 'pm'] ? ' on' : '') + '" data-av="' + d + '|pm">' + esc(t('blockPm')) + '</button></span></div>';
       }).join('') + '<div class="msg" id="avMsg" hidden></div></div>' : '';
@@ -1081,6 +1127,7 @@
     if (!CC.coaches.length) { var c = await sb.from('coaches').select('person_id,first_name,last_name,coaching_title').order('last_name'); CC.coaches = c.data || []; }
     var r = await sb.from('eval_requests').select('id,game_id,game_date,venue,purpose,status,coach_person_id,ref_name,ref_person_id,note').in('status', ['requested', 'assigned']).order('game_date');
     CC.evalReqs = r.data || [];
+    try { var cand = await sb.rpc('eval_candidates'); CC.cands = cand.data || []; } catch (e) { CC.cands = []; }
   }
   async function loadEvals() { return load(loadEvals_()); }
   function renderCenter() {
@@ -1111,7 +1158,8 @@
           (r.status === 'assigned' ? '<button class="btn outline small" data-evaldone="' + r.id + '">' + esc(t('evalMarkDone')) + '</button>' : '') + '</div>';
       };
       body = '<div class="pad lead" style="padding-top:12px">' + esc(t('evalsLead')) + '</div><div class="disp h2">' + esc(t('evalsOpen')) + ' ' + open.length + '</div>' + (open.length ? open.map(card).join('') : '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>') +
-        '<div class="disp h2">' + esc(t('evalsAssigned')) + ' ' + assigned.length + '</div>' + (assigned.length ? assigned.map(card).join('') : '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>');
+        '<div class="disp h2">' + esc(t('evalsAssigned')) + ' ' + assigned.length + '</div>' + (assigned.length ? assigned.map(card).join('') : '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>') +
+        ((CC.cands || []).length ? '<div class="disp h2">' + esc(t('evalCandidates').replace('{y}', new Date().getFullYear())) + '</div><div class="pad hint" style="padding-top:0">' + esc(t('evalCandidatesHint')) + '</div><div class="pad" style="padding-top:6px"><table class="dt" style="width:100%"><thead><tr><th>' + esc(t('fitName')) + '</th><th>' + esc(t('evalPurposeCol')) + '</th><th class="n">' + esc(t('evalDoneCol')) + '</th><th class="n">' + esc(t('evalOpenCol')) + '</th></tr></thead><tbody>' + CC.cands.map(function (c) { var full = Number(c.done) >= Number(c.need); return '<tr class="' + (full ? 'passed' : '') + '"><td>' + refLink(c.name || '') + '</td><td>' + esc(t('evalPurpose.' + c.purpose) || c.purpose) + '</td><td class="n"><b>' + esc(String(c.done)) + ' / ' + esc(String(c.need)) + '</b></td><td class="n">' + esc(String(c.requested)) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '');
     } else if (CC.tab === 'schedule') {
       var todayAss = CC.assigns.filter(function (a) { return a.date === CC.sdate; });
       var avCount = Object.keys(CC.avail || {}).filter(function (k) { return CC.avail[k][CC.block]; }).length;
@@ -1608,11 +1656,14 @@
       };
       if (SES.open) { $('setupBody').innerHTML = sessionsSetupHtml(); wireSessionsSetup($('setupBody')); return; }
       if (VE.open != null) { $('setupBody').innerHTML = venueEditorHtml(); wireVenueEditor($('setupBody')); return; }
-      var tdy = todayStr(), evDone = SU.events.filter(function (e) { return (e.end_date || e.start_date || '') < tdy; }), evLive = SU.events.filter(function (e) { return evDone.indexOf(e) < 0; });
-      $('setupBody').innerHTML = rulesCard + sessionsSetupHtml() + '<div class="disp h2">' + esc(t('setupEventsTitle')) + '</div><div class="pad" style="padding-top:12px"><button class="btn primary" id="evNew" style="width:100%">' + esc(t('newEvent')) + '</button></div><div class="list">' + evLive.map(evItem).join('') + '</div>' +
+      var tdy = todayStr(), evDone = SU.events.filter(function (e) { return (e.end_date || e.start_date || '') < tdy; }), evOff = SU.events.filter(function (e) { return evDone.indexOf(e) < 0 && !e.active; }), evLive = SU.events.filter(function (e) { return evDone.indexOf(e) < 0 && e.active; }).sort(function (a, b) { return String(a.start_date || '').localeCompare(String(b.start_date || '')); });
+      var evPick = '<div class="pad" style="padding-top:10px"><select id="evJump" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><option value="">' + esc(t('evJump')) + '</option>' + [[t('evCurrent'), evLive], [t('evOffTitle'), evOff], [t('evCompleted'), evDone]].map(function (grp) { return grp[1].length ? '<optgroup label="' + esc(grp[0]) + '">' + grp[1].map(function (e) { return '<option value="' + esc(e.id) + '">' + esc(e.name || e.id) + '</option>'; }).join('') + '</optgroup>' : ''; }).join('') + '</select></div>';
+      $('setupBody').innerHTML = rulesCard + sessionsSetupHtml() + '<div class="disp h2">' + esc(t('setupEventsTitle')) + '</div><div class="pad" style="padding-top:12px"><button class="btn primary" id="evNew" style="width:100%">' + esc(t('newEvent')) + '</button></div>' + evPick + '<div class="list">' + evLive.map(evItem).join('') + '</div>' +
+        (evOff.length ? fold('evoff', t('evOffTitle'), evOff.length, '<div class="list">' + evOff.map(evItem).join('') + '</div>', false) : '') +
         (evDone.length ? fold('evdone', t('evCompleted'), evDone.length, '<div class="list">' + evDone.map(evItem).join('') + '</div>', false) : '') + venuesSetupHtml() + syncSetupHtml();
       wireSessionsSetup($('setupBody')); wireVenuesSetup($('setupBody'));
       $('evNew').onclick = function () { SU.ev = blankEvent(); SU.check = null; renderSetup(); };
+      $('evJump').onchange = function () { var src = SU.events.filter(function (x) { return x.id === $('evJump').value; })[0]; if (!src) return; SU.ev = JSON.parse(JSON.stringify(src)); SU.ev.venues = SU.ev.venues || []; SU.ev.tools = SU.ev.tools || []; SU.ev.alert_emails = SU.ev.alert_emails || []; SU.check = null; renderSetup(); };
       $('setupBody').querySelectorAll('[data-ev]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); var src = SU.events.filter(function (x) { return x.id === a.getAttribute('data-ev'); })[0]; SU.ev = JSON.parse(JSON.stringify(src)); SU.ev.venues = SU.ev.venues || []; SU.ev.tools = SU.ev.tools || []; SU.ev.alert_emails = SU.ev.alert_emails || []; SU.check = null; renderSetup(); }; });
       return;
     }
@@ -2091,6 +2142,7 @@
       staff ? sb.rpc('ref_contact', { p_name: name }) : Promise.resolve({ data: null })
     ]);
     var card = rr[0], notes = rr[1], ct = rr[2].data;
+    var prog = null; try { if (card.data && card.data.person_id) { var pr = await sb.rpc('eval_progress', { p_person: card.data.person_id }); prog = pr.data; } } catch (e) {}
     busy(false);
     var c = card.data;
     var contact = !ct ? '' : '<div class="card" style="gap:6px;border-color:var(--gold)"><b>' + esc(t('contactTitle')) + (ct.minor ? ' <span class="pill">' + esc(t('contactMinor')) + '</span>' : '') + '</b>' +
@@ -2102,7 +2154,7 @@
     var stat = function (n, l, cls) { return '<div class="stat' + (cls ? ' ' + cls : '') + '"><b>' + (n == null ? '0' : esc(n)) + '</b><i>' + esc(l) + '</i></div>'; };
     $('refBody').innerHTML =
       '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(t('refCardTitle')) + (c.city ? ', ' + esc(c.city) : '') + (c.green_badge ? ', ' + esc(t('greenBadge')) : '') + '</div><div class="disp" style="font-size:40px">' + esc(name) + '</div><div>' + fitBadgeHtml(c.fitness) + (titles || '<span class="hint">' + esc(t('noneYet')) + '</span>') + '</div></div>' +
-      contact +
+      contact + progressHtml(prog) +
       '<div class="disp h2">' + esc(t('refSeason')) + '</div>' +
       '<div class="stats">' + stat(c.games, t('refGames')) + stat(c.as_center, t('refCenter')) + stat(c.evaluations, t('refEvals')) + '</div>' +
       '<div class="stats">' + stat(c.notes, t('refSeen'), c.notes ? 'green' : 'red') + stat(c.released, t('refReleased')) + stat(c.coaches, t('refCoaches')) + '</div>' +
@@ -2485,6 +2537,7 @@
     if (h.indexOf('coach') === 0 && !iCan('coaching')) { location.hash = '#day'; return; }
     if (h.indexOf('coachcard/') === 0) { if (!iCan('review')) { location.hash = '#day'; return; } show('s-ref'); renderCoachCard(decodeURIComponent(h.slice(10))); return; }
     if (h.indexOf('ref/') === 0) { if (!canSeeRef()) { location.hash = '#day'; return; } show('s-ref'); renderRef(decodeURIComponent(h.slice(4))); return; }
+    if (h.indexOf('eval/') === 0) { if (!(iCan('evaluations') || iCan('review'))) { location.hash = '#day'; return; } show('s-eval'); renderEval(parseInt(h.slice(5), 10)); return; }
     if (h.indexOf('map/') === 0) { var mp = h.slice(4).split('/'); show('s-map'); renderMap(decodeURIComponent(mp[0] || ''), decodeURIComponent(mp[1] || '')); return; }
     if (h === 'eod') { if (!canEod()) { location.hash = '#day'; return; } $('eodBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-eod'); loadEod().then(renderEod).catch(function (e) { $('eodBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'setup') { if (!iCan('setup')) { location.hash = '#day'; return; } $('setupBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-setup'); SU.ev = null; loadSetup().then(renderSetup).catch(function (e) { $('setupBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
@@ -2537,8 +2590,8 @@
     ['themeBtn0', 'themeBtn1', 'themeBtn2'].forEach(function (id) { $(id).onclick = toggleTheme; });
     ['langBtn0', 'langBtn1'].forEach(function (id) { $(id).onclick = function () { setLang(S.lang === 'es' ? 'en' : 'es'); }; });
     $('markSignin').src = C.marks.csa; $('markDay').src = C.marks.csa;
-    ['markGame', 'markNotes', 'markHelp', 'markCoach', 'markCoachGame', 'markMyNotes', 'markReview', 'markCenter', 'markOps', 'markPeople', 'markSetup', 'markEod', 'markRef', 'markState', 'markMap'].forEach(function (id) { $(id).src = C.marks.program; });
-    ['ja0', 'ja1', 'ja2', 'ja3', 'ja4', 'ja5', 'ja6', 'ja7', 'ja8', 'ja9', 'ja10', 'ja11', 'ja12', 'ja13', 'ja14', 'ja15', 'ja16'].forEach(function (id) { $(id).src = C.marks.ja; });
+    ['markGame', 'markNotes', 'markHelp', 'markCoach', 'markCoachGame', 'markMyNotes', 'markReview', 'markCenter', 'markOps', 'markPeople', 'markSetup', 'markEod', 'markRef', 'markState', 'markMap', 'markEval'].forEach(function (id) { $(id).src = C.marks.program; });
+    ['ja0', 'ja1', 'ja2', 'ja3', 'ja4', 'ja5', 'ja6', 'ja7', 'ja8', 'ja9', 'ja10', 'ja11', 'ja12', 'ja13', 'ja14', 'ja15', 'ja16', 'ja17'].forEach(function (id) { $(id).src = C.marks.ja; });
     $('peopleQ').oninput = function () { var q = $('peopleQ').value.trim(); clearTimeout(PP.timer); PP.timer = setTimeout(function () { searchPeople(q); }, 300); };
     $('peopleQ').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); } };
     $('staffBtn').onclick = function () { renderStaff(); };
