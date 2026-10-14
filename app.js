@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.13-t';
+  var VERSION = '2026.10.13-u';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1659,6 +1659,7 @@
     // Live season numbers from the same view the Coverage tab uses.
     try { var cov = await sb.rpc('coverage_rows'); ST.cov = cov.data || []; } catch (e) { ST.cov = []; }
     try { var fs = await sb.rpc('fitness_summary'); ST.fit = fs.data || []; } catch (e) { ST.fit = []; }
+    try { var sn = await sb.from('registration_snapshots').select('season,taken_on,licensed,first_year,continuing,gap_return').order('taken_on'); ST.snaps = sn.data || []; } catch (e) { ST.snaps = []; }
     // ZIP centroids and the fields we use, static files in this folder.
     if (!ST.zips) { try { var z = await Promise.all([fetch('zips.json?v=' + VERSION).then(function (x) { return x.json(); }), fetch('venues.json?v=' + VERSION).then(function (x) { return x.json(); })]); ST.zips = z[0]; ST.venues = z[1]; delete ST.venues._note; } catch (e) { ST.zips = {}; ST.venues = {}; } }
   }
@@ -1808,6 +1809,14 @@
     if (nrYears.length) html += '<div class="disp h2">' + esc(t('stNewReturning')) + '</div><div class="card chartcard">' + svgStack(nrYears, split ?
       [{ name: t('stContinuing'), values: nrYears.map(function (y) { return stVal(y, 'continuing'); }) }, { name: t('stGapReturn'), values: nrYears.map(function (y) { return stVal(y, 'gap_return'); }) }, { name: t('stFirstTime'), values: nrYears.map(function (y) { return stVal(y, 'new'); }) }] :
       [{ name: t('stReturning'), values: nrYears.map(function (y) { return stVal(y, 'returning'); }) }, { name: t('stFirstTime'), values: nrYears.map(function (y) { return stVal(y, 'new'); }) }], { label: t('stNewReturning') }) + (split ? '<div class="hint">' + esc(t('stGapHint')) + '</div>' : '') + '</div>';
+    // The coming season, week by week: every Learning Center load adds a point.
+    var openY = open || Number(latest) + 1, snaps = (ST.snaps || []).filter(function (r) { return Number(r.season) === Number(openY); });
+    if (snaps.length) {
+      var last = snaps[snaps.length - 1], prevWeek = snaps.filter(function (r) { return r.taken_on <= new Date(Date.parse(last.taken_on) - 6 * 86400000).toISOString().slice(0, 10); }).pop();
+      var labels = snaps.map(function (r) { var d = new Date(r.taken_on + 'T12:00:00'); return (d.getMonth() + 1) + '/' + d.getDate(); });
+      html += '<div class="card chartcard" style="gap:6px"><b>' + esc(t('stPace').replace('{y}', openY)) + '</b><div class="hint">' + esc(t('stPaceLine').replace('{n}', fmtN(last.licensed)).replace('{d}', dayLong(last.taken_on)) + (prevWeek && prevWeek !== last ? ' ' + esc(t('stPaceWeek').replace('{n}', fmtN(last.licensed - prevWeek.licensed))) : '')) + '</div>' +
+        (snaps.length > 1 ? svgLines(labels, [{ name: t('stReferees').replace('{y}', openY), short: '', values: snaps.map(function (r) { return r.licensed; }) }, { name: t('stContinuing'), short: '', values: snaps.map(function (r) { return r.continuing; }) }, { name: t('stFirstTime'), short: '', values: snaps.map(function (r) { return r.first_year; }) }], { label: t('stPace').replace('{y}', openY) }) : '') + '</div>';
+    }
     // Who comes back: of the referees who left after a year, the share that ever registered again.
     var lvYears = full.filter(function (y) { return stVal(y, 'leavers') != null && Number(y) <= Number(latest) - 2; });
     if (lvYears.length) html += '<div class="card" style="gap:6px"><b>' + esc(t('stLeavers')) + '</b>' + hbars(lvYears.map(function (y) { return { l: String(y) + ', ' + fmtN(stVal(y, 'leavers')) + ' ' + t('stLeft') + ', ' + fmtN(stVal(y, 'leavers_back')) + ' ' + t('stCameBack'), v: pct(stVal(y, 'leavers_back'), stVal(y, 'leavers')) }; }), 0, '%') + '<div class="hint">' + esc(t('stLeaversHint')) + '</div></div>';
@@ -1960,6 +1969,36 @@
 
   // ── Staff roster ─────────────────────────────────────────────────
   var STAFF = { rows: null, filter: '' };
+  // ── Not yet registered: the renewal campaign list ─────────────────
+  var REG = { rows: null, season: null, filter: 'all', batch: 0 };
+  function regSeason() { var d = new Date(); return d.getMonth() >= 8 ? d.getFullYear() + 1 : d.getFullYear(); }
+  function regFiltered() {
+    var f = REG.filter;
+    return (REG.rows || []).filter(function (p) { return f === 'all' || (f === 'first' && p.first_year) || (f === '20_24' && p.age_band === '20_24') || (f === 'u18' && p.age_band === 'u18') || (f === 'upgrade' && p.level !== 'grassroots'); });
+  }
+  async function renderUnregistered() {
+    REG.season = regSeason();
+    if (!REG.rows) { busy(true); var r = await sb.rpc('unregistered', { p_season: REG.season }); busy(false); REG.rows = r.data || []; REG.batch = 0; }
+    var rows = regFiltered(), emails = rows.map(function (p) { return p.email; }).filter(Boolean), BATCH = 200, nb = Math.max(1, Math.ceil(emails.length / BATCH));
+    if (REG.batch >= nb) REG.batch = 0;
+    var chip = function (k, label, n) { return '<button class="chip-btn small' + (REG.filter === k ? ' on' : '') + '" data-reg-f="' + k + '">' + esc(label) + ' ' + n + '</button>'; };
+    var all = REG.rows, cnt = function (fn) { return all.filter(fn).length; };
+    $('personCard').innerHTML = '';
+    $('peopleResults').innerHTML = '<div class="pad" style="padding-top:12px"><div class="disp" style="font-size:30px">' + esc(t('regListTitle').replace('{y}', REG.season)) + '</div><div class="disp" style="font-size:44px;color:var(--red)">' + fmtN(all.length) + '</div><div class="hint">' + esc(t('regListLead').replace('{prev}', REG.season - 1)) + '</div>' +
+      '<div class="chips" style="margin-top:8px">' + chip('all', t('regAll'), all.length) + chip('first', t('regFirstYear'), cnt(function (p) { return p.first_year; })) + chip('u18', t('regU18'), cnt(function (p) { return p.age_band === 'u18'; })) + chip('20_24', t('reg2024'), cnt(function (p) { return p.age_band === '20_24'; })) + chip('upgrade', t('regUpgrade'), cnt(function (p) { return p.level !== 'grassroots'; })) + '</div></div>' +
+      '<div class="card" style="gap:8px"><b>' + esc(t('regEmailTitle').replace('{n}', fmtN(emails.length))) + '</b><div class="hint">' + esc(t('regEmailHint')) + '</div>' +
+      '<div class="actions" style="padding:0;flex-wrap:wrap"><button class="btn primary small" id="regCopy">' + esc(nb > 1 ? t('regCopyBatch').replace('{i}', REG.batch + 1).replace('{n}', nb) : t('regCopy')) + '</button>' + (nb > 1 ? '<button class="btn outline small" id="regNext">' + esc(t('regNextBatch')) + '</button>' : '') + '<button class="btn outline small" id="regCsv">' + esc(t('regCsv')) + '</button></div><div class="msg" id="regMsg" hidden></div></div>' +
+      (rows.length ? '<div class="list">' + rows.slice(0, 200).map(function (p) { return '<a class="item" href="#" data-person="' + p.id + '"><div><b>' + esc(p.first_name + ' ' + p.last_name) + '</b><br><span class="hint">' + esc([p.city, p.first_year ? t('regFirstYear') : (p.seasons + ' ' + t('regSeasons')), p.level !== 'grassroots' ? t('fitStd.' + p.level) : ''].filter(Boolean).join(', ')) + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + (rows.length > 200 ? '<div class="pad hint">' + esc(t('showingFirst').replace('{n}', 200)) + '</div>' : '') + '</div>' : '<div class="card"><div class="hint">' + esc(t('regNobody')) + '</div></div>');
+    $('peopleResults').querySelectorAll('[data-reg-f]').forEach(function (b) { b.onclick = function () { REG.filter = b.getAttribute('data-reg-f'); REG.batch = 0; renderUnregistered(); }; });
+    $('regCopy').onclick = async function () { var slice = emails.slice(REG.batch * BATCH, (REG.batch + 1) * BATCH).join(', '); try { await navigator.clipboard.writeText(slice); say('regMsg', t('regCopied').replace('{n}', slice ? slice.split(', ').length : 0), 'good'); } catch (e) { window.prompt(t('regCopyManual'), slice); } };
+    var nx = $('regNext'); if (nx) nx.onclick = function () { REG.batch = (REG.batch + 1) % nb; renderUnregistered(); };
+    $('regCsv').onclick = function () {
+      var head = ['first_name', 'last_name', 'email', 'phone', 'city', 'age_band', 'first_year', 'seasons', 'level'];
+      var csv = head.join(',') + '\n' + rows.map(function (p) { return head.map(function (k) { var v = p[k] == null ? '' : String(p[k]); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(','); }).join('\n');
+      var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'not-registered-' + REG.season + '-' + REG.filter + '.csv'; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+    };
+    $('peopleResults').querySelectorAll('[data-person]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); openPerson(a.getAttribute('data-person')); }; });
+  }
   async function renderStaff() {
     if (!STAFF.rows) { busy(true); var r = await sb.rpc('staff_roster'); busy(false); STAFF.rows = r.data || []; }
     var all = {}; STAFF.rows.forEach(function (p) { (p.titles || []).forEach(function (x) { all[x.label] = (all[x.label] || 0) + 1; }); });
@@ -2323,6 +2362,7 @@
     $('peopleQ').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); } };
     $('staffBtn').onclick = function () { renderStaff(); };
     $('linkBtn').onclick = function () { LINK.rows = null; LINK.pick = null; renderLinks(); };
+    $('regBtn').onclick = function () { REG.rows = null; renderUnregistered(); };
     $('peopleGo').onclick = function () { clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); };
     document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('[data-tab="staff"]'); if (a && a.getAttribute('href') === '#ops') OPS.openStaff = true; });
     $('signOut').onclick = async function (e) { e.preventDefault(); liveStop(); await sb.auth.signOut(); S.me = null; location.hash = ''; show('s-signin'); };
