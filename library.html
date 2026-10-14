@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- library.html v2026.10.14-j · 2026-10-14 · Colorado Referees Library -->
+<!-- library.html v2026.10.14-k · 2026-10-14 · Colorado Referees Library -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -73,6 +73,8 @@ a{color:inherit;text-decoration:none;}
   font-size:9px;font-weight:700;color:var(--grn);
   letter-spacing:.06em;white-space:nowrap;
 }
+
+@media(max-width:520px){.header-sub{display:none;}.header-badge:not(#langBtn){display:none;}}
 
 /* ── SEARCH ── */
 .search-bar{
@@ -325,14 +327,14 @@ a{color:inherit;text-decoration:none;}
 <header class="site-header">
   <div class="header-inner">
     <div class="header-brand">
-      <a href="index.html#day" style="display:flex;align-items:center;gap:6px;font-weight:700;min-height:44px;color:var(--ink);white-space:nowrap">&#8249; Your day</a>
+      <a href="index.html#day" style="display:flex;align-items:center;gap:6px;font-weight:700;min-height:44px;color:var(--ink);white-space:nowrap" data-l="back">&#8249; Your day</a>
       <div class="header-logos"><img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program"></div>
       <div class="header-titles">
-        <div class="header-title">Library</div>
-        <div class="header-sub">Colorado Referees &middot; the Laws, the guide, game day</div>
+        <div class="header-title" data-l="title">Library</div>
+        <div class="header-sub" data-l="sub">Colorado Referees &middot; the Laws, the guide, game day</div>
       </div>
     </div>
-    <div class="header-badge">&#9679; Works offline</div>
+    <div style="display:flex;align-items:center;gap:8px"><button class="header-badge" id="langBtn" style="cursor:pointer;font-family:var(--font)" data-l="langSwitch">Español</button><div class="header-badge" data-l="offline">&#9679; Works offline</div></div>
   </div>
 </header>
 
@@ -342,19 +344,19 @@ a{color:inherit;text-decoration:none;}
     <div class="search-wrap">
       <span class="search-icon">&#128269;</span>
       <input class="search-input" id="searchInput" type="search"
-        placeholder="Search the Library" autocomplete="off" spellcheck="false">
+        placeholder="Search the Library" data-l="search" autocomplete="off" spellcheck="false">
       <button class="search-clear" id="searchClear" onclick="clearSearch()">&#10005;</button>
     </div>
   </div>
   <div class="filter-bar">
-    <div class="filter-pill active" data-cat="all" onclick="setFilter('all')">All Modules</div>
-    <div class="filter-pill" data-cat="hub" onclick="setFilter('hub')">&#128241; Using the Hub</div>
-    <div class="filter-pill" data-cat="guide" onclick="setFilter('guide')">&#128218; CSA Guide</div>
-    <div class="filter-pill" data-cat="laws" onclick="setFilter('laws')">&#9878; Laws</div>
-    <div class="filter-pill" data-cat="gameday" onclick="setFilter('gameday')">&#9917; Game Day</div>
-    <div class="filter-pill" data-cat="career" onclick="setFilter('career')">&#128197; Career</div>
-    <div class="filter-pill" data-cat="policy" onclick="setFilter('policy')">&#128737; Policy</div>
-    <div class="filter-pill" data-cat="contacts" onclick="setFilter('contacts')">&#128222; Contacts</div>
+    <div class="filter-pill active" data-cat="all" onclick="setFilter('all')" data-l="pill_all">All Modules</div>
+    <div class="filter-pill" data-cat="hub" onclick="setFilter('hub')" data-l="pill_hub">&#128241; Using the Hub</div>
+    <div class="filter-pill" data-cat="guide" onclick="setFilter('guide')" data-l="pill_guide">&#128218; CSA Guide</div>
+    <div class="filter-pill" data-cat="laws" onclick="setFilter('laws')" data-l="pill_laws">&#9878; Laws</div>
+    <div class="filter-pill" data-cat="gameday" onclick="setFilter('gameday')" data-l="pill_gameday">&#9917; Game Day</div>
+    <div class="filter-pill" data-cat="career" onclick="setFilter('career')" data-l="pill_career">&#128197; Career</div>
+    <div class="filter-pill" data-cat="policy" onclick="setFilter('policy')" data-l="pill_policy">&#128737; Policy</div>
+    <div class="filter-pill" data-cat="contacts" onclick="setFilter('contacts')" data-l="pill_contacts">&#128222; Contacts</div>
   </div>
 </div>
 
@@ -363,55 +365,55 @@ a{color:inherit;text-decoration:none;}
 
   <div class="no-results" id="noResults">
     <div class="no-results-icon">&#128269;</div>
-    No modules found. Try a different search or filter.
+    <span data-l="noResults">No modules found. Try a different search or filter.</span>
   </div>
 
   <!-- CSA GUIDE -->
   <!-- USING THE HUB -->
   <div class="section-header" data-section="hub">
     <div class="section-dot" style="background:var(--c-hub)"></div>
-    <div class="section-title">Using the Hub</div>
+    <div class="section-title" data-l="sec_hub">Using the Hub</div>
   </div>
   <div class="modules-grid" id="grid-hub"></div>
 
   <div class="section-header" data-section="guide">
     <div class="section-dot" style="background:var(--c-guide)"></div>
-    <div class="section-title">CSA Guide to Referees 2025/26</div>
+    <div class="section-title" data-l="sec_guide">CSA Guide to Referees 2025/26</div>
   </div>
   <div class="modules-grid" id="grid-guide"></div>
 
   <!-- LAWS -->
   <div class="section-header" data-section="laws">
     <div class="section-dot" style="background:var(--c-laws)"></div>
-    <div class="section-title">17 Laws of the Game 2026/27</div>
+    <div class="section-title" data-l="sec_laws">17 Laws of the Game 2026/27</div>
   </div>
   <div class="modules-grid" id="grid-laws"></div>
 
   <!-- GAME DAY -->
   <div class="section-header" data-section="gameday">
     <div class="section-dot" style="background:var(--c-gameday)"></div>
-    <div class="section-title">Game Day Procedures</div>
+    <div class="section-title" data-l="sec_gameday">Game Day Procedures</div>
   </div>
   <div class="modules-grid" id="grid-gameday"></div>
 
   <!-- CAREER -->
   <div class="section-header" data-section="career">
     <div class="section-dot" style="background:var(--c-career)"></div>
-    <div class="section-title">Career Resources</div>
+    <div class="section-title" data-l="sec_career">Career Resources</div>
   </div>
   <div class="modules-grid" id="grid-career"></div>
 
   <!-- POLICY -->
   <div class="section-header" data-section="policy">
     <div class="section-dot" style="background:var(--c-policy)"></div>
-    <div class="section-title">Policies &amp; Safety</div>
+    <div class="section-title" data-l="sec_policy">Policies &amp; Safety</div>
   </div>
   <div class="modules-grid" id="grid-policy"></div>
 
   <!-- CONTACTS -->
   <div class="section-header" data-section="contacts">
     <div class="section-dot" style="background:var(--c-contacts)"></div>
-    <div class="section-title">CSA Contacts</div>
+    <div class="section-title" data-l="sec_contacts">CSA Contacts</div>
   </div>
   <div class="modules-grid" id="grid-contacts"></div>
 
@@ -425,9 +427,9 @@ a{color:inherit;text-decoration:none;}
       <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program">
     </div>
     <div class="footer-text">
-      Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition &middot; Built with JAReferee &middot; v2026.10.14-j<br>
+      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.10.14-k<br>
       <a href="https://coloradosoccer.org" class="footer-link">ColoradoSoccer.org</a> &middot;
-      Questions: <a href="mailto:refeducation@coloradoreferees.com" class="footer-link">refeducation@coloradoreferees.com</a> &middot; 303.888.6863
+      <span data-l="questions">Questions:</span> <a href="mailto:refeducation@coloradoreferees.com" class="footer-link">refeducation@coloradoreferees.com</a> &middot; 303.888.6863
     </div>
   </div>
 </footer>
@@ -472,6 +474,35 @@ function callout(color, icon, text) {
     "<span style=\"font-size:12px;line-height:1.6;color:var(--ink)\">" + text + "</span></div>";
 }
 
+/* ────────────────────────────────────────────
+   LANGUAGE. The Hub's choice (hub-lang) carries over; the button here flips both.
+   ──────────────────────────────────────────── */
+var LANG = 'en';
+try { LANG = localStorage.getItem('hub-lang') === 'es' ? 'es' : 'en'; } catch (e) {}
+var UI = {
+  en: { back: '&#8249; Your day', title: 'Library', sub: 'Colorado Referees &middot; the Laws, the guide, game day', offline: '&#9679; Works offline', langSwitch: 'Español', search: 'Search the Library',
+        pill_all: 'All Modules', pill_hub: '&#128241; Using the Hub', pill_guide: '&#128218; CSA Guide', pill_laws: '&#9878; Laws', pill_gameday: '&#9917; Game Day', pill_career: '&#128197; Career', pill_policy: '&#128737; Policy', pill_contacts: '&#128222; Contacts',
+        noResults: 'No modules found. Try a different search or filter.', sec_hub: 'Using the Hub', sec_guide: 'CSA Guide to Referees 2025/26', sec_laws: '17 Laws of the Game 2026/27', sec_gameday: 'Game Day Procedures', sec_career: 'Career Resources', sec_policy: 'Policies &amp; Safety', sec_contacts: 'CSA Contacts',
+        foot1: 'Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition', questions: 'Questions:' },
+  es: { back: '&#8249; Tu día', title: 'Biblioteca', sub: 'Árbitros de Colorado &middot; las Reglas, la guía, el día del partido', offline: '&#9679; Funciona sin señal', langSwitch: 'English', search: 'Buscar en la Biblioteca',
+        pill_all: 'Todos los módulos', pill_hub: '&#128241; Cómo usar el Hub', pill_guide: '&#128218; Guía CSA', pill_laws: '&#9878; Reglas', pill_gameday: '&#9917; Día del partido', pill_career: '&#128197; Carrera', pill_policy: '&#128737; Políticas', pill_contacts: '&#128222; Contactos',
+        noResults: 'No hay módulos con ese nombre. Prueba otra búsqueda u otro filtro.', sec_hub: 'Cómo usar el Hub', sec_guide: 'Guía CSA para árbitros 2025/26', sec_laws: '17 Reglas de Juego 2026/27', sec_gameday: 'Procedimientos del día del partido', sec_career: 'Recursos de carrera', sec_policy: 'Políticas y seguridad', sec_contacts: 'Contactos de CSA',
+        foot1: 'Biblioteca de Árbitros de Colorado &middot; Colorado Soccer Association &middot; edición 2026/27', questions: 'Preguntas:' }
+};
+function applyLang() {
+  document.documentElement.lang = LANG;
+  document.querySelectorAll('[data-l]').forEach(function (el) { var k = el.getAttribute('data-l'), v = UI[LANG][k]; if (v == null) return; if (el.tagName === 'INPUT') el.placeholder = v.replace(/&[a-z#0-9]+;/g, ''); else el.innerHTML = v; });
+  document.title = (LANG === 'es' ? 'Biblioteca' : 'Library') + ' · Colorado Referees';
+}
+function setLang(l) {
+  LANG = l; try { localStorage.setItem('hub-lang', l); } catch (e) {}
+  applyLang(); buildCards(); applySearchAndFilter();
+  var open = document.getElementById('detailPanel').classList.contains('open'), id = location.hash.replace('#', '');
+  if (open && id) { var m = MODULES.filter(function (x) { return x.id === id; })[0]; if (m) openModule(m); }
+}
+// A module in the current language: the Spanish entry when there is one, else English.
+function mod_(m) { var e = LANG === 'es' && ES[m.id]; return e ? { id: m.id, cat: m.cat, icon: m.icon, iconBg: m.iconBg, title: e.title, sub: e.sub, eyebrow: e.eyebrow, keywords: e.keywords, build: e.build } : m; }
+
 var MODULES = [
 
   /* ══════════ USING THE HUB ══════════ */
@@ -492,7 +523,7 @@ var MODULES = [
         bul("<strong>Android:</strong> in Chrome tap the three dots, then <strong>Install app</strong> or <strong>Add to Home screen</strong>.") +
         dt("It opens full screen like an app and loads faster. The Library also works with no signal once it has opened once.")) +
       ds("Make it yours",
-        bul("<strong>Language:</strong> the Español / English button at the top of the Hub switches every word. The Library is in English for now.") +
+        bul("<strong>Language:</strong> the Español / English button at the top switches every word, in the Hub and in this Library. Your choice carries across both.") +
         bul("<strong>Light or dark:</strong> the sun and moon button. The Hub remembers your choice.") +
         bul("<strong>Spinning ball</strong> means it is loading. If it spins for more than a few seconds you probably have no signal.") +
         bul("<strong>Version number</strong> sits at the bottom of every screen. Mention it when you report a problem; new versions appear after you refresh the page."));
@@ -667,7 +698,7 @@ var MODULES = [
         bul("<strong>Regional Referee</strong>: Intermediate, requires additional training and assessments") +
         bul("<strong>National Referee</strong>: Advanced, requires national-level assessments") +
         dt("From your very first game: <strong>keep records. Log every game you work.</strong> Your game log verifies payments, provides match reports if requested, and is essential for advancing to the next grade.") +
-        dt("Contact Deanna at refeducation@coloradoreferees.com to begin the assessment process."));
+        dt("Contact the Director of Referee Operations at refeducation@coloradoreferees.com to begin the assessment process."));
     }
   },
   {
@@ -693,7 +724,7 @@ var MODULES = [
         chk("Consider getting certified yourself")) +
       ds("Safety Rules for Minor Referees",
         dt("<strong>Never meet alone with a mentor</strong>: always bring a parent or have the meeting around other people. Leave the field as a team. Plan your ride in advance.") +
-        dt("If a mentor ever asks you to meet alone or in a private location, report it to your assignor or Deanna at CSA immediately: 303.888.6863")) +
+        dt("If a mentor ever asks you to meet alone or in a private location, report it to your assignor or the Director of Referee Operations at CSA immediately: 303.888.6863")) +
       ds("RAP Protection",
         dt("Youth referees are protected by U.S. Soccer Policy 531-9. If your child experiences abuse, report immediately: <strong>303.529.7718</strong> or <strong>RAPReporting@coloradoreferees.com</strong>"));
     }
@@ -1358,7 +1389,7 @@ var MODULES = [
     title:"How Do I Upgrade My Grade?",
     sub:"Referee to Regional to National: process & contact",
     eyebrow:"Career Resources",
-    keywords:"upgrade grade regional national assessment Deanna pathway",
+    keywords:"upgrade grade regional national assessment pathway",
     build: function() {
       return ds("Grade Overview",
         bul("<strong>Referee</strong>: Entry level, completed initial Grassroots course") +
@@ -1366,7 +1397,7 @@ var MODULES = [
         bul("<strong>National Referee</strong>: Advanced, national-level assessments required") +
         dt("Each grade unlocks higher-level games and better pay. Most active referees can upgrade to Regional in 1-2 seasons.")) +
       ds("How to Get Assessed",
-        callout("200,146,26","&#128105;","Contact <strong>Deanna Duncan-Allen</strong> at <strong>refeducation@coloradoreferees.com</strong> or <strong>303.888.6863</strong> to express your interest. She will explain requirements, connect you with an assessor, and guide the process.") +
+        callout("200,146,26","&#128105;","Contact the <strong>Director of Referee Operations</strong> at <strong>refeducation@coloradoreferees.com</strong> or <strong>303.888.6863</strong> to express your interest. She will explain requirements, connect you with an assessor, and guide the process.") +
         dt("<strong>Do not wait to be asked</strong>: reach out proactively.")) +
       ds("What Happens During Assessment",
         dt("An assessor watches you referee a game (usually without you knowing exactly when). They evaluate positioning, decision-making, game management, and fitness. After the game they give you a written report.")) +
@@ -1492,10 +1523,10 @@ var MODULES = [
     title:"CSA Contact Directory",
     sub:"All key contacts, hotlines & resources",
     eyebrow:"CSA Contacts",
-    keywords:"contacts Deanna emergency hotline mentor RAP OSI uniform phone email",
+    keywords:"contacts director emergency hotline mentor RAP OSI uniform phone email",
     build: function() {
       var contacts = [
-        ["&#128105;","Deanna Duncan-Allen","Director of Referee Operations","303.888.6863","refeducation@coloradoreferees.com"],
+        ["&#128105;","Director of Referee Operations","Colorado Soccer Association","303.888.6863","refeducation@coloradoreferees.com"],
         ["&#128680;","Referee Emergency Hotline","Field emergencies: text or voice","303.529.7718",""],
         ["&#128172;","Ask A Mentor Line","Referee questions: text only","720.513.2585",""],
         ["&#128737;","RAP Reporting","Referee Abuse Prevention","","RAPReporting@coloradoreferees.com"],
@@ -1524,6 +1555,964 @@ var MODULES = [
   }
 ];
 
+/* ══════════ EN ESPAÑOL: the same modules, keyed by id ══════════ */
+var ES = {
+  "hub-start": {
+    title: "Primeros pasos", sub: "Inicia sesión, ponlo en tu teléfono, idioma, claro u oscuro", eyebrow: "Cómo usar el Hub · 1 de 7",
+    keywords: "tutorial cómo empezar iniciar sesión instalar pantalla de inicio teléfono idioma español modo oscuro versión",
+    build: function() {
+      return ds("Inicia sesión una sola vez",
+        stp(1, "Abre el Hub y escribe el correo que usas en Assignr. Toca <strong>Enviar enlace</strong>.") +
+        stp(2, "Abre el correo en el mismo teléfono y toca el enlace. Sin contraseña, nunca. El Hub te mantiene conectado.") +
+        stp(3, "Si el Hub no reconoce tu correo, te dice a quién contactar. Tu nombre tiene que coincidir con Assignr.")) +
+      ds("Ponlo en tu teléfono",
+        bul("<strong>iPhone:</strong> en Safari toca Compartir y luego <strong>Agregar a pantalla de inicio</strong>.") +
+        bul("<strong>Android:</strong> en Chrome toca los tres puntos y luego <strong>Instalar app</strong> o <strong>Agregar a pantalla de inicio</strong>.") +
+        dt("Se abre a pantalla completa como una app y carga más rápido. La Biblioteca también funciona sin señal una vez que se ha abierto por primera vez.")) +
+      ds("Hazlo tuyo",
+        bul("<strong>Idioma:</strong> el botón Español / English en la parte superior cambia cada palabra, en el Hub y en esta Biblioteca. Tu elección se mantiene en los dos.") +
+        bul("<strong>Claro u oscuro:</strong> el botón del sol y la luna. El Hub recuerda tu elección.") +
+        bul("<strong>El balón girando</strong> significa que está cargando. Si gira por más de unos segundos, probablemente no tienes señal.") +
+        bul("<strong>El número de versión</strong> está al pie de cada pantalla. Menciónalo cuando reportes un problema; las versiones nuevas aparecen después de actualizar la página."));
+    }
+  },
+
+  "hub-day": {
+    title: "Tu día", sub: "Tus partidos, el mapa de canchas, el registro al llegar y el tablero", eyebrow: "Cómo usar el Hub · 2 de 7",
+    keywords: "tutorial tu día partidos tarjeta del partido registrarme registro mapa cancha tablero dorado rojo equipo arbitral reglas",
+    build: function() {
+      return ds("Lo que ves",
+        dt("Tu día muestra cada partido que Assignr ha publicado para ti, en orden de hora, con la sede, la cancha y el equipo arbitral. El Hub se actualiza desde Assignr cada pocos minutos, así que un cambio de último momento aparece sin que hagas nada.") +
+        bul("<strong>Toca un partido</strong> para ver la tarjeta completa: el equipo arbitral con teléfonos, el enlace a las reglas de la competición y el enlace al Mapa con la cancha exacta.") +
+        bul("<strong>Mapa</strong> abre el plano de la sede con tu cancha resaltada y un marcador de dónde estás desde el estacionamiento o la carpa de árbitros.") +
+        bul("<strong>Reglas</strong> abre las reglas de juego de la competición (tamaño del balón, duración de los tiempos, sustituciones).")) +
+      ds("Regístrate al llegar",
+        stp(1, "Abre la tarjeta del partido y toca <strong>Registrarme</strong>. Hazlo cuando estés en la cancha, no desde el carro.") +
+        stp(2, "La carpa de árbitros ve un tablero con todos los partidos. Un equipo arbitral que no se ha registrado se pone <strong>dorado a 30 minutos</strong> del saque de salida y <strong>rojo a 15</strong>. Registrarte te mantiene fuera de esa lista.") +
+        stp(3, "Si trabajas en dos sedes en un día, regístrate en cada una.")) +
+      ds("Si vas tarde",
+        dt("En la tarjeta del partido toca <strong>¿Vas tarde? Avisa al coordinador de sede</strong> y di cuántos minutos. El coordinador de sede lo confirma y tú lo ves en la tarjeta. Al llegar, ve directo a tu cancha y regístrate ahí.")) +
+      callout("46,204,113","&#10003;","¿Ya estás registrado y tu compañero no aparece? Avísale al coordinador de sede en la carpa de árbitros o manda un mensaje de texto a la línea de árbitros desde la pantalla de <strong>Ayuda</strong>. No dejes la cancha para ir a buscarlo.");
+    }
+  },
+
+  "hub-help": {
+    title: "Cuando algo sale mal", sub: "El botón de Ayuda y la línea de árbitros", eyebrow: "Cómo usar el Hub · 3 de 7",
+    keywords: "tutorial ayuda tarde falta compañero lesión incidente emergencia carpa de árbitros centro de mando",
+    build: function() {
+      return ds("El botón rojo de Ayuda",
+        dt("Está al pie de Tu día. Tócalo, elige lo que está pasando y confirma. No se envía nada hasta que confirmes. Llega a la carpa de árbitros con tu nombre y tu cancha.") +
+        bul("<strong>Problema con la lista de jugadores o la tarjeta del partido:</strong> faltan pases, lista equivocada, no hay tarjeta del partido.") +
+        bul("<strong>Problema con un entrenador o espectador:</strong> una conducta con la que necesitas ayuda antes de que se vuelva un incidente.") +
+        bul("<strong>Tarjeta roja o expulsión:</strong> la carpa se entera antes de que el equipo llegue a ella.") +
+        bul("<strong>Pelea o amenaza:</strong> la carpa va hacia ti. Si alguien está en peligro, llama primero al 911.") +
+        bul("<strong>Lesión, necesito al preparador físico:</strong> la carpa manda al preparador físico a tu cancha.") +
+        bul("<strong>Manda un mensaje de texto a la línea de árbitros</strong> para cualquier cosa que no encaje en la lista.")) +
+      ds("Qué pasa después",
+        dt("Tu llamado llega al Centro de mando con tu nombre, cancha y partido. El coordinador de sede toca <strong>Voy en camino</strong> o <strong>Resuelto</strong> y tú lo ves en tu pantalla. Si es urgente y no recibes respuesta en unos minutos, manda un mensaje de texto a la línea de árbitros.")) +
+      callout("230,57,70","&#9888;","El botón de Ayuda es para los partidos de hoy. Para cualquier cosa que pueda esperar hasta mañana, escribe un correo a Operaciones Arbitrales desde el módulo de Contactos.");
+    }
+  },
+
+  "hub-notes": {
+    title: "Comentarios y tu tarjeta", sub: "Notas de los coaches de árbitros, tu temporada, tus evaluaciones", eyebrow: "Cómo usar el Hub · 4 de 7",
+    keywords: "tutorial notas comentarios coach observación confirmar lectura tarjeta de árbitro temporada evaluación progreso ascenso mantenimiento pedir",
+    build: function() {
+      return ds("Comentarios de un coach de árbitros",
+        dt("Cuando un coach de árbitros te observa, su nota te llega en el Hub, ya pulida y en lenguaje claro, normalmente esa misma tarde. Tu nota más reciente aparece en Tu día; <strong>Todas tus notas</strong> abre las demás.") +
+        bul("Cada nota tiene una o dos cosas que salieron bien y una o dos para trabajar. Al abrirla, el coach sabe que la leíste.") +
+        bul("Que todavía no tengas comentarios no significa que no te hayan observado. Los árbitros de primer año reciben una visita al inicio de la temporada.")) +
+      ds("Evaluaciones formales",
+        bul("Un ascenso a Regional o Nacional requiere <strong>tres</strong> evaluaciones completadas en el año calendario; mantener el grado Regional o Nacional requiere <strong>una</strong>. Tu progreso se muestra en Tu día.") +
+        bul("<strong>Pide una evaluación</strong> desde la tarjeta de un partido próximo: toca Pedir evaluación e indica si es para ascenso o mantenimiento. El Director de Desarrollo Arbitral asigna un coach; verás la asignación en Tu día y, una vez aprobada, la evaluación escrita.") +
+        bul("Tu resultado de la prueba física y tu insignia aparecen en la tarjeta de la prueba física. Al final de la temporada, una tarjeta de <strong>Tu temporada</strong> resume tu año y la tabla de posiciones del club."));
+    }
+  },
+
+  "hub-fitness": {
+    title: "Prueba física", sub: "Inscripción, exención de responsabilidad, estándares, qué significa la insignia", eyebrow: "Cómo usar el Hub · 5 de 7",
+    keywords: "tutorial prueba física inscribirme exención de responsabilidad sprint intervalos coda insignia pago premium estándar",
+    build: function() {
+      return ds("Antes de la prueba",
+        stp(1, "Abre la tarjeta de la <strong>Prueba física</strong> en Tu día o el módulo de Condición física en esta Biblioteca.") +
+        stp(2, "Lee los estándares de tu categoría: 6 x 40 m de sprints, la carrera de intervalos de 40 x 75 m / 25 m y el CODA.") +
+        stp(3, "Marca la <strong>exención de responsabilidad</strong> y luego toca <strong>Inscribirme</strong> en una sesión. Puedes cancelar desde la misma tarjeta.")) +
+      ds("El día de la prueba",
+        bul("El instructor dirige todo desde su teléfono, incluidos los pitidos de la carrera de intervalos. Puedes descargar el audio para entrenar.") +
+        bul("Solo el instructor registra los tiempos. Ves tu resultado en tu tarjeta en cuanto se guarda.") +
+        bul("Aprueba las dos partes y la <strong>insignia de condición física</strong> aparece en tu tarjeta y en el Centro de mando para los asignadores. Las tarifas de pago premium siguen el estándar publicado."));
+    }
+  },
+
+  "hub-coach": {
+    title: "Para coaches de árbitros", sub: "Notas, el Evaluador, el debrief, cómo redactar la evaluación", eyebrow: "Cómo usar el Hub · 6 de 7",
+    keywords: "tutorial coach coaching notas observación evaluador registro en vivo post-partido calificaciones debrief pdf evaluación formal redactar enviar revisión refeval",
+    build: function() {
+      return ds("Notas de observación",
+        stp(1, "Abre <strong>Coaching</strong> desde Tu día, elige el partido y toca al árbitro.") +
+        stp(2, "Dicta o escribe tus notas durante y después del partido. Corto y específico es mejor que largo.") +
+        stp(3, "Toca <strong>Enviar</strong>. El Hub pule la redacción, tú la apruebas y el árbitro la recibe esa misma tarde.")) +
+      ds("Una evaluación formal, de principio a fin",
+        stp(1, "El Director de Desarrollo Arbitral te asigna al partido de un árbitro. Aparece en <strong>Mis evaluaciones</strong> dentro de Coaching.") +
+        stp(2, "<strong>Ábrela en el Evaluador</strong> en la cancha. Registra los eventos en vivo, con el sorteo y la dirección de ataque para que la app sepa cuál portería es cuál.") +
+        stp(3, "Después del partido: pestaña <strong>Post-partido</strong>, califica a cada árbitro, registra los CMI y los CRE y elige tu puntaje de sensación.") +
+        stp(4, "Pestaña <strong>Debrief</strong>: toca los dos o tres puntos que vas a conversar con el árbitro. Limita el debrief a esos.") +
+        stp(5, "<strong>Exportar</strong>: genera el PDF. La evaluación ya está completa en el Hub.") +
+        stp(6, "En casa, abre la evaluación en el Hub y <strong>redacta tú mismo la evaluación formal</strong> a partir del PDF y tus notas, en el estilo de US Soccer. Guarda conforme avances.") +
+        stp(7, "Toca <strong>Enviar a revisión</strong>. Un revisor la aprueba o la devuelve con una nota. Una vez aprobada, <strong>Copiar para RefEval</strong> y pégala ahí.")) +
+      callout("245,200,66","&#128161;","El Redactor, que genera un borrador a partir de tu registro, es para los revisores. Un coach redacta sus primeras evaluaciones por su cuenta; así es como el programa confirma que puedes hacerlo.");
+    }
+  },
+
+  "hub-ops": {
+    title: "Centro de mando, Estado del programa, Configuración", sub: "Para coordinadores de sede, operaciones arbitrales y administradores", eyebrow: "Cómo usar el Hub · 7 de 7",
+    keywords: "tutorial centro de mando coordinador de sede tablero cambios avisos clima estado del programa configuración eventos sedes sesiones assignr sincronización no registrados personas",
+    build: function() {
+      return ds("Centro de mando (coordinadores de sede y carpa de árbitros)",
+        bul("<strong>Sedes:</strong> cada sede con partidos ese día. Verde es registrado, rojo es un llamado de Ayuda todavía abierto. Toca un partido para ver el equipo arbitral y sus teléfonos; las filas en dorado y rojo necesitan una llamada.") +
+        bul("<strong>Los llamados de Ayuda</strong> aparecen en la parte superior de la sede. Toca <strong>Voy en camino</strong> o <strong>Resuelto</strong> para que el árbitro lo vea.") +
+        bul("Los avisos de <strong>Vas tarde</strong> aparecen en la lista de atención; toca Enterado para confirmarlos.") +
+        bul("<strong>Avisos:</strong> lo que cada árbitro ve en Tu día, dentro de un rango de fechas. <strong>Personal:</strong> mensajes entre coordinadores de sede y el Director, nunca para los árbitros.") +
+        bul("<strong>Retener:</strong> árbitros que están trabajando pero nadie ha observado, y árbitros que han dejado de aparecer.") +
+        bul("<strong>Evaluaciones:</strong> solicitudes abiertas, asignaciones, evaluaciones pendientes de revisión y quién va en camino a un ascenso este año.")) +
+      ds("Estado del programa (léelo en una computadora)",
+        dt("El programa de un vistazo: registros comparados con el año pasado, quién regresa, los rangos de edad, el resumen de condición física y la lista de no registrados con envíos de correo en lote con un solo toque.")) +
+      ds("Configuración (administradores)",
+        bul("<strong>Eventos:</strong> qué está activo, qué está apagado, qué ya terminó. Un evento necesita sedes y herramientas solo cuando está activo.") +
+        bul("<strong>Sedes:</strong> los planos de canchas detrás de los mapas y los letreros con QR, con una vista previa en vivo mientras editas.") +
+        bul("<strong>Sesiones:</strong> pruebas físicas y sesiones de aula; el instructor las dirige desde la misma tarjeta.") +
+        bul("<strong>Sincronización con Assignr:</strong> cuándo se descargó por última vez cada grupo de asignación y si algo falló. Se ejecuta sola cada cinco minutos."));
+    }
+  },
+
+  "guide-intro": {
+    title: "Guía CSA: Introducción y resumen", sub: "Bienvenida, resumen ejecutivo y puntos clave", eyebrow: "Guía CSA 2025/26",
+    keywords: "introducción bienvenida grassroots licencia colorado",
+    build: function() {
+      return ds("Bienvenida",
+        dt("Felicidades por obtener tu licencia de árbitro de U.S. Soccer: ¡bienvenido a la comunidad arbitral de Colorado! Tu licencia te da la oportunidad de arbitrar partidos sancionados y asegurados por U.S. Soccer y Colorado Soccer Association.") +
+        dt("Esta guía responde las preguntas más frecuentes de árbitros nuevos y padres, y te da la información que necesitas para las ligas, eventos y competiciones en las que vas a trabajar.")) +
+      ds("Puntos clave",
+        chk("<strong>Completa tus documentos en Assignr.</strong> Una vez que termines el U.S. Soccer Learning Center, recibirás una invitación automática a Assignr. Todos los documentos requeridos se completan digitalmente dentro de Assignr.") +
+        chk("<strong>Aprende Assignr a fondo.</strong> Assignr es tu plataforma de asignaciones, tu calendario de disponibilidad, tu centro de comunicación y tu sistema de pago.") +
+        chk("<strong>Reporta tus partidos.</strong> El reporte del partido es el último paso para completar tu asignación. <strong>Sin reporte = sin pago del partido.</strong>") +
+        chk("<strong>La educación continua es esencial.</strong> Las Reglas de Juego cambian cada año. El Hub de árbitros de Colorado, los eventos educativos de CSA y el Calendario Maestro de Árbitros de Colorado te mantienen al día.") +
+        chk("<strong>Conoce la política RAP.</strong> La Política 531-9 de U.S. Soccer está vigente en todos los partidos sancionados en Colorado. Conoce tus derechos y cómo reportar.")) +
+      ds("Acerca de C.R.E.S.T.",
+        dt("Si obtuviste tu licencia a través de la Academia C.R.E.S.T. en Renaissance Secondary School o en una escuela asociada, bienvenido: eres parte de algo especial.") +
+        dt("C.R.E.S.T. es el programa de desarrollo arbitral en las escuelas de Colorado Soccer Association. Tu herramienta de referencia digital gratuita: la <strong>app C.R.E.S.T. Referee Resources</strong>: está disponible en ColoradoSoccer.org y funciona sin conexión en cualquier dispositivo."));
+    }
+  },
+
+  "guide-license": {
+    title: "Licencia y ruta de grados", sub: "Licencia Grassroots, recertificación, ascenso", eyebrow: "Guía CSA: Sección 1",
+    keywords: "licencia grado regional nacional grassroots recertificar ruta ascenso",
+    build: function() {
+      return ds("Licencia de árbitro Grassroots",
+        dt("El curso Grassroots está abierto a cualquier persona de 13 años o más. Al completar los componentes en línea y en cancha a través del U.S. Soccer Learning Center, los árbitros quedan habilitados para trabajar como árbitro central o árbitro asistente.") +
+        dt("Después de terminar el curso, tu registro se procesa con U.S. Soccer. Recibirás un correo de bienvenida que confirma tu licencia. Tu insignia de árbitro se enviará por correo postal desde el Programa de Árbitros de Colorado.")) +
+      ds("Cómo mantener tu licencia",
+        dt("<strong>Los árbitros deben recertificarse cada año.</strong> La información de recertificación se publica cada otoño y debe completarse antes del 31 de diciembre para estar listo para los partidos después del 1 de enero.") +
+        dt("Tu licencia de U.S. Soccer es válida en todo el país y se puede transferir si te mudas a otro estado.")) +
+      ds("Ruta de grados",
+        bul("<strong>Árbitro</strong>: nivel de entrada, completó el curso inicial Grassroots") +
+        bul("<strong>Árbitro Regional</strong>: nivel intermedio, requiere capacitación y evaluaciones adicionales") +
+        bul("<strong>Árbitro Nacional</strong>: nivel avanzado, requiere evaluaciones de nivel nacional") +
+        dt("Desde tu primer partido: <strong>lleva registros. Anota cada partido que trabajes.</strong> Tu registro de partidos verifica los pagos, sirve para reportes de partido si te los piden y es esencial para ascender al siguiente grado.") +
+        dt("Contacta al Director de Operaciones Arbitrales en refeducation@coloradoreferees.com para iniciar el proceso de evaluación."));
+    }
+  },
+
+  "guide-parents": {
+    title: "Padres de árbitros juveniles", sub: "Tu papel, responsabilidades y reglas de seguridad", eyebrow: "Guía CSA: Sección 2",
+    keywords: "padres tutor menor juvenil seguridad assignr configuración",
+    build: function() {
+      return ds("Tu papel",
+        dt("Tu hijo o hija completó con éxito el curso de árbitro de U.S. Soccer. Arbitrar es un trabajo y, como padre, madre o tutor de un árbitro con licencia menor de 18 años, tu participación es fundamental.")) +
+      ds("Lista para padres",
+        chk("Revisa esta guía con tu hijo o hija y guárdala como referencia") +
+        chk("Ayuda a configurar la cuenta de Assignr: usa un correo personal, NO un correo de la escuela") +
+        chk("Agrega tu correo y tus datos de contacto en Assignr: es obligatorio para árbitros menores de 18 años") +
+        chk("Lee, entiende y firma todos los documentos requeridos en Assignr") +
+        chk("Coordina la disponibilidad: si tú eres su transporte, tú también necesitas estar disponible") +
+        chk("Quédate en la cancha cuando tu hijo o hija trabaje. Si no puedes asistir, asegúrate de que pueda comunicarse contigo en una emergencia") +
+        chk("Asegúrate de que tu hijo o hija tenga el uniforme y el equipo adecuados") +
+        chk("Ayúdale a entender cómo reportar los partidos para recibir el pago: Sin reporte = Sin pago") +
+        chk("Anímale a asistir a eventos de mentoría y educación continua: acompáñale cuando sea posible") +
+        chk("Considera certificarte tú también")) +
+      ds("Reglas de seguridad para árbitros menores de edad",
+        dt("<strong>Nunca te reúnas a solas con un mentor</strong>: siempre lleva a un padre o madre, o haz la reunión donde haya otras personas. Salgan de la cancha en grupo. Planea tu transporte con anticipación.") +
+        dt("Si un mentor alguna vez te pide reunirte a solas o en un lugar privado, repórtalo de inmediato a tu asignador o al Director de Operaciones Arbitrales en CSA: 303.888.6863")) +
+      ds("Protección RAP",
+        dt("Los árbitros juveniles están protegidos por la Política 531-9 de U.S. Soccer. Si tu hijo o hija sufre abuso, repórtalo de inmediato: <strong>303.529.7718</strong> o <strong>RAPReporting@coloradoreferees.com</strong>"));
+    }
+  },
+
+  "guide-success": {
+    title: "Claves del éxito", sub: "Primera impresión, mentalidad del día de partido, crecimiento", eyebrow: "Guía CSA: Sección 3",
+    keywords: "éxito exito primera impresión impresion llegar temprano charla previa conducta errores confianza",
+    build: function() {
+      return ds("Causa una gran primera impresión",
+        bul("<strong>Vístete de forma profesional.</strong> Tu uniforme le dice a todos en esa cancha si estás preparado y listo.") +
+        bul("<strong>Conoce las Reglas.</strong> Sigue repasando las Reglas después de tu curso Grassroots. Usa el Hub, TheIFAB.com y el U.S. Soccer Resource Center.") +
+        bul("<strong>Llega temprano.</strong> Mínimo 30 minutos antes del saque de salida: de preferencia 45-60 minutos.") +
+        bul("<strong>Haz una charla previa como se debe.</strong> Habla con tus AA antes de cada partido. Una charla previa de 10 minutos evita una docena de problemas durante el partido.") +
+        bul("<strong>Conoce las reglas de la competición.</strong> Cada liga puede modificar las Reglas de Juego. Lee las reglas antes de cada asignación.")) +
+      ds("Lo que los árbitros con experiencia hubieran querido saber",
+        dt("<strong>Tu presencia controla el partido antes de que suene el silbato.</strong> Entra a esa cancha con confianza, haz contacto visual y comunícate con claridad.") +
+        dt("<strong>Vas a cometer errores.</strong> Todos los árbitros los cometen. Lo que importa es cómo respondes. Mantén la calma, sigue concentrado, repasa tus decisiones.") +
+        dt("<strong>Construye la relación con tu terna.</strong> Los árbitros que trabajan contigo son tus compañeros de equipo. Confía en ellos, comunícate, apóyense entre sí.") +
+        dt("<strong>Habla con tu asignador.</strong> Dile tu nivel de comodidad, tus metas y cualquier inquietud. Los asignadores solo pueden ayudarte si saben dónde estás.")) +
+      ds("Después del partido",
+        bul("Reporta de inmediato: sin reporte = sin pago del partido") +
+        bul("Repasa la jugada: si no estás seguro de una decisión, búscala") +
+        bul("Asiste a eventos de educación: se publican en ColoradoSoccer.org"));
+    }
+  },
+
+  "guide-uniform": {
+    title: "Uniforme y equipo", sub: "Colores aprobados, equipo obligatorio, dónde comprar", eyebrow: "Guía CSA: Sección 4",
+    keywords: "uniforme camiseta short shorts calcetas medias zapatos equipo insignia tarjetas silbato OSI",
+    build: function() {
+      return ds("Uniforme arbitral aprobado",
+        bul("Camisetas aprobadas en <strong>dorado, rojo, negro, azul y verde</strong>: todos colores oficiales de U.S. Soccer. Normalmente la amarilla/dorada se compra primero.") +
+        bul("<strong>Short de árbitro negro liso</strong> con bolsillos. Los shorts de jugador y los shorts con logos de marca NO son aceptables.") +
+        bul("<strong>Calcetas de árbitro</strong> aprobadas por USSF. Nada de calcetas con logo de Nike, Adidas u otra marca.") +
+        bul("<strong>Zapatos principalmente negros.</strong> Se acepta un detalle blanco o el logo del fabricante.")) +
+      ds("Equipo obligatorio",
+        chk("Insignia de árbitro de U.S. Soccer") +
+        chk("Silbato(s): usa una correa de muñeca") +
+        chk("Juego de banderas de árbitro asistente") +
+        chk("Reloj con cronómetro") +
+        chk("Moneda para el sorteo") +
+        chk("Tarjetas roja y amarilla") +
+        chk("Tarjetas del partido para registrar el encuentro") +
+        chk("Pluma o lápiz") +
+        chk("Bolsa para cargar todo el equipo") +
+        chk("Agua y bocadillos: trae los tuyos")) +
+      ds("Dónde conseguir tu equipo",
+        dt("Official Sports International (OSI) es el proveedor oficial del Programa de Árbitros de U.S. Soccer.") +
+        callout("200,146,26", "&#128138;", "Tienda OSI de Colorado: <strong>www.colorado-osi.com</strong>") +
+        dt("<strong>Consejo fiscal:</strong> Como contratista independiente, las compras de uniforme y equipo son un gasto de tu actividad. Guarda los comprobantes de todas tus compras y coméntalo con quien prepara tus impuestos."));
+    }
+  },
+
+  "guide-assignors": {
+    title: "Asignadores y asignaciones de partidos", sub: "Estatus de contratista, reglas de asignación, política de 72 horas", eyebrow: "Guía CSA: Sección 5",
+    keywords: "asignador contratista independiente IC asignación asignacion 72 horas aceptar rechazar intercambiar",
+    build: function() {
+      return ds("Estatus de contratista independiente",
+        dt("Los árbitros son contratistas independientes (IC). Pagas cuotas para obtener tu licencia, compras tu propio equipo, defines tu propia disponibilidad, trabajas para varios asignadores y eres responsable de reportar tus ingresos al IRS.") +
+        callout("230,57,70","&#9888;","<strong>No aceptes partidos directamente de un entrenador.</strong> Si lo haces, el seguro no te cubre. Acepta únicamente de asignadores con licencia de U.S. Soccer.")) +
+      ds("Reglas de asignación",
+        chk("<strong>Responde dentro de 24 horas.</strong> Assignr rechaza automáticamente después de ese plazo. Los rechazos automáticos repetidos afectan tu prioridad de asignación.") +
+        chk("<strong>Dentro de las 72 horas antes del saque de salida, el partido es tuyo.</strong> Si no puedes trabajar un partido, eres responsable de encontrar tu propio reemplazo del mismo grado, con aprobación del asignador.") +
+        chk("No hay intercambios ni cambios sin la aprobación explícita del asignador.") +
+        chk("<strong>No busques el mejor partido.</strong> No es ético enviar tu disponibilidad a varios asignadores y luego elegir el partido mejor pagado.") +
+        chk("<strong>No te comprometas dos veces.</strong> Da tu disponibilidad a un solo asignador por bloque de tiempo.")) +
+      ds("Lineamientos para las asignaciones",
+        dt("Los asignadores programan a los árbitros según la experiencia, la capacidad y lo que es mejor para el partido. Los árbitros recién certificados necesitan <strong>trabajar primero como árbitro central</strong> antes de avanzar a niveles más altos.") +
+        dt("Un lineamiento habitual: el árbitro tendrá al menos dos años más que la categoría de edad que dirige.") +
+        dt("Comunica tus metas. Dile a tu asignador tu nivel de comodidad y hasta dónde quieres llegar en tu carrera arbitral."));
+    }
+  },
+
+  "guide-assignr": {
+    title: "Guía de la plataforma Assignr", sub: "Crear la cuenta, disponibilidad, aceptar partidos", eyebrow: "Guía CSA: Sección 6",
+    keywords: "assignr plataforma cuenta configuración configuracion disponibilidad correo invitación invitacion app sitio web",
+    build: function() {
+      return ds("Primeros pasos",
+        dt("Cuando completas el Learning Center de U.S. Soccer, se envía una invitación de Assignr <strong>automáticamente a tu correo.</strong> No crees una cuenta por tu cuenta: espera tu enlace de invitación.") +
+        callout("230,57,70","&#9888;","<strong>No uses un correo escolar</strong> como tu correo principal. Usa un correo personal que vayas a tener a largo plazo.")) +
+      ds("Lista para crear tu cuenta",
+        chk("Haz clic en el enlace de invitación y crea la cuenta con tu correo personal") +
+        chk("Agrega el correo de tu padre, madre o tutor si eres menor de 18") +
+        chk("Sube una foto de perfil profesional") +
+        chk("Agrega la información de contacto de emergencia") +
+        chk("Completa y firma el formulario fiscal W9") +
+        chk("Firma el acuerdo de contratista independiente") +
+        chk("Configura tu pago en Assignr Pay (EFT/ACH o Venmo)") +
+        chk("Define tu disponibilidad y tus preferencias de liga") +
+        callout("200,146,26","&#9888;","<strong>Primero los documentos.</strong> No recibirás asignaciones hasta que todos los documentos obligatorios estén registrados.")) +
+      ds("Cómo definir tu disponibilidad",
+        dt("Assignr asume que <strong>NO ESTÁS DISPONIBLE</strong> a menos que ingreses tu disponibilidad específicamente.") +
+        bul("Sé específico: ingresa fechas y horarios exactos") +
+        bul("Un asignador por bloque de tiempo para evitar comprometerte dos veces") +
+        bul("Actualiza de inmediato cuando cambie tu horario") +
+        bul("<strong>Preferencias de liga:</strong> Si no estás recibiendo asignaciones, revisa si tienes preferencias en conflicto.")) +
+      ds("App vs sitio web",
+        dt("<strong>App:</strong> horario, botones de aceptar/rechazar, detalles del partido, mensajes y disponibilidad.") +
+        dt("<strong>Sitio web:</strong> W9/datos bancarios, reportes de partido detallados y toda la configuración de la cuenta. Haz tu configuración inicial en el sitio web."));
+    }
+  },
+
+  "guide-reporting": {
+    title: "Reportes de partido", sub: "Qué reportar, cuándo y cómo", eyebrow: "Guía CSA: Sección 8",
+    keywords: "reporte de partido reporte enviar assignr 24 horas tarjeta amarilla tarjeta roja conducta incorrecta",
+    build: function() {
+      return callout("230,57,70","&#9888;","<strong>Sin reporte de partido = SIN pago del partido.</strong> Todo árbitro debe enviar un reporte después del partido. Los reportes de los AA deben confirmar la terna, el marcador y cualquier detalle importante.") +
+      ds("Qué va en un reporte de partido",
+        bul("<strong>A tiempo</strong>: envíalo dentro de 24 horas. Complétalo al llegar a casa.") +
+        bul("<strong>Preciso</strong>: solo hechos, sin opiniones personales. Incluye el marcador, tarjetas amarillas, tarjetas rojas y cualquier incidente.") +
+        bul("<strong>Completo</strong>: si se requiere un reporte suplementario, preséntalo como un reporte de incidente aparte.")) +
+      ds("Dos tipos de reportes",
+        dt("<strong>1. Reporte oficial del partido</strong>: obligatorio en todos los partidos. Incluye el marcador, todas las sustituciones, toda conducta incorrecta y cualquier incidente.") +
+        dt("<strong>2. Reporte suplementario</strong>: obligatorio en casos de: tarjetas rojas, expulsión de entrenadores u oficiales de equipo, partidos abandonados, abuso o agresión a árbitros, abuso de padres o espectadores. <em>Ante la duda, preséntalo.</em>")) +
+      ds("Reglas para redactar el reporte",
+        bul("Limítate a los hechos: evita opiniones o suposiciones") +
+        bul("Usa el lenguaje oficial de las Reglas de Juego: 'infracción de tiro libre directo', 'conducta antideportiva', 'expulsado por uso de fuerza excesiva'") +
+        bul("Escribe el reporte justo después del partido, con los detalles frescos") +
+        bul("Revísalo con tu terna antes de enviarlo") +
+        bul("En caso de abuso a árbitros: escribe exactamente lo que se dijo, palabra por palabra y entre comillas. El reporte es un registro legal."));
+    }
+  },
+
+  "guide-pay": {
+    title: "Pago arbitral y cómo cobrar", sub: "Tarifas, Assignr Pay, EFT/ACH, consejos fiscales", eyebrow: "Guía CSA: Secciones 9 y 10",
+    keywords: "pago cobro assignr EFT ACH venmo impuestos W9 Dwolla tarifas",
+    build: function() {
+      return ds("Cómo funciona el pago",
+        dt("El pago de los partidos viene de <strong>las ligas y los clubes, no de tu asignador.</strong> Los asignadores coordinan tus asignaciones: no son responsables de tu pago.") +
+        callout("230,57,70","&#9888;","<strong>Sin reporte de partido = sin pago.</strong> Las ligas procesan el pago con base en los reportes de partido. Si tu reporte llega tarde o falta, tu pago quedará retenido.")) +
+      ds("Documentos obligatorios antes del primer pago",
+        chk("Formulario fiscal W9: completado en Assignr") +
+        chk("Acuerdo de contratista independiente: completado en Assignr")) +
+      ds("Cómo configurar Assignr Pay",
+        dt("Inicia sesión en Assignr.com. Ve a la sección Pay. Configura la <strong>transferencia electrónica de fondos (EFT/ACH)</strong>: es gratis y se deposita directamente en tu cuenta bancaria. También puedes conectar Venmo a través de Assignr.com.") +
+        dt("Los árbitros de cualquier edad pueden configurar Assignr Pay: no se requiere una cuenta de cheques personal.") +
+        callout("200,146,26","&#128181;","<strong>Se recomienda mucho usar EFT/ACH.</strong> Los cheques en papel tienen una cuota de procesamiento y el pago se retrasa.")) +
+      ds("Plazos de pago",
+        bul("Normalmente los partidos se envían a la liga que paga en un ciclo quincenal") +
+        bul("Espera de 3-5 días hábiles después del procesamiento para que aparezcan los fondos") +
+        callout("100,180,255","&#128273;","<strong>Recordatorio fiscal:</strong> Como IC, NO se retienen impuestos de tu pago. Eres responsable de reportar todos tus ingresos. Guarda un registro de todos los pagos."));
+    }
+  },
+
+  "guide-policies": {
+    title: "Políticas generales y expectativas", sub: "Programación, política de inasistencias, expectativas del día de partido", eyebrow: "Guía CSA: Sección 11",
+    keywords: "inasistencia no presentarse política politica programación programacion expectativas llegar temprano registrarse día de partido",
+    build: function() {
+      return ds("Expectativas del día de partido",
+        bul("Llega al menos <strong>30 minutos antes de tu primer partido</strong> (de preferencia 45-60 minutos)") +
+        bul("Todos los equipos deben registrarse con los árbitros antes del saque de salida") +
+        bul("Inicia el partido a tiempo") +
+        bul("Envía los marcadores y reportes dentro de 24 horas")) +
+      ds("Política de inasistencias",
+        dt("Los árbitros que no se presentan se atienden caso por caso y pueden ser retirados del calendario por el resto de la temporada. Se aplican multas. Las inasistencias se reportan a CSA, al Comité de Árbitros de Colorado y a los directores de la liga y el club correspondientes.") +
+        callout("230,57,70","&#9888;","<strong>Tu reputación es tu calendario de asignaciones.</strong> Los árbitros que responden rápido, cumplen sus asignaciones y reportan sus partidos son reconocidos y priorizados. Lo contrario también es cierto.")) +
+      ds("Plazos de asignación",
+        bul("Solicitudes de cambio a asignaciones de fin de semana: hasta el <strong>martes a las 9:00 PM</strong>") +
+        bul("No hay cancelaciones después del <strong>miércoles a las 5:00 PM</strong>: pasado ese plazo, tú buscas tu propio reemplazo") +
+        bul("Dentro de las <strong>72 horas antes del saque de salida</strong>, el partido es tuyo"));
+    }
+  },
+
+  "guide-mentoring": {
+    title: "Mentoría y educación continua", sub: "Programa de mentores, el Hub, recursos educativos", eyebrow: "Guía CSA: Sección 12",
+    keywords: "mentor mentoría mentoria educación educacion continua el Hub learning center eventos calendario",
+    build: function() {
+      return ds("El programa de mentores",
+        dt("El Programa de Mentores del Programa de Árbitros de Colorado existe para aumentar la retención de árbitros, brindar apoyo y mejorar el arbitraje en todos los niveles. Entre los mentores hay árbitros FIFA, MLS y Nacionales, y coaches de árbitros de U.S. Soccer.") +
+        dt("TODOS los árbitros y padres están invitados y animados a asistir a los eventos de mentoría y educación.")) +
+      ds("El Hub de Árbitros de Colorado",
+        dt("Esta <strong>Biblioteca</strong>, dentro de tu Hub de Árbitros de Colorado, es tu referencia de bolsillo gratuita: funciona en cualquier dispositivo, completamente sin conexión.") +
+        dt("Cubre las 17 Reglas de Juego de la IFAB y 11 módulos de referencia, incluidas guías del día de partido, recorridos de Assignr, procedimientos de la charla previa, procedimientos del tiro penal y más.")) +
+      ds("Dónde encontrar educación",
+        bul("<strong>Calendario Maestro de Árbitros de Colorado</strong>: todos los eventos educativos en ColoradoSoccer.org") +
+        bul("<strong>U.S. Soccer Learning Center</strong>: learning.ussoccer.com") +
+        bul("<strong>Mensajes y correos de Assignr</strong>: tus asignadores publican novedades y recordatorios de eventos") +
+        bul("Instagram: @CoSoccerRef &middot; @SoccerRefInstrn &middot; @WeAreCOSoccer"));
+    }
+  },
+
+  "laws-new": {
+    title: "Qué cambió para 2026/27", sub: "Los cambios de la IFAB vigentes desde el 1 de julio de 2026, en un solo lugar", eyebrow: "Reglas de Juego IFAB 2026/27",
+    keywords: "nuevo cambios 2026 2027 cuenta regresiva cinco segundos saque de banda saque de meta lesión lesion minuto sustitución sustitucion diez segundos accesorios joyería joyeria balón a tierra balon dogso ventaja doble toque forfeit siete jugadores",
+    build: function() {
+      return ds("Los que usarás en cada partido",
+        stp(1, "<strong>Cuenta regresiva de 5 segundos en saques de banda y saques de meta.</strong> Demora injusta: silbato, levanta la mano, cuenta cinco segundos de forma visible. Saque de banda no ejecutado = saque de banda para los rivales. Saque de meta no ejecutado = saque de esquina. Amonestación solo por demora excesiva después de eso. (Reglas 15, 16, 17)") +
+        stp(2, "<strong>El jugador lesionado se queda fuera un minuto.</strong> Si lo atienden en el campo, o la lesión detuvo el juego: el jugador sale y vuelve un minuto después de la reanudación, desde la línea de banda. No aplica al portero, ni a un jugador lesionado por una falta que mereció tarjeta. (Regla 5)") +
+        stp(3, "<strong>El jugador sustituido tiene 10 segundos para salir.</strong> Si se tarda, el sustituto espera hasta la primera interrupción después de un minuto de juego. (Regla 3)") +
+        stp(4, "<strong>Accesorios en lugar de joyería.</strong> Se permiten si no son peligrosos y están cubiertos de forma segura y firme. Los objetos peligrosos se quitan; la cinta no los hace legales. (Regla 4)") +
+        stp(5, "<strong>El balón a tierra va para el equipo que habría tenido el balón</strong>, incluido el equipo que habría ejecutado la reanudación. Si el balón te golpea a ti o a un agente externo: suéltalo donde ocurrió el contacto. (Regla 8)") +
+        stp(6, "<strong>DOGSO y ventaja.</strong> Das ventaja y anotan: sin tarjeta. Lo mismo para un intento fallido de mano para evitar un gol. El número y la posición de los atacantes ahora cuentan para el DOGSO. (Regla 12)") +
+        stp(7, "<strong>Retrasar la reanudación es más acotado.</strong> La cuenta regresiva se encarga de los saques de banda y de meta lentos. Amonestación por demora excesiva, patear o llevarse el balón, fingir un saque de banda, salir despacio al ser sustituido, o un tiro libre ejecutado deliberadamente desde el lugar equivocado. (Regla 12)") +
+        stp(8, "<strong>Doble toque en el penal.</strong> Accidental (con ambos pies, o el balón golpea la pierna de apoyo): gol = se repite, no gol = TLI. En los tiros desde el punto penal: gol = se repite, no gol = fallado. Desaparece la amonestación automática cuando el ejecutor y el portero infringen a la vez. (Reglas 10, 14)") +
+        stp(9, "<strong>Menos de 7 jugadores.</strong> Un equipo que provoca que el partido se detenga o se abandone con menos de 7 pierde, en principio, por forfeit. Las expulsiones temporales y los periodos de un minuto fuera del campo no cuentan. (Reglas 3, 7)") +
+        stp(10, "<strong>Ventaja en una reanudación mal ejecutada.</strong> Si una reanudación se ejecuta de forma incorrecta y los rivales ganan el balón, puedes dejar seguir. (Regla 5)")) +
+      ds("Opciones de la competición y lo que viene",
+        bul("Taparse la boca al provocar a un rival, y retirarse del campo en protesta, pueden ser infracciones de expulsión donde la competición las adopte.") +
+        bul("Solo el capitán se acerca al árbitro: obligatorio en todas partes desde el 1 de julio de 2027. Empieza ahora.") +
+        bul("Sigue vigente desde 2025/26: el portero que retiene el balón más de 8 segundos concede saque de esquina, con la misma cuenta visible de 5 segundos.") +
+        bul("Las cámaras corporales, el VAR y el fuera de juego semiautomático son asuntos de la competición; no para nuestras canchas.")) +
+      callout("100,180,255","&#128161;","US Soccer aplica las Reglas de la IFAB desde el 1 de julio. Las competiciones juveniles y amateur de Colorado pueden modificar las sustituciones, la duración del partido y el tamaño del balón; lee las reglas de tu competición en la tarjeta del partido. Texto completo: theifab.com/laws.");
+    }
+  },
+
+  "laws-1-2": {
+    title: "Reglas 1 y 2: Campo y balón", sub: "Dimensiones del campo, marcas, tamaño de la portería, especificaciones del balón", eyebrow: "Reglas IFAB 1-2",
+    keywords: "campo cancha dimensiones marcas área penal area círculo central circulo esquina balón balon tamaño peso",
+    build: function() {
+      return ds("Regla 1: El terreno de juego",
+        dt("<strong>Forma:</strong> Rectángulo de pasto natural o artificial.") +
+        dt("<strong>Dimensiones:</strong> Largo 90-120m, Ancho 45-90m. Internacional: 100-110m x 64-75m.") +
+        dt("<strong>Líneas:</strong> Las líneas más largas son las <strong>líneas de banda</strong>. Las más cortas son las <strong>líneas de meta</strong>.") +
+        bul("<strong>Círculo central:</strong> 9.15m (10 yardas) de radio") +
+        bul("<strong>Área penal:</strong> 16.5m (18 yardas) desde cada poste") +
+        bul("<strong>Área de meta:</strong> 5.5m (6 yardas) desde cada poste") +
+        bul("<strong>Punto penal:</strong> 11m (12 yardas) desde la línea de meta") +
+        bul("<strong>Porterías:</strong> 7.32m de ancho x 2.44m de alto (8 yardas x 8 pies)")) +
+      ds("Regla 2: El balón",
+        bul("Esférico, de cuero u otro material adecuado") +
+        bul("<strong>Tamaño 5:</strong> Circunferencia 68-70cm, Peso 410-450g (adultos)") +
+        bul("<strong>Tamaño 4:</strong> partidos U9-U12") +
+        bul("<strong>Tamaño 3:</strong> partidos U6-U8") +
+        dt("Si el balón se daña durante el juego, se detiene el partido y se reanuda con un balón nuevo desde donde el balón original se dañó."));
+    }
+  },
+
+  "laws-3-4": {
+    title: "Reglas 3 y 4: Jugadores y equipamiento",
+    sub: "Número de jugadores, sustituciones, portero, reglas de uniforme",
+    eyebrow: "Reglas IFAB 3-4",
+    keywords: "jugadores numero sustituciones cambios portero uniforme equipamiento joyas espinilleras",
+    build: function() {
+      return ds("Regla 3: Los jugadores",
+        bul("Un partido lo juegan dos equipos, cada uno con <strong>un máximo de 11 jugadores</strong>, incluido un portero.") +
+        bul("Un partido no puede comenzar ni continuar si alguno de los equipos tiene menos de 7 jugadores. <strong>Nuevo 2026/27:</strong> el equipo que provoca que un partido se detenga o se suspenda por tener menos de 7 jugadores, en principio, pierde el partido (sujeto a las reglas de la competición). Las expulsiones temporales y los periodos de un minuto fuera del campo no cuentan contra los 7.") +
+        bul("<strong>Sustituciones:</strong> máximo 5 por equipo en partidos oficiales. 3 oportunidades para sustituir. Revisa las reglas de la competición; las ligas juveniles suelen permitir más.") +
+        bul("<strong>Nuevo 2026/27, salir del campo:</strong> el jugador sustituido debe salir dentro de los <strong>10 segundos</strong> siguientes a la señal del tablero o del árbitro. Si no lo hace, el sustituto espera hasta la primera detención después de un minuto de juego. Amonestación solo por retrasar excesivamente la reanudación.") +
+        bul("<strong>Solo el capitán:</strong> las directrices según las cuales solo el capitán puede acercarse al árbitro serán obligatorias en todas las competiciones a partir del 1 de julio de 2027.") +
+        dt("Un jugador expulsado debe abandonar el campo. Las sustituciones no pueden reemplazar a un jugador expulsado.")) +
+      ds("Regla 4: Equipamiento de los jugadores",
+        dt("<strong>Equipamiento obligatorio:</strong> camiseta con número, pantalón corto, medias que cubran las espinilleras, espinilleras y calzado.") +
+        callout("100,180,255","&#128161;","<strong>Nuevo 2026/27, accesorios.</strong> Ya no existe la prohibición total de joyas. Los accesorios se permiten siempre que no sean peligrosos y estén <strong>cubiertos de forma segura y firme</strong>. Todo lo que sea peligroso debe quitarse; cubrir con cinta un objeto peligroso no es suficiente. El árbitro decide qué es peligroso.") +
+        bul("Espinilleras: deben estar cubiertas por las medias y ofrecer una protección razonable") +
+        bul("El portero debe usar colores que se distingan de ambos equipos y del árbitro") +
+        bul("Los jugadores no deben usar ningún equipamiento que sea peligroso para ellos mismos o para otros jugadores"));
+    }
+  },
+
+  "laws-5-6-7": {
+    title: "Reglas 5, 6 y 7: Árbitros y tiempo",
+    sub: "Autoridad del árbitro, funciones del AA, duración del partido",
+    eyebrow: "Reglas IFAB 5-6-7",
+    keywords: "arbitro autoridad poderes arbitro asistente AA funciones tiempo añadido detencion tiempos",
+    build: function() {
+      return ds("Regla 5: El árbitro",
+        dt("El árbitro tiene plena autoridad para hacer cumplir las Reglas de Juego. Las decisiones del árbitro sobre los hechos son definitivas.") +
+        bul("Puede permitir que el juego continúe cuando se ha cometido una infracción si el equipo no infractor se beneficia (ventaja). <strong>Nuevo 2026/27:</strong> también se puede aplicar la ventaja cuando una reanudación se ejecuta incorrectamente y los adversarios ganan el balón.") +
+        bul("<strong>Nuevo 2026/27, lesiones:</strong> un jugador atendido en el campo, o cuya lesión detiene o retrasa el juego, debe salir y puede volver a entrar <strong>un minuto después de que se reanude el juego</strong> (desde la línea de banda mientras el balón está en juego). Entre las excepciones están un portero lesionado y un jugador lesionado por una infracción física por la que el adversario es amonestado o expulsado.") +
+        bul("Puede amonestar o expulsar jugadores en cualquier momento, incluso durante las detenciones") +
+        bul("No puede cambiar una decisión después de que el juego se haya reanudado, salvo por indicación de un AA o del cuarto árbitro") +
+        bul("Mantiene su jurisdicción desde que entra al campo hasta que lo abandona después del silbatazo final")) +
+      ds("Regla 6: Los otros miembros del equipo arbitral",
+        bul("Los AA ayudan al árbitro con el fuera de juego, el balón fuera de juego, las sustituciones y otras decisiones") +
+        bul("Los AA solo pueden corregir al árbitro si este les pide su opinión o si ven algo que el árbitro no vio") +
+        bul("El cuarto árbitro gestiona las sustituciones, el equipamiento y el comportamiento del banquillo")) +
+      ds("Regla 7: Duración del partido",
+        bul("Dos tiempos iguales de <strong>45 minutos</strong> (pueden reducirse por acuerdo)") +
+        bul("<strong>Descanso del medio tiempo:</strong> máximo 15 minutos") +
+        bul("El <strong>tiempo añadido</strong> se agrega por: sustituciones, lesiones, celebraciones de gol, acciones disciplinarias, pérdida de tiempo y VAR") +
+        bul("SÍ PUEDES agregar tiempo al tiempo añadido si ocurren más detenciones"));
+    }
+  },
+
+  "laws-8-9": {
+    title: "Reglas 8 y 9: Reanudaciones y balón en juego",
+    sub: "Saque de salida, balón a tierra, cuándo el balón está en juego o fuera",
+    eyebrow: "Reglas IFAB 8-9",
+    keywords: "saque de salida balon a tierra en juego fuera de juego muerto vivo reanudacion",
+    build: function() {
+      return ds("Regla 8: Inicio y reanudación del juego",
+        dt("<strong>Procedimiento del saque de salida:</strong>") +
+        bul("Balón colocado en el punto central") +
+        bul("Todos los jugadores en su propia mitad, el equipo defensor fuera del círculo central") +
+        bul("El balón está en juego cuando se patea y se mueve claramente (en cualquier dirección)") +
+        bul("Se puede anotar gol directamente desde el saque de salida") +
+        dt("<strong>Balón a tierra:</strong> se usa para reanudar el juego después de una detención temporal no cubierta por otra Regla. Dentro del área penal se deja caer para el portero del equipo defensor. <strong>Nuevo 2026/27:</strong> en cualquier otro lugar se deja caer para un jugador del equipo que tenía, o habría tenido, la posesión, o que la habría recuperado, incluido el equipo que habría ejecutado la reanudación. Si el balón tocó a un miembro del equipo arbitral o a un agente externo, se deja caer donde ocurrió ese contacto.")) +
+      ds("Regla 9: Balón en juego o fuera de juego",
+        dt("El balón está <strong>FUERA de juego</strong> cuando ha cruzado por completo la línea de meta o la línea de banda (por el suelo o por el aire), o cuando el árbitro ha detenido el juego.") +
+        dt("El balón está <strong>EN juego</strong> en todo otro momento, incluso cuando rebota en un poste, el travesaño o el banderín de esquina, o cuando rebota en el árbitro.") +
+        callout("100,180,255","&#128161;","El balón debe cruzar <em>por completo</em> la línea para estar fuera de juego. Si cualquier parte del balón todavía está sobre la línea o encima de ella, sigue en juego."));
+    }
+  },
+
+  "laws-10-11": {
+    title: "Reglas 10 y 11: Goles y fuera de juego",
+    sub: "Determinar el resultado, posición de fuera de juego, juego activo",
+    eyebrow: "Reglas IFAB 10-11",
+    keywords: "gol fuera de juego posicion juego activo interferir ventaja penultimo",
+    build: function() {
+      return ds("Regla 10: Determinar el resultado",
+        dt("Se anota un gol cuando el balón <strong>cruza por completo la línea de meta</strong> entre los postes y por debajo del travesaño, siempre que el equipo que anota no haya cometido ninguna infracción.") +
+        dt("Si el marcador está empatado al final del partido, las reglas de la competición determinan el resultado: tiempo extra, tiros desde el punto penal, etc.") +
+        dt("<strong>Nuevo 2026/27, tiros desde el punto penal:</strong> un doble toque accidental (con ambos pies, o el balón golpea la pierna de apoyo) se repite si el balón entra y se registra como fallado si no entra. Se elimina la amonestación automática para el ejecutor que comete una infracción al mismo tiempo que el portero.")) +
+      ds("Regla 11: Fuera de juego",
+        dt("Un jugador está en <strong>posición de fuera de juego</strong> si cualquier parte de la cabeza, el cuerpo o los pies está <em>más cerca de la línea de meta contraria que el balón y que el penúltimo adversario</em>.") +
+        callout("100,180,255","&#128161;","<strong>Estar en posición de fuera de juego NO es una infracción.</strong> Un jugador solo es sancionado si participa en el juego activo.") +
+        dt("<strong>Participar en el juego activo significa:</strong>") +
+        bul("Interferir en el juego: tocar el balón") +
+        bul("Interferir con un adversario: impedirle jugar el balón") +
+        bul("Obtener una ventaja por estar en esa posición") +
+        dt("NO hay infracción de fuera de juego en tu propia mitad, ni directamente desde un saque de meta, un saque de banda o un saque de esquina."));
+    }
+  },
+
+  "laws-12": {
+    title: "Regla 12: Faltas y conducta incorrecta",
+    sub: "TLD, TLI, amonestaciones, expulsiones, DOGSO, SPA",
+    eyebrow: "Regla IFAB 12",
+    keywords: "falta conducta incorrecta TLD TLI directo indirecto DOGSO SPA tarjeta amarilla roja amonestacion expulsion mano",
+    build: function() {
+      return ds("Infracciones de tiro libre directo",
+        dt("Se concede por imprudencia, temeridad o uso de fuerza excesiva al: patear, hacer una zancadilla, saltar sobre, cargar, golpear, empujar, entrar con tackle, sujetar, escupir o tocar el balón con la mano.") +
+        callout("230,126,34","&#9888;","Si cualquiera de las 10 infracciones de TLD ocurre dentro del <em>área penal propia</em> del infractor, es <strong>tiro penal</strong>.")) +
+      ds("Infracciones de tiro libre indirecto",
+        bul("El portero toca el balón con la mano tras un pase atrás deliberado con el pie de un compañero") +
+        bul("El portero toca el balón con la mano tras recibirlo directamente de un saque de banda") +
+        bul("Que el portero retenga el balón más de <strong>8 segundos</strong> es <strong>saque de esquina</strong> (no TLI). El árbitro muestra una cuenta regresiva visible de 5 segundos con la mano levantada.") +
+        bul("Juego peligroso") +
+        bul("Obstaculizar a un adversario sin disputar el balón")) +
+      ds("DOGSO y SPA",
+        dt("<strong>DOGSO</strong>: negar una oportunidad manifiesta de gol = <strong>expulsión con tarjeta roja</strong>") +
+        dt("Las 4 D: <strong>Distancia</strong> a la portería, <strong>Dirección</strong> del juego, número de <strong>Defensores</strong>, <strong>Destino</strong> del balón. <strong>Nuevo 2026/27:</strong> la ubicación y el número de <strong>atacantes</strong> también cuentan.") +
+        dt("<strong>Nuevo 2026/27, ventaja:</strong> si aplicas la ventaja en una infracción de DOGSO y el equipo atacante anota a partir de ella, <strong>no hay tarjeta</strong>. Lo mismo para un intento fallido de evitar un gol con la mano. Si no resulta en gol, amonesta como antes.") +
+        dt("<strong>SPA</strong>: interrumpir un ataque prometedor = <strong>amonestación con tarjeta amarilla</strong>")) +
+      ds("Amonestaciones (tarjeta amarilla)",
+        bul("Conducta antideportiva") + bul("Protestar") + bul("Infringir persistentemente") +
+        bul("Retrasar la reanudación. <strong>Nuevo 2026/27:</strong> los saques de banda y saques de meta lentos ahora se sancionan con la cuenta regresiva de 5 segundos (los adversarios obtienen la reanudación); amonestación solo por retraso <em>excesivo</em>, patear o llevarse el balón, fingir un saque de banda y dejárselo a un compañero, salir lentamente al ser sustituido, o ejecutar un tiro libre desde el lugar equivocado para forzar una repetición") + bul("Invadir la distancia") + bul("Entrar o salir sin permiso") + bul("Simulación")) +
+      ds("Expulsiones (tarjeta roja)",
+        bul("Juego brusco grave") + bul("Conducta violenta") + bul("Escupir a una persona") +
+        bul("DOGSO") + bul("Dos amonestaciones en el mismo partido") +
+        bul("Lenguaje o gestos ofensivos, insultantes o humillantes") +
+        dt("<strong>Opciones de la competición 2026/27:</strong> taparse la boca mientras se comunica de forma provocadora con un adversario, y abandonar el campo en protesta (o animar a otros a hacerlo), pueden ser infracciones de expulsión cuando la competición las adopte."));
+    }
+  },
+
+  "laws-13-17": {
+    title: "Reglas 13 a 17: Reanudaciones",
+    sub: "Tiros libres, penales, saques de banda, saques de meta, esquinas",
+    eyebrow: "Reglas IFAB 13-17",
+    keywords: "tiro libre tiro penal saque de banda saque de meta saque de esquina invasion barrera reanudacion",
+    build: function() {
+      return ds("Regla 13: Tiros libres",
+        bul("<strong>Tiro libre directo (TLD):</strong> se puede anotar gol directamente") +
+        bul("<strong>Tiro libre indirecto (TLI):</strong> el árbitro debe mantener el brazo en alto hasta que un segundo jugador toque el balón") +
+        bul("El equipo defensor debe estar a 9.15 m (10 yardas) del balón") +
+        bul("El balón está en juego cuando se patea y se mueve claramente")) +
+      ds("Regla 14: Tiro penal",
+        bul("Balón en el punto penal (11 m / 12 yardas)") +
+        bul("Portero en la línea de meta entre los postes, de frente al ejecutor") +
+        bul("Todos los demás jugadores: fuera del área penal, fuera del semicírculo, detrás del punto penal") +
+        bul("El balón está en juego cuando se patea y se mueve hacia adelante") +
+        bul("<strong>Nuevo 2026/27, doble toque:</strong> si el ejecutor patea accidentalmente con ambos pies, o el balón golpea su otra pierna justo después del tiro: gol = se repite, no gol = TLI. Un segundo toque deliberado antes de que otro jugador lo juegue es TLI.") +
+        callout("230,57,70","&#9888;","Portero que se adelanta de la línea: gol = se concede. No gol = se repite solo si la infracción del portero afectó claramente al ejecutor; advierte primero al portero y amonesta si lo repite. Si el ejecutor y el portero cometen infracción al mismo tiempo = TLI para la defensa.")) +
+      ds("Regla 15: Saque de banda",
+        bul("Ambos pies sobre la línea de banda o detrás de ella en el momento del saque") +
+        bul("El balón se lanza desde atrás y por encima de la cabeza con ambas manos") +
+        bul("No se puede anotar gol directamente desde un saque de banda") +
+        callout("100,180,255","&#9203;","<strong>Nuevo 2026/27, cuenta regresiva de 5 segundos.</strong> Cuando un equipo retrasa injustamente un saque de banda, pita, levanta la mano y cuenta cinco segundos de forma visible. Si no se ejecuta a tiempo = <strong>saque de banda para los adversarios</strong>. Amonesta solo si después retrasan excesivamente la reanudación.")) +
+      ds("Regla 16: Saque de meta",
+        bul("Se ejecuta desde cualquier punto del área de meta") +
+        bul("El balón está en juego cuando se patea y se mueve claramente") +
+        bul("Los jugadores adversarios deben estar fuera del área penal hasta que el balón esté en juego") +
+        callout("100,180,255","&#9203;","<strong>Nuevo 2026/27, cuenta regresiva de 5 segundos.</strong> La misma señal que en el saque de banda. Un saque de meta no ejecutado al terminar la cuenta = <strong>saque de esquina para los adversarios</strong>. Amonesta solo por retraso excesivo después de eso.")) +
+      ds("Regla 17: Saque de esquina",
+        bul("Balón colocado completamente dentro del cuadrante de esquina más cercano al punto por donde cruzó la línea de meta") +
+        bul("El equipo defensor debe estar a 9.15 m del cuadrante de esquina") +
+        bul("Se puede anotar gol directamente desde un saque de esquina") +
+        bul("<strong>También es saque de esquina:</strong> el portero controla el balón con las manos durante más de 8 segundos, o un equipo retrasa su propio saque de meta más allá de la cuenta de 5 segundos"));
+    }
+  },
+
+  "gd-firstday": {
+    title: "Guía del árbitro para tu primer día",
+    sub: "Qué llevar, nervios, errores, los 4 momentos",
+    eyebrow: "Día de partido",
+    keywords: "primer dia llevar silbato nervios errores entrenador 4 momentos safesport",
+    build: function() {
+      return ds("Qué llevar",
+        dt("<strong>Obligatorio:</strong> uniforme (camiseta amarilla), silbato, reloj con cronómetro, tarjetas roja y amarilla, moneda para el sorteo, pluma o lápiz, tarjeta del partido. Lleva agua: vas a correr de 60 a 90 minutos.") +
+        callout("100,180,255","&#128161;","<strong>El silbato es lo ÚNICO que sí o sí debes tener.</strong> Una amonestación verbal es válida sin tarjetas físicas. NO canceles un partido porque olvidaste equipamiento.")) +
+      ds("Antes del silbatazo",
+        dt("<strong>¿Nervios?</strong> Totalmente normal: incluso para árbitros con experiencia. Concéntrate en lo que puedes controlar: llega temprano, conoce las Reglas, sé decidido. Mantente erguido y proyecta autoridad.") +
+        dt("<strong>Vas a cometer errores.</strong> Todos los árbitros los cometen, en cada partido. Sigue adelante de inmediato. Los jugadores respetan al árbitro que se recupera y mantiene la calma.") +
+        dt("<strong>Si un entrenador cuestiona una decisión:</strong> mantén la calma. Una breve explicación neutral está bien. No discutas, no te disculpes por decisiones correctas y no cambies una decisión porque un entrenador grita.")) +
+      ds("Los cuatro momentos del fútbol",
+        dt("U.S. Soccer enseña cuatro momentos que definen cada partido. Entenderlos te ayuda a <strong>anticipar hacia dónde va el juego</strong> y a colocarte correctamente ANTES de que ocurran los incidentes.") +
+        bul("<strong>Ataque</strong>: el equipo tiene el balón e intenta anotar") +
+        bul("<strong>Defensa</strong>: el equipo no tiene el balón e intenta evitar un gol") +
+        bul("<strong>Recuperar el balón</strong>: transición de la defensa al ataque") +
+        bul("<strong>Perder el balón</strong>: transición del ataque a la defensa")) +
+      ds("SafeSport",
+        dt("<strong>Menores de 18:</strong> completa la capacitación Introduction to Safe and Healthy Playing Environments.") +
+        dt("<strong>18 años o más:</strong> la capacitación SafeSport es obligatoria antes de que tu licencia sea válida, además de una verificación de antecedentes. Revisa learning.ussoccer.com."));
+    }
+  },
+
+  "gd-pregame": {
+    title: "Procedimientos previos al partido",
+    sub: "Inspección del campo, revisión de equipamiento, sorteo",
+    eyebrow: "Día de partido",
+    keywords: "previo al partido llegar inspeccion campo porterias redes revision equipamiento sorteo moneda saque de salida",
+    build: function() {
+      return ds("Llegada",
+        dt("<strong>Llega al menos 30 minutos antes del saque de salida.</strong> Tiempo para inspeccionar el campo, reunirte con tus AA, revisar el equipamiento y hacer el sorteo sin prisas.") +
+        dt("<strong>Inspección del campo: revisa:</strong>") +
+        bul("Redes de las porterías bien sujetas y fijadas") +
+        bul("Banderines de esquina en su lugar") +
+        bul("Marcas del campo visibles, puntos penales claros") +
+        bul("Sin obstrucciones ni peligros") +
+        bul("Porterías bien ancladas: comprueba que no se muevan al empujarlas")) +
+      ds("Revisión de equipamiento",
+        dt("Pide a ambos equipos que se formen. Verifica que cada jugador tenga: camiseta con número, pantalón corto, medias que cubran las espinilleras y botines.") +
+        callout("230,57,70","&#9888;","<strong>Quitar todas las joyas: NO se permite cubrir los aretes con cinta.</strong> Verifica que el portero tenga un color distinto al de ambos equipos y al de los árbitros.") +
+        dt("<strong>Espinilleras:</strong> deben estar cubiertas por las medias. Si un jugador no tiene espinilleras, no puede jugar.") +
+        dt("<strong>Documentación:</strong> recoge las tarjetas del partido o las listas de jugadores de ambos equipos antes del saque de salida.")) +
+      ds("Sorteo",
+        dt("Llama a ambos capitanes al círculo central. Lanza la moneda: el ganador elige <strong>la portería que atacará O ejecutar el saque de salida.</strong> El otro equipo recibe la opción que no fue elegida.")) +
+      ds("Requisitos del saque de salida",
+        bul("Balón en el punto central") +
+        bul("Todos los jugadores en su propia mitad") +
+        bul("Equipo defensor fuera del círculo central (9.15 m)") +
+        bul("El ejecutor no puede volver a tocar el balón hasta que otro jugador lo toque") +
+        bul("SÍ se puede anotar gol directamente desde el saque de salida") +
+        callout("100,180,255","&#128161;","<strong>Inicia tu reloj cuando el balón se patea y se mueve</strong>: no con tu silbatazo. Esto importa para calcular el tiempo añadido."));
+    }
+  },
+
+  "gd-during": {
+    title: "Durante el partido",
+    sub: "Posicionamiento, ventaja, patrones de silbato, 8 señales",
+    eyebrow: "Día de partido",
+    keywords: "diagonal ventaja silbato patrones señales lenguaje corporal protestar medio tiempo",
+    build: function() {
+      return ds("Posicionamiento",
+        dt("Usa el <strong>sistema diagonal de control (SDC)</strong>: muévete en diagonal para mantener un buen ángulo del juego. Tus AA cubren las bandas: apóyate en ellos.") +
+        dt("Contacto visual antes de las reanudaciones. Reconoce las banderas de los AA de inmediato.")) +
+      ds("Ventaja",
+        dt("Aplica la ventaja cuando: el equipo que sufrió la falta tiene posesión inmediata en una posición prometedora, la falta no fue grave y seguir jugando le beneficia más que detener el juego. Si la ventaja no se concreta en <strong>2 a 3 segundos</strong>, regresa el juego.") +
+        callout("100,180,255","&#128161;","SÍ PUEDES amonestar a un jugador después de aplicar la ventaja: hazlo en la siguiente detención.")) +
+      ds("Cuatro patrones de silbato",
+        stp(1,"<strong>Sustitución</strong>: un silbatazo corto para detener el juego") +
+        stp(2,"<strong>Falta leve</strong>: un silbatazo firme") +
+        stp(3,"<strong>Falta grave</strong>: silbatazo fuerte y enérgico, detención inmediata") +
+        stp(4,"<strong>Final del partido</strong>: silbatazo largo y sostenido") +
+        dt("Usa el silbato con intención: usarlo en exceso reduce su impacto.")) +
+      ds("Ocho señales clave con las manos",
+        stp(1,"<strong>Tiro libre indirecto</strong>: brazo levantado en vertical, mantenlo hasta el segundo toque") +
+        stp(2,"<strong>Tiro penal</strong>: señala el punto penal") +
+        stp(3,"<strong>Tiro libre directo</strong>: señala la dirección del tiro") +
+        stp(4,"<strong>Saque de banda</strong>: señala la dirección del saque") +
+        stp(5,"<strong>Saque de meta</strong>: señala hacia el área de meta") +
+        stp(6,"<strong>Saque de esquina</strong>: señala hacia el cuadrante de esquina") +
+        stp(7,"<strong>Ventaja con 1 brazo</strong>: un brazo hacia adelante (moderada)") +
+        stp(8,"<strong>Ventaja con 2 brazos</strong>: ambos brazos hacia adelante (fuerte)")) +
+      ds("Lenguaje corporal",
+        dt("Postura erguida que muestre autoridad. Contacto visual al dirigirte a los jugadores. Expresión facial neutral. Lenguaje corporal tranquilo para calmar la situación antes de sacar una tarjeta. <strong>Señalar con el dedo NO sustituye una señal clara.</strong>")) +
+      ds("Medio tiempo",
+        bul("<strong>Recuperación física</strong>: descansa, hidrátate, vuelve a aplicarte protector solar") +
+        bul("<strong>Charla del equipo arbitral</strong>: jugadores clave, ajustes de posicionamiento, notas de conducta incorrecta") +
+        bul("<strong>Ajustes estratégicos</strong>: ¿sancionar las faltas con más rigor o con más flexibilidad en el segundo tiempo?"));
+    }
+  },
+
+  "gd-postgame": {
+    title: "Procedimientos posteriores al partido",
+    sub: "Tareas tras el silbatazo final, reportes, reflexión",
+    eyebrow: "Día de partido",
+    keywords: "posterior al partido silbatazo final reporte reflexion tarjeta roja RAP suplementario",
+    build: function() {
+      return ds("Inmediatamente después del silbatazo final",
+        dt("Controla el final del partido: observa las reacciones entre los jugadores. <strong>Mantienes tu jurisdicción hasta que abandonas el campo.</strong>") +
+        bul("Recoge el balón del partido") +
+        bul("Salgan del campo juntos como equipo arbitral") +
+        bul("Mantente alerta a las tensiones posteriores al partido") +
+        bul("Devuelve los pases de jugadores y las listas después de obtener las firmas requeridas de los entrenadores")) +
+      ds("Enviar tu reporte del partido",
+        callout("230,57,70","&#9888;","<strong>Sin reporte del partido = SIN pago del partido.</strong> Envíalo la misma noche que trabajas: los detalles están más frescos de inmediato.") +
+        dt("Inicia sesión en Assignr.com o en la app. Busca el partido y selecciona Game Report. Completa el marcador, las amonestaciones, las expulsiones y las notas.")) +
+      ds("Se requiere reporte suplementario por",
+        bul("Cualquier tarjeta roja / expulsión") +
+        bul("Entrenador u oficial de equipo expulsado del área técnica") +
+        bul("Partido suspendido por cualquier motivo") +
+        bul("Abuso o agresión contra el árbitro") +
+        bul("Abuso de un padre o espectador hacia un miembro del equipo arbitral") +
+        dt("Ante la duda, envía uno: es mejor tener la documentación.")) +
+      ds("Reflexión",
+        dt("Después del reporte: ¿Qué funcionó? ¿Qué no funcionó? ¿Cómo podemos mejorar? ¿Cuáles fueron los retos particulares?") +
+        dt("Haz de la reflexión un hábito constante: así es como crece cada árbitro en cada nivel."));
+    }
+  },
+
+  "gd-pocketguide": {
+    title: "Guía de bolsillo del día de partido",
+    sub: "Lista completa de la mochila + regla del cabeceo + autoevaluación",
+    eyebrow: "Día de partido",
+    keywords: "lista mochila bolsa árbitro silbato repuesto equipo regla cabeceo conmoción autoevaluación",
+    build: function() {
+      return ds("Lista de la mochila del árbitro",
+        chk("Uniforme: todos los colores (amarillo, rojo, negro), shorts, medias, zapatos") +
+        chk("Silbato: trae uno de repuesto. Sin silbato = sin partido.") +
+        chk("Tarjeta amarilla y tarjeta roja: trae repuestos") +
+        chk("Reloj con cronómetro: trae uno de repuesto") +
+        chk("Libreta de árbitro y pluma o lápiz") +
+        chk("Moneda para el sorteo") +
+        chk("Agua y algo de comer, toalla, bloqueador solar")) +
+      ds("Regla del cabeceo de U.S. Soccer",
+        callout("230,126,34","&#9888;","<strong>No se permite cabecear a jugadores menores de 11 años (U6-U10).</strong> Si un jugador menor de 11 cabecea el balón, la reanudación es un TLI para el equipo contrario desde el lugar del cabeceo. Si el cabeceo ocurre dentro del área de meta, el TLI se ejecuta desde la línea del área de meta paralela a la línea de meta, en el punto más cercano.")) +
+      ds("Autoevaluación después de cada partido",
+        dt("Anota una cosa que hiciste bien y una cosa por mejorar. Este hábito separa a los árbitros que crecen rápido de los que se estancan.") +
+        dt("Considera llevar un diario de arbitraje: los patrones en tus notas guiarán tu desarrollo."));
+    }
+  },
+
+  "gd-agegroups": {
+    title: "Tabla de estándares por categoría de edad",
+    sub: "De U6-U8 hasta U13+: formato, balón, campo, tiempo",
+    eyebrow: "Día de partido",
+    keywords: "categoría edad U6 U8 U9 U10 U11 U12 U13 formato tamaño balón campo tiempo portero fuera de juego",
+    build: function() {
+      var rows = [
+        ["U6 a U8","4v4","Tamaño 3","4 x 10 min","25-35 x 15-25 yds","4 x 6 ft","No","No"],
+        ["U9 a U10","7v7","Tamaño 4","2 x 25 min","55-65 x 35-45 yds","6.5 x 18.5 ft","Sí","Sí"],
+        ["U11 a U12","9v9","Tamaño 4","2 x 30 min","70-80 x 45-55 yds","7 x 21 ft","Sí","Sí"],
+        ["U13+","11v11","Tamaño 5","Consulta las reglas locales","Consulta las reglas locales","8 x 24 ft","Sí","Sí"]
+      ];
+      var hds = ["Edad","Formato","Balón","Duración","Campo","Portería","Portero","Fuera de juego"];
+      var tbl = "<div style=\"overflow-x:auto\"><table style=\"width:100%;border-collapse:collapse;font-size:12px\">" +
+        "<thead><tr style=\"background:rgba(46,204,113,.12)\">" +
+        hds.map(function(h){ return "<th style=\"padding:7px 10px;text-align:left;color:var(--grn);font-weight:700;white-space:nowrap\">" + h + "</th>"; }).join("") +
+        "</tr></thead><tbody>";
+      rows.forEach(function(row,i) {
+        tbl += "<tr style=\"background:" + (i%2===0?"var(--ov)":"transparent") + "\">";
+        row.forEach(function(cell){ tbl += "<td style=\"padding:7px 10px;color:var(--ink);border-bottom:1px solid var(--line);white-space:nowrap\">" + cell + "</td>"; });
+        tbl += "</tr>";
+      });
+      tbl += "</tbody></table></div>";
+      return ds("Estándares por categoría de edad", tbl) +
+        ds("Notas clave",
+          callout("230,57,70","&#9888;","<strong>No se permite cabecear a jugadores menores de 11 años (U6-U10).</strong> La reanudación es un TLI para el equipo contrario.") +
+          bul("<strong>Partidos iron-man</strong> en 7v7 (U9-U10): eres el único árbitro. Pago extra de $15-20. Acéptalos.") +
+          bul("Verifica siempre con las reglas de la competición específica: las reglas locales pueden variar."));
+    }
+  },
+
+  "gd-pk": {
+    title: "Procedimiento del tiro penal",
+    sub: "Tiro penal paso a paso, tandas de penales, reglas de invasión",
+    eyebrow: "Día de partido",
+    keywords: "tiro penal penal procedimiento portero invasión repetir amago finta tanda penales",
+    build: function() {
+      return ds("Antes del tiro",
+        bul("Balón sobre el punto penal (11 m / 12 yardas). Confirma que esté bien colocado.") +
+        bul("Ejecutor identificado. Puede acercarse desde cualquier dirección. <strong>No puede amagar una vez iniciada la carrera hacia el balón</strong>: solo se permite un amago antes de llegar al balón.") +
+        bul("Todos los demás jugadores: dentro del campo, fuera del área penal, fuera del semicírculo del área penal, detrás del punto penal.") +
+        bul("Portero sobre la línea de meta entre los postes, de frente al ejecutor. Puede moverse hacia los lados, no hacia adelante.")) +
+      ds("Ejecución del tiro",
+        stp(1,"Confirma la identidad del ejecutor con el AA") +
+        stp(2,"Confirma que todos los jugadores estén en posición") +
+        stp(3,"Contacto visual con el ejecutor") +
+        stp(4,"Silbato y señala el punto penal") +
+        stp(5,"El balón debe moverse HACIA ADELANTE: movimiento hacia atrás = tiro no válido, ordena repetirlo")) +
+      ds("Reglas de invasión",
+        dt("<strong>El portero se adelanta antes del tiro y el tiro falla:</strong> Se repite + amonestación al portero. Si hay gol: concédelo.") +
+        dt("<strong>Un jugador atacante invade:</strong> Se repite sin importar el resultado.") +
+        dt("<strong>Un jugador defensor invade y el balón entra:</strong> El gol es válido. Si el balón no entra: se repite.") +
+        dt("<strong>Ambos invaden:</strong> Se repite.")) +
+      ds("Tanda de penales",
+        bul("Los equipos ejecutan tiros alternados. Anota el orden y qué jugadores ya han tirado.") +
+        bul("¿Portero lesionado sin suplentes? El reemplazo debe ser un jugador de campo que esté en el terreno.") +
+        bul("¿El balón rebota al ejecutor después de una atajada? El tiro terminó: el ejecutor NO puede volver a jugarlo."));
+    }
+  },
+
+  "career-getgames": {
+    title: "¿Cómo consigo partidos?",
+    sub: "Asignadores, disponibilidad, AA vs árbitro central, iron-man",
+    eyebrow: "Recursos de carrera",
+    keywords: "conseguir partidos asignador disponibilidad AA árbitro central iron-man subir de nivel",
+    build: function() {
+      return ds("Qué buscan los asignadores",
+        dt("Los asignadores asignan a árbitros en quienes pueden confiar. La confianza se construye partido a partido.") +
+        bul("Ten amplia disponibilidad, sobre todo fines de semana y tardes") +
+        bul("Responde a las asignaciones de inmediato") +
+        bul("Acepta tanto de árbitro central como de AA") +
+        bul("Nunca canceles a última hora") +
+        bul("Entrega los reportes de partido a tiempo") +
+        dt("<strong>¿Debo aceptar asignaciones de AA?</strong> Acepta todo, sobre todo al principio. Trabajar como AA en un nivel más alto es mejor experiencia que ser árbitro central en un nivel más bajo.")) +
+      ds("Maximiza tu disponibilidad",
+        dt("<strong>¿Cuánto tardaré en recibir partidos?</strong> La mayoría de los árbitros nuevos reciben su primer partido en las 2-3 semanas siguientes a activar Assignr y configurar su disponibilidad. Si llevas más de 3 semanas esperando, contacta a tu asignador: puede que haya que ajustar tu configuración.") +
+        dt("<strong>¿Qué categorías de edad?</strong> Empieza con 7v7 (U9-U10) y 9v9 (U11-U12). Trabaja como árbitro central en estos niveles para ganar confianza antes de pasar a 11v11.") +
+        dt("<strong>Preferencias:</strong> Una vez que tengas 10-20 partidos, es razonable compartir tus preferencias. Los árbitros nuevos que de entrada ponen restricciones tienen menos probabilidades de recibir partidos.")) +
+      ds("Partidos iron-man",
+        dt("<strong>¿Qué es un iron-man?</strong> Eres el único árbitro: no hay AA asignados. Pago extra de $15-20. Es una gran experiencia y a los asignadores les encantan los árbitros que los aceptan.") +
+        dt("Si llegas y no hay otro árbitro: procede como iron-man si los equipos están de acuerdo. Llama al 303.529.7718 si tienes dudas. Nunca abandones un partido sin llamar primero a tu asignador."));
+    }
+  },
+
+  "career-upgrade": {
+    title: "¿Cómo asciendo de grado?",
+    sub: "De Árbitro a Regional a Nacional: proceso y contacto",
+    eyebrow: "Recursos de carrera",
+    keywords: "ascenso grado regional nacional evaluación director operaciones arbitrales camino",
+    build: function() {
+      return ds("Resumen de grados",
+        bul("<strong>Árbitro</strong>: Nivel inicial, curso Grassroots inicial completado") +
+        bul("<strong>Árbitro Regional</strong>: Nivel intermedio, requiere capacitación y evaluaciones adicionales") +
+        bul("<strong>Árbitro Nacional</strong>: Nivel avanzado, requiere evaluaciones a nivel nacional") +
+        dt("Cada grado abre partidos de mayor nivel y mejor pago. La mayoría de los árbitros activos pueden ascender a Regional en 1-2 temporadas.")) +
+      ds("Cómo pedir una evaluación",
+        callout("200,146,26","&#128105;","Contacta al <strong>Director de Operaciones Arbitrales</strong> en <strong>refeducation@coloradoreferees.com</strong> o al <strong>303.888.6863</strong> para expresar tu interés. Te explicará los requisitos, te conectará con un evaluador y te guiará en el proceso.") +
+        dt("<strong>No esperes a que te lo pidan</strong>: toma la iniciativa.")) +
+      ds("Qué pasa durante la evaluación",
+        dt("Un evaluador te observa arbitrar un partido (normalmente sin que sepas exactamente cuándo). Evalúa tu posicionamiento, toma de decisiones, manejo del partido y condición física. Después del partido te entrega un reporte por escrito.")) +
+      ds("Después de ascender a Regional",
+        dt("Pasas a ser elegible para la Front Range League, partidos de torneo de mayor nivel, partidos de academias de élite y tarifas de pago premium.") +
+        dt("<strong>El camino más allá de Regional:</strong> Árbitro Nacional, luego Instructor de Árbitros (enseñas a árbitros nuevos), luego Evaluador de Árbitros (evalúas a otros para sus ascensos). Habla con el CRA sobre el camino de desarrollo nacional."));
+    }
+  },
+
+  "career-assignr-pay": {
+    title: "Cómo recibir tu pago: Assignr Pay",
+    sub: "EFT/ACH, Venmo, Dwolla, plazos de pago",
+    eyebrow: "Recursos de carrera",
+    keywords: "recibir pago cobrar Assignr pay EFT ACH Venmo Dwolla cuenta bancaria plazos",
+    build: function() {
+      return ds("Cómo funciona el pago",
+        dt("El pago viene de las <strong>ligas y clubes</strong>: no de tu asignador. Tus documentos deben estar en el sistema y los reportes de partido entregados antes de que se procese el pago.") +
+        callout("230,57,70","&#9888;","<strong>Sin reporte de partido = SIN pago del partido.</strong> Entrega el reporte la misma noche que trabajas.")) +
+      ds("Configurar el pago",
+        dt("Inicia sesión en Assignr.com (sitio web). Ve a Account Settings y luego a Payment. Te conectarás con <strong>Dwolla</strong>: ingresa el número de ruta y el número de cuenta de tu banco.") +
+        dt("<strong>Dwolla</strong> es un procesador de pagos legítimo y regulado. Tu información bancaria la guarda Dwolla, no Assignr ni CSA.") +
+        dt("También puedes conectar <strong>Venmo</strong> a través de Assignr.com. Los árbitros de cualquier edad pueden configurar Assignr Pay: no se requiere una cuenta de cheques personal.")) +
+      ds("Plazos de pago",
+        bul("Los partidos se envían a la liga que paga en un ciclo quincenal") +
+        bul("Espera de 3 a 5 días hábiles después del procesamiento para que aparezcan los fondos") +
+        bul("Los torneos suelen pagar más rápido: normalmente poco después de que termina el torneo") +
+        callout("100,180,255","&#128273;","<strong>Recordatorio de impuestos:</strong> Como contratista independiente (IC), NO se retienen impuestos. Guarda registros de todos tus ingresos. El uniforme y el equipo son gastos de negocio deducibles."));
+    }
+  },
+
+
+  "career-fitness": {
+    title: "Prueba física",
+    sub: "Estándares FIFA, diagramas, audio marcapasos",
+    eyebrow: "Recursos de carrera",
+    keywords: "prueba física FIFA RSA sprint intervalo marcapasos audio beep nacional regional",
+    build: function() {
+      return ds("Dos pruebas, una mañana",
+        dt("La prueba física de Colorado sigue la prueba FIFA para árbitros: seis sprints de 40 m y luego cuarenta carreras de 75 m con una caminata de 25 m entre cada una, al ritmo de una señal de audio.") +
+        bul("<strong>La prueba Nacional</strong> usa los tiempos internacionales de la rama varonil de FIFA: sprints en menos de 6.0 s, carreras en 15 s, caminatas en 18 s") +
+        bul("<strong>La prueba Regional</strong> usa los tiempos internacionales de la rama femenil de FIFA: sprints en menos de 6.4 s, carreras en 17 s, caminatas en 20 s") +
+        bul("Un sprint fallado te da un 7º intento. Dos fallos es reprobar. Una carrera tarde te da una advertencia, la segunda termina la prueba")) +
+      ds("Estándares, diagramas y marcapasos",
+        dt("La página completa tiene todas las categorías FIFA, un diagrama de cada prueba, un marcapasos que reproduce la señal de intervalo desde tu teléfono y una descarga del audio para que entrenes con la cadencia real en cualquier lugar.") +
+        "<a class=\"btn\" href=\"fitness.html\" style=\"display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:10px;background:var(--navy);color:var(--onnavy);font-weight:700;text-decoration:none\">Abrir la página de la prueba física &#8250;</a>") +
+      ds("Inscribirme",
+        dt("Las fechas de la prueba aparecen en Tu día en el Hub cuando el Departamento de Árbitros programa una. Inscríbete ahí; la tarjeta de inscripción enlaza de vuelta a esta página."));
+    }
+  },
+
+  "policy-rap": {
+    title: "RAP: Prevención del abuso a árbitros",
+    sub: "Política 531-9: Respect The Call: matriz de sanciones",
+    eyebrow: "Políticas",
+    keywords: "RAP prevención abuso árbitros política 531-9 respect the call matriz sanciones niveles reportar",
+    build: function() {
+      var levels = [
+        ["Nivel 1","No físico","Lenguaje ofensivo, insultante, humillante o de burla","Suspensión mínima de 2 partidos"],
+        ["Nivel 2","No físico","Acoso, intimidación, amenazas, represalias","Suspensión mínima de 4 partidos"],
+        ["Nivel 3","No físico","Agresión, amenazas físicas, ciberacoso, doxing","6 partidos + suspensión de 6-12 meses"],
+        ["Nivel 4","Físico","Cualquier contacto físico, agresión, violencia física","Prohibición permanente + posibles cargos penales"]
+      ];
+      return ds("La política",
+        dt("La Política 531-9 de U.S. Soccer: <strong>Respect The Call</strong>: está vigente en TODOS los partidos sancionados en Colorado. Aplica a entrenadores, jugadores, espectadores y administradores.") +
+        callout("230,57,70","&#9888;","<strong>90%</strong> de los árbitros reportan que el abuso ha aumentado. <strong>60%</strong> no renuevan su certificación por el acoso. CSA te respalda.")) +
+      ds("Niveles de abuso y sanciones obligatorias",
+        levels.map(function(row) {
+          return "<div style=\"border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:8px\">" +
+            "<div style=\"display:flex;justify-content:space-between;margin-bottom:4px\">" +
+            "<span style=\"font-size:11px;font-weight:700;color:var(--red)\">" + row[0] + "</span>" +
+            "<span style=\"font-size:10px;color:var(--muted)\">" + row[1] + "</span></div>" +
+            "<div style=\"font-size:13px;color:var(--ink);margin-bottom:4px\">" + row[2] + "</div>" +
+            "<div style=\"font-size:11px;font-weight:700;color:var(--gold)\">" + row[3] + "</div></div>";
+        }).join("")) +
+      ds("Multiplicadores de sanción",
+        bul("<strong>Segunda infracción</strong> = el doble de la sanción mínima") +
+        bul("<strong>Tercera infracción</strong> = prohibición de por vida") +
+        bul("<strong>Cualquier infracción contra un árbitro menor de edad</strong> = sanción TRIPLE automáticamente")) +
+      ds("Cómo reportar",
+        dt("<strong>Durante el partido:</strong> actúa según las Reglas (amonestación o expulsión). Después del partido, completa tu reporte posterior al partido y marca la casilla RAP.") +
+        dt("<strong>Después del partido:</strong> envía el reporte del partido Y el reporte complementario de incidente en Assignr dentro de las 24 horas.") +
+        callout("230,57,70","&#128222;","Emergencias: <strong>303.529.7718</strong> (texto/voz)<br>Reportes RAP: <strong>RAPReporting@coloradoreferees.com</strong>"));
+    }
+  },
+
+  "policy-ic": {
+    title: "Acuerdo de contratista independiente",
+    sub: "Estatus de IC, qué significa, tus responsabilidades",
+    eyebrow: "Políticas",
+    keywords: "contratista independiente IC acuerdo estatus impuestos seguro responsabilidad civil",
+    build: function() {
+      return ds("Qué significa el estatus de IC",
+        bul("NO eres empleado de CSA ni de ningún club, liga o asociación") +
+        bul("Pagas cuotas para obtener tu licencia") +
+        bul("Compras y usas tu propio equipo") +
+        bul("Tú defines tu propia disponibilidad") +
+        bul("Trabajas para los distintos asignadores y ligas que tú elijas") +
+        bul("Eres responsable de reportar tus ingresos al IRS")) +
+      ds("Tus responsabilidades bajo el acuerdo de IC",
+        bul("Completa y firma todos los documentos requeridos en Assignr (W9, acuerdo de IC)") +
+        bul("Usa tu propio equipo al arbitrar") +
+        bul("El pago es responsabilidad exclusiva de la liga o el club: no del asignador") +
+        bul("CSA NO retendrá FICA, impuestos sobre la renta estatales o federales, ni contribuciones de desempleo") +
+        bul("Eres responsable de todos los gastos: cuotas de licencia, viajes, equipo") +
+        bul("Otorgas a CSA el derecho de usar fotografías y video de eventos de CSA para capacitación y promoción")) +
+      ds("Seguro",
+        dt("Los árbitros con licencia de U.S. Soccer cuentan con <strong>seguro de responsabilidad civil a través de U.S. Soccer</strong> mientras su registro esté vigente.") +
+        dt("Hay seguro de responsabilidad civil adicional para oficiales disponible a través de la <strong>National Association of Sports Officials</strong> en naso.org.") +
+        callout("230,57,70","&#9888;","<strong>No aceptes partidos directamente de un entrenador.</strong> Si lo haces, NO estás cubierto por el seguro. Acepta solo de asignadores con licencia de U.S. Soccer."));
+    }
+  },
+
+  "contacts-main": {
+    title: "Directorio de contactos de CSA",
+    sub: "Todos los contactos clave, líneas directas y recursos",
+    eyebrow: "Contactos de CSA",
+    keywords: "contactos director operaciones arbitrales emergencia línea directa mentor RAP OSI uniforme teléfono correo",
+    build: function() {
+      var contacts = [
+        ["&#128105;","Director de Operaciones Arbitrales","Educación y operaciones arbitrales de CSA","303.888.6863","refeducation@coloradoreferees.com"],
+        ["&#128680;","Línea de emergencia para árbitros","Emergencias en el campo: texto o voz","303.529.7718",""],
+        ["&#128172;","Línea Pregunta a un Mentor","Preguntas de arbitraje: solo texto","720.513.2585",""],
+        ["&#128737;","Reportes RAP","Prevención del abuso a árbitros","","RAPReporting@coloradoreferees.com"],
+        ["&#128247;","Contacto de medios","Comunicaciones de CSA","","kvasquez@coloradosoccer.org"],
+        ["&#128137;","Tienda de uniformes OSI","Equipo oficial de U.S. Soccer","","www.colorado-osi.com"]
+      ];
+      return ds("Contactos clave",
+        contacts.map(function(c) {
+          return "<div style=\"display:flex;gap:14px;padding:12px 0;border-bottom:1px solid var(--line);align-items:flex-start\">" +
+            "<div style=\"font-size:22px;width:32px;text-align:center;flex-shrink:0;margin-top:2px\">" + c[0] + "</div>" +
+            "<div><div style=\"font-size:14px;font-weight:700;color:var(--ink);margin-bottom:2px\">" + c[1] + "</div>" +
+            "<div style=\"font-size:11px;color:var(--muted);margin-bottom:4px\">" + c[2] + "</div>" +
+            (c[3] ? "<div style=\"font-size:12px;color:var(--gold)\">" + c[3] + "</div>" : "") +
+            (c[4] ? "<div style=\"font-size:12px;color:var(--gold)\">" + c[4] + "</div>" : "") +
+            "</div></div>";
+        }).join("")) +
+      ds("Sitios web esenciales",
+        bul("<strong>ColoradoSoccer.org</strong>: Sitio de CSA, sección de árbitros, calendario de educación, el Hub") +
+        bul("<strong>TheIFAB.com</strong>: Reglas de Juego vigentes") +
+        bul("<strong>learning.ussoccer.com</strong>: U.S. Soccer Learning Center") +
+        bul("<strong>ussoccer.com/referees</strong>: Centro de recursos para árbitros de U.S. Soccer") +
+        bul("<strong>Assignr.com</strong>: Plataforma de asignaciones, disponibilidad, pagos") +
+        bul("<strong>naso.org</strong>: Seguro de responsabilidad civil adicional para oficiales") +
+        bul("<strong>ussoccer.com/rap</strong>: Texto completo de la Política RAP 531-9"));
+    }
+  }
+};
+
 /* ────────────────────────────────────────────
    BUILD CARDS
    ──────────────────────────────────────────── */
@@ -1538,12 +2527,14 @@ function buildCards() {
     hub:      document.getElementById("grid-hub")
   };
 
-  MODULES.forEach(function(mod, idx) {
+  Object.keys(grids).forEach(function (k) { if (grids[k]) grids[k].innerHTML = ""; });
+  MODULES.forEach(function(raw, idx) {
+    var mod = mod_(raw), both = raw === mod ? "" : " " + raw.title + " " + raw.sub + " " + (raw.keywords || "");
     var card = document.createElement("div");
     card.className = "mod-card";
     card.setAttribute("data-cat", mod.cat);
     card.setAttribute("data-id", mod.id);
-    card.setAttribute("data-keywords", (mod.title + " " + mod.sub + " " + (mod.keywords || "")).toLowerCase());
+    card.setAttribute("data-keywords", (mod.title + " " + mod.sub + " " + (mod.keywords || "") + both).toLowerCase());
     card.style.animationDelay = (idx * 0.02) + "s";
     card.innerHTML =
       "<div class=\"mod-card-inner\">" +
@@ -1554,7 +2545,7 @@ function buildCards() {
         "</div>" +
         "<div class=\"mod-arrow\">&#8250;</div>" +
       "</div>";
-    card.addEventListener("click", function() { openModule(mod); });
+    card.addEventListener("click", function() { openModule(raw); });
     if (grids[mod.cat]) grids[mod.cat].appendChild(card);
   });
 }
@@ -1562,7 +2553,8 @@ function buildCards() {
 /* ────────────────────────────────────────────
    DETAIL PANEL
    ──────────────────────────────────────────── */
-function openModule(mod) {
+function openModule(raw) {
+  var mod = mod_(raw);
   if (location.hash !== "#" + mod.id) history.replaceState(null, "", "#" + mod.id);
   document.getElementById("detailEyebrow").textContent = mod.eyebrow;
   document.getElementById("detailTitle").textContent = mod.title;
@@ -1635,6 +2627,8 @@ function applySearchAndFilter() {
 /* ────────────────────────────────────────────
    INIT
    ──────────────────────────────────────────── */
+applyLang();
+document.getElementById("langBtn").onclick = function () { setLang(LANG === "es" ? "en" : "es"); };
 buildCards();
 // A link like library.html#hub-start opens that module.
 (function () { var id = location.hash.replace("#", ""); if (!id) return; var m = MODULES.filter(function (x) { return x.id === id; })[0]; if (m) openModule(m); })();
