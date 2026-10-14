@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Fitness test · Colorado Referees</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
-<link rel="stylesheet" href="app.css?v=2026.10.13-q">
+<link rel="stylesheet" href="app.css?v=2026.10.13-r">
 <style>
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 20px 0; }
   .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
@@ -100,7 +100,7 @@
   <div class="rule"><b>Between the tests</b><p>Test 1 to Test 2: 6 to 8 minutes. Warm up before Test 1 as you would for a match.</p></div>
 
   <div class="rules-h" id="standards">ALL STANDARDS, FOR REFERENCE</div>
-  <div class="pad hint">FIFA Fitness Tests for Referees, 2016 edition. The two Colorado rows are highlighted. Other categories are listed for knowledge; a federation may set its own.</div>
+  <div class="pad hint">FIFA Fitness Tests for Referees, 2016 edition. The Colorado rows are highlighted. Some Regional referees are set to the category 3 times by the Referee Department. Other categories are listed for knowledge; a federation may set its own.</div>
   <table class="std"><thead><tr><th>Category</th><th>RSA, 6 × 40 m</th><th>Interval run</th><th>Interval walk</th></tr></thead><tbody>
     <tr class="co"><td>Men, international. <b>Colorado National test, FIFA test</b></td><td class="n">6.0 s</td><td class="n">15 s</td><td class="n">18 s</td></tr>
     <tr><td>Men, category 1</td><td class="n">6.0 s</td><td class="n">15 s</td><td class="n">20 s</td></tr>
@@ -109,7 +109,7 @@
     <tr class="co"><td>Women, international. <b>Colorado Regional test</b></td><td class="n">6.4 s</td><td class="n">17 s</td><td class="n">20 s</td></tr>
     <tr><td>Women, category 1</td><td class="n">6.4 s</td><td class="n">17 s</td><td class="n">22 s</td></tr>
     <tr><td>Women, category 2</td><td class="n">6.5 s</td><td class="n">17 s</td><td class="n">24 s</td></tr>
-    <tr><td>Women, category 3</td><td class="n">6.6 s</td><td class="n">18 s</td><td class="n">26 s</td></tr>
+    <tr class="co"><td>Women, category 3. <b>Colorado Regional test, category 3 times, where assigned</b></td><td class="n">6.6 s</td><td class="n">18 s</td><td class="n">26 s</td></tr>
   </tbody></table>
 
   <div class="rules-h" id="ar">ASSISTANT REFEREES</div>
@@ -119,56 +119,45 @@
   <div class="rule"><b>Test 3: Interval, 40 × 75 m run and 25 m walk</b><p>Same track as the referees. International reference: men 15 s run, 20 s walk; women 17 s run, 22 s walk.</p></div>
 
   <div class="rules-h" id="pacer">PACER AND AUDIO</div>
-  <div class="pad hint">The interval test runs to a signal. This pacer plays it: a long tone to start each run, a short tone at the end of the run, a short tone at the end of the walk. Pick the standard, turn the phone up or plug in a speaker, and tap Start. The screen stays on while it runs. Works offline once the page has loaded.</div>
+  <div class="pad hint">The interval test runs to a signal: a long tone starts each run, a short tone ends it, a short tone ends the walk. Play it here, or download the audio to your phone and play it from any speaker, for training or on test day. Pick the times first.</div>
   <div class="pacer">
     <div class="chips" id="pacerPick">
       <button class="chip-btn on" data-run="15" data-walk="18">National 15 / 18</button>
       <button class="chip-btn" data-run="17" data-walk="20">Regional 17 / 20</button>
+      <button class="chip-btn" data-run="18" data-walk="26">Regional, category 3, 18 / 26</button>
       <button class="chip-btn" data-run="15" data-walk="20">15 / 20</button>
       <button class="chip-btn" data-run="17" data-walk="22">17 / 22</button>
     </div>
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:10px"><div><div class="hint" id="pacerLabel">Run 15 s, walk 18 s. 40 runs, about 22 minutes.</div><div class="phase rest" id="pacerPhase">Ready</div></div><div class="big" id="pacerCount">0</div></div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:10px"><div><div class="hint" id="pacerLabel"></div><div class="phase rest" id="pacerPhase">Ready</div></div><div class="big" id="pacerCount">0</div></div>
     <div class="hint" style="text-align:right">of 40 runs</div>
-    <div class="actions" style="padding:12px 0 0"><button class="btn primary" id="pacerStart">START</button><button class="btn outline" id="pacerStop" disabled>Stop</button></div>
-    <div class="hint" style="margin-top:8px">Start plays a 10-second countdown first. Lap 10 ends after run 40.</div>
+    <div class="actions" style="padding:12px 0 0"><button class="btn primary" id="pacerStart">START</button><button class="btn outline" id="pacerStop" disabled>Stop</button><button class="btn outline" id="pacerDl">Download audio</button></div>
+    <div class="hint" style="margin-top:8px">Start plays a 10-second countdown first. The download is a 10 MB WAV file that plays on any phone or speaker.</div>
   </div>
 
   <div class="pad hint" style="margin-top:18px">Standards from FIFA Fitness Tests for Referees (2016). Colorado's choice of the men's and women's international times for the National and Regional tests is set by the Referee Department. Questions: refeducation@coloradoreferees.com.</div>
   <div class="foot" style="flex-direction:column"><a class="btn help" href="index.html#help">I NEED HELP</a></div>
-  <div class="credit"><span class="chip"><img src="assets/jareferee-mark.png" alt=""></span><a href="https://jareferee.com">Built with JAReferee</a><span class="ver">v2026.10.13-q</span></div>
+  <div class="credit"><span class="chip"><img src="assets/jareferee-mark.png" alt=""></span><a href="https://jareferee.com">Built with JAReferee</a><span class="ver">v2026.10.13-r</span></div>
 </div>
+<script src="pacer.js?v=2026.10.13-r"></script>
 <script>
 (function () {
-  var run = 15, walk = 18, ctx = null, timer = null, count = 0, wake = null;
-  var $ = function (id) { return document.getElementById(id); };
-  function tone(freq, ms) { if (!ctx) return; var o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = freq; g.gain.value = 0.6; o.connect(g); g.connect(ctx.destination); var t = ctx.currentTime; o.start(t); g.gain.setValueAtTime(0.6, t + ms / 1000 - 0.03); g.gain.linearRampToValueAtTime(0, t + ms / 1000); o.stop(t + ms / 1000); }
-  function phase(cls, text) { var p = $('pacerPhase'); p.className = 'phase ' + cls; p.textContent = text; }
+  var run = 15, walk = 18, $ = function (id) { return document.getElementById(id); };
   function label() { $('pacerLabel').textContent = 'Run ' + run + ' s, walk ' + walk + ' s. 40 runs, about ' + Math.round(40 * (run + walk) / 60) + ' minutes.'; }
-  document.querySelectorAll('#pacerPick [data-run]').forEach(function (b) { b.onclick = function () { if (timer) return; run = +b.getAttribute('data-run'); walk = +b.getAttribute('data-walk'); document.querySelectorAll('#pacerPick .chip-btn').forEach(function (c) { c.classList.toggle('on', c === b); }); label(); }; });
-  async function keepAwake() { try { if (navigator.wakeLock) wake = await navigator.wakeLock.request('screen'); } catch (e) {} }
-  function stop() { clearTimeout(timer); timer = null; $('pacerStart').disabled = false; $('pacerStop').disabled = true; phase('rest', count >= 40 ? 'Done' : 'Stopped'); if (wake) { try { wake.release(); } catch (e) {} wake = null; } }
-  // Scheduled on the audio clock, not setTimeout alone, so the beeps stay exact.
-  function start() {
-    if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
-    ctx.resume(); count = 0; $('pacerCount').textContent = '0'; $('pacerStart').disabled = true; $('pacerStop').disabled = false; keepAwake();
-    var t0 = Date.now() + 10000; phase('rest', 'Get ready');
-    for (var i = 3; i >= 1; i--) setTimeout(tone.bind(null, 660, 150), 10000 - i * 1000);
-    var step = function () {
-      var now = Date.now(), elapsed = now - t0;
-      if (elapsed < 0) { timer = setTimeout(step, 50); return; }
-      var cycle = (run + walk) * 1000, n = Math.floor(elapsed / cycle), inCycle = elapsed - n * cycle;
-      if (n >= 40) { tone(880, 900); $('pacerCount').textContent = '40'; count = 40; stop(); return; }
-      var running = inCycle < run * 1000;
-      if (n + 1 !== count) { count = n + 1; $('pacerCount').textContent = String(count); tone(880, 600); }
-      if (running) phase('run', 'RUN ' + Math.ceil((run * 1000 - inCycle) / 1000));
-      else { if (inCycle - run * 1000 < 60) tone(523, 250); phase('walk', 'WALK ' + Math.ceil((cycle - inCycle) / 1000)); }
-      timer = setTimeout(step, 50);
-    };
-    step();
-  }
-  $('pacerStart').onclick = start; $('pacerStop').onclick = stop;
+  function phase(cls, text) { var p = $('pacerPhase'); p.className = 'phase ' + cls; p.textContent = text; }
+  document.querySelectorAll('#pacerPick [data-run]').forEach(function (b) { b.onclick = function () { if (Pacer.state.on) return; run = +b.getAttribute('data-run'); walk = +b.getAttribute('data-walk'); document.querySelectorAll('#pacerPick .chip-btn').forEach(function (c) { c.classList.toggle('on', c === b); }); label(); }; });
+  Pacer.state.onTick = function (P) {
+    $('pacerCount').textContent = String(P.run);
+    if (P.phase === 'ready') phase('rest', 'Get ready ' + P.left);
+    else if (P.phase === 'run') phase('run', 'RUN ' + P.left);
+    else if (P.phase === 'walk') phase('walk', 'WALK ' + P.left);
+    else { phase('rest', P.phase === 'done' ? 'Done' : 'Stopped'); $('pacerStart').disabled = false; $('pacerStop').disabled = true; }
+  };
+  $('pacerStart').onclick = function () { $('pacerStart').disabled = true; $('pacerStop').disabled = false; Pacer.start(run, walk, 40); };
+  $('pacerStop').onclick = function () { Pacer.stop(); };
+  $('pacerDl').onclick = function () { Pacer.download(run, walk, 40); };
+  label();
   try { var th = localStorage.getItem('hub-theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}
-  document.getElementById('themeBtn').onclick = function () { var cur = document.documentElement.getAttribute('data-theme'); var dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches; var next = dark ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', next); try { localStorage.setItem('hub-theme', next); } catch (e) {} };
+  $('themeBtn').onclick = function () { var cur = document.documentElement.getAttribute('data-theme'); var dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches; var next = dark ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', next); try { localStorage.setItem('hub-theme', next); } catch (e) {} };
 })();
 </script>
 </body>

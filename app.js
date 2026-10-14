@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.13-q';
+  var VERSION = '2026.10.13-r';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -168,25 +168,39 @@
   document.addEventListener('toggle', function (e) { var d = e.target; if (d && d.matches && d.matches('details.fold')) FOLD[d.getAttribute('data-fold')] = d.open; }, true);
 
   // ── Sessions: fitness tests, classes, clinics ────────────────────
-  var SES = { list: [], mine: [], counts: {}, open: null, roster: [], form: null, badge: null };
+  var SES = { list: [], past: [], mine: [], counts: {}, open: null, roster: [], form: null, badge: null, pacerRun: 0 };
   function runsSessions() { return iCan('setup') || iCan('review'); }
+  // FIFA standards Colorado runs to. National = men's international, Regional = women's international,
+  // Regional category 3 = women's category 3 for referees the Referee Department sets there.
+  // CODA is the assistant referee change-of-direction test. Premium pay: sprints within PREMIUM_PLUS
+  // of the standard and at least PREMIUM_LAPS laps of the interval. Numbers pending confirmation.
+  var FIT = { national: { rsa: 6.0, run: 15, walk: 18, coda: 10.0 }, regional: { rsa: 6.4, run: 17, walk: 20, coda: 11.0 }, regional3: { rsa: 6.6, run: 18, walk: 26, coda: 11.0 } };
+  var PREMIUM_PLUS = 0.4, PREMIUM_LAPS = 6, INTERVAL_RUNS = 40;
+  var FIT_WAIVER_URL = 'https://www.emailmeform.com/builder/form/93yTc7L8112iaafnM6';
+  function stdKey(x) { return FIT[x && x.standard] ? x.standard : 'national'; }
+  function fitStd(x) { return FIT[stdKey(x)]; }
+  function stdLine(x) { var f = fitStd(x); return t('fitStd.' + stdKey(x)) + ': ' + t('fitStdLine').replace('{rsa}', f.rsa.toFixed(1)).replace('{run}', f.run).replace('{walk}', f.walk); }
+  var SES_SEL = 'id,kind,title,date,start_time,end_time,venue,address,capacity,open_to,notes,active,standard';
   async function loadSessions_() {
-    var today = todayStr();
+    var today = todayStr(), back = new Date(Date.now() - 120 * 86400000);
     var r = await Promise.all([
-      sb.from('sessions').select('id,kind,title,date,start_time,end_time,venue,address,capacity,open_to,notes,active,standard').gte('date', today).eq('active', true).order('date').order('start_time'),
+      sb.from('sessions').select(SES_SEL).gte('date', today).eq('active', true).order('date').order('start_time'),
       sb.from('session_signups').select('id,session_id,status,result').eq('person_id', S.me.person_id),
       sb.rpc('session_counts'),
-      sb.from('session_signups').select('status,sessions!inner(kind,date,standard)').eq('person_id', S.me.person_id).eq('status', 'passed').eq('sessions.kind', 'fitness').gte('sessions.date', todayStr().slice(0, 4) + '-01-01')
+      sb.from('session_signups').select('status,sessions!inner(kind,date,standard)').eq('person_id', S.me.person_id).eq('status', 'passed').eq('sessions.kind', 'fitness').gte('sessions.date', today.slice(0, 4) + '-01-01'),
+      runsSessions() ? sb.from('sessions').select(SES_SEL).lt('date', today).gte('date', todayStr(back)).order('date', { ascending: false }) : Promise.resolve({ data: [] })
     ]);
-    SES.list = r[0].data || []; SES.mine = r[1].data || [];
-    SES.badge = ((r[3] && r[3].data) || []).map(function (x) { return x.sessions; }).filter(Boolean).sort(function (a, b) { return a.date < b.date ? 1 : -1; })[0] || null;
+    SES.list = r[0].data || []; SES.mine = r[1].data || []; SES.past = r[4].data || [];
     SES.counts = {}; (r[2].data || []).forEach(function (c) { SES.counts[String(c.session_id)] = Number(c.signed); });
+    SES.badge = ((r[3] && r[3].data) || []).map(function (x) { return x.sessions; }).filter(Boolean).sort(function (a, b) { return a.date < b.date ? 1 : -1; })[0] || null;
   }
-  // FIFA standards Colorado runs to: National = men's international, Regional = women's international.
-  var FIT = { national: { rsa: 6.0, run: 15, walk: 18 }, regional: { rsa: 6.4, run: 17, walk: 20 } };
-  function fitStd(x) { return FIT[x.standard] || FIT.national; }
-  function stdLine(x) { var f = fitStd(x); return t('fitStd.' + (FIT[x.standard] ? x.standard : 'national')) + ': ' + t('fitStdLine').replace('{rsa}', f.rsa.toFixed(1)).replace('{run}', f.run).replace('{walk}', f.walk); }
-  // RSA verdict from up to seven times: 'pass', 'fail', 'seventh' (one miss, 7th still to run) or '' (not finished).
+  function fitBadgeHtml(f) { return f ? '<span class="pill ok fitbadge">' + esc(t('fitBadge').replace('{std}', t('fitStd.' + stdKey(f))).replace('{date}', dayLong(f.date))) + '</span>' : ''; }
+  function mySignup(sid) { return SES.mine.filter(function (x) { return String(x.session_id) === String(sid); })[0]; }
+  function sessionLine(x) { return esc(dayLong(x.date)) + (x.start_time ? ', ' + esc(hhmm(x.start_time)) + (x.end_time ? ' to ' + esc(hhmm(x.end_time)) : '') : '') + (x.venue ? ', ' + esc(x.venue) : ''); }
+  function sessionById(id) { return SES.list.concat(SES.past).filter(function (y) { return y.id === id; })[0]; }
+
+  // ── Verdicts. The test is two parts (three for assistant referees); every part must pass.
+  // Sprints: 'pass', 'fail', 'seventh' (one miss, 7th still to run) or '' (not finished).
   function rsaVerdict(times, std) {
     var six = (times || []).slice(0, 6), miss = 0, done = 0;
     six.forEach(function (v) { if (v != null && v !== '') { done++; if (Number(v) > std) miss++; } });
@@ -197,32 +211,53 @@
     if (s7 == null || s7 === '') return 'seventh';
     return Number(s7) > std ? 'fail' : 'pass';
   }
+  // Interval: 'fail' once a run put them out, 'pass' once all runs are done, '' while running or not run.
+  function intervalVerdict(r) { if (r.interval_fail_run) return 'fail'; if ((r.interval_runs || 0) >= INTERVAL_RUNS) return 'pass'; return ''; }
+  // CODA: only counts when a time is entered. Two failed trials is a fail; one good trial passes.
+  function codaVerdict(times, std) {
+    var tr = (times || []).filter(function (v) { return v != null && v !== ''; });
+    if (!tr.length) return 'none';
+    if (tr.some(function (v) { return Number(v) <= std; })) return 'pass';
+    return tr.length >= 2 ? 'fail' : '';
+  }
+  // Premium pay: every sprint within the extra margin and enough interval laps, when the full test was not passed.
+  function premiumOk(r, std) {
+    var six = (r.rsa || []).slice(0, 6); if (six.length < 6 || six.some(function (v) { return v == null || v === ''; })) return false;
+    if (six.some(function (v) { return Number(v) > std.rsa + PREMIUM_PLUS; })) return false;
+    var runs = r.interval_fail_run ? r.interval_fail_run - 1 : (r.interval_runs || 0);
+    return runs >= PREMIUM_LAPS * 4;
+  }
+  // Overall: passed | failed | premium | signed (incomplete) | no_show | waitlist | withdrawn
   function fitOverall(r, std) {
     if (r.status === 'no_show' || r.status === 'withdrawn' || r.status === 'waitlist') return r.status;
-    var v = rsaVerdict(r.rsa, std);
-    if (v === 'fail' || r.interval_result === 'fail') return 'failed';
-    if (v === 'pass' && r.interval_result === 'pass') return 'passed';
+    var a = rsaVerdict(r.rsa, std.rsa), b = intervalVerdict(r), c = codaVerdict(r.coda, std.coda);
+    if (a === 'fail' || b === 'fail' || c === 'fail') return premiumOk(r, std) ? 'premium' : 'failed';
+    if (a === 'pass' && b === 'pass' && c !== '') return 'passed';
     return 'signed';
   }
-  function fitBadgeHtml(f) { return f ? '<span class="pill ok fitbadge">' + esc(t('fitBadge').replace('{std}', t('fitStd.' + (FIT[f.standard] ? f.standard : 'national'))).replace('{date}', dayLong(f.date))) + '</span>' : ''; }
-  function mySignup(sid) { return SES.mine.filter(function (x) { return String(x.session_id) === String(sid); })[0]; }
-  function sessionLine(x) { return esc(dayLong(x.date)) + (x.start_time ? ', ' + esc(hhmm(x.start_time)) + (x.end_time ? ' to ' + esc(hhmm(x.end_time)) : '') : '') + (x.venue ? ', ' + esc(x.venue) : ''); }
-  // The sign-up card on Your day: upcoming sessions a referee may join.
+  function fitWord(k) { return k === 'passed' ? t('sesPassed') : k === 'failed' ? t('sesFailed') : k === 'premium' ? t('fitPremium') : k === 'no_show' ? t('sesNoShow') : k === 'waitlist' ? t('sesWaitlisted') : k === 'signed' ? t('fitIncomplete') : ''; }
+
+  // ── The sign-up card on Your day: upcoming sessions a referee may join. Fitness needs the waiver first.
   function signupCardHtml() {
     var list = SES.list.filter(function (x) { return x.open_to !== 'invite' || mySignup(x.id); });
     if (!list.length) return SES.badge ? '<div class="card" style="gap:8px;border-color:var(--gold)">' + fitBadgeHtml(SES.badge) + '</div>' : '';
     return '<div class="card" style="gap:8px;border-color:var(--gold)">' + fitBadgeHtml(SES.badge) + '<b>' + esc(t('sesTitle')) + '</b>' + list.map(function (x) {
-      var me = mySignup(x.id), n = SES.counts[String(x.id)] || 0, full = x.capacity && n >= x.capacity && !me;
-      var state = me ? (me.status === 'passed' ? t('sesPassed') : me.status === 'failed' ? t('sesFailed') : me.status === 'no_show' ? t('sesNoShow') : me.status === 'waitlist' ? t('sesWaitlisted') : t('sesIn')) : (full ? t('sesFull') : (x.capacity ? t('sesSpots').replace('{n}', x.capacity - n) : ''));
-      return '<div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><div><b>' + esc(t('sesKind.' + x.kind)) + ': ' + esc(x.title) + '</b><br><span class="hint">' + sessionLine(x) + (state ? '. ' + esc(state) : '') + '</span>' + (x.notes ? '<br><span class="hint">' + esc(x.notes) + '</span>' : '') + (x.kind === 'fitness' ? '<br><span class="hint">' + esc(stdLine(x)) + '</span><br><a href="fitness.html" class="chip-btn small" style="display:inline-block;margin-top:6px;text-decoration:none">' + esc(t('fitOpen')) + '</a>' : '') + '</div>' +
-        (me && ['signed', 'waitlist'].indexOf(me.status) >= 0 ? '<button class="btn outline small" data-ses-out="' + me.id + '">' + esc(t('sesWithdraw')) + '</button>' : (!me && !full ? '<button class="btn primary small" data-ses-in="' + x.id + '">' + esc(t('sesSignUp')) + '</button>' : '')) + '</div>';
+      var me = mySignup(x.id), n = SES.counts[String(x.id)] || 0, full = x.capacity && n >= x.capacity && !me, fit = x.kind === 'fitness';
+      var state = me ? (me.status === 'passed' ? t('sesPassed') : me.status === 'failed' ? t('sesFailed') : me.status === 'premium' ? t('fitPremium') : me.status === 'no_show' ? t('sesNoShow') : me.status === 'waitlist' ? t('sesWaitlisted') : t('sesIn')) : (full ? t('sesFull') : (x.capacity ? t('sesSpots').replace('{n}', x.capacity - n) : ''));
+      var join = !me && !full ? (fit ? '<div class="no-print" style="margin-top:8px"><a class="chip-btn small" style="display:inline-block;text-decoration:none" href="' + FIT_WAIVER_URL + '" target="_blank" rel="noopener">' + esc(t('fitWaiverOpen')) + '</a><label style="display:flex;gap:10px;align-items:flex-start;min-height:44px;margin-top:6px"><input type="checkbox" data-waiver="' + x.id + '" style="width:22px;height:22px;flex:none;margin-top:2px"> <span class="hint">' + esc(t('fitWaiverConfirm')) + '</span></label><button class="btn primary small" data-ses-in="' + x.id + '" disabled>' + esc(t('sesSignUp')) + '</button></div>' : '<div style="margin-top:8px"><button class="btn primary small" data-ses-in="' + x.id + '">' + esc(t('sesSignUp')) + '</button></div>') : '';
+      return '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div style="flex:1"><b>' + esc(t('sesKind.' + x.kind)) + ': ' + esc(x.title) + '</b><br><span class="hint">' + sessionLine(x) + (state ? '. ' + esc(state) : '') + '</span>' + (x.notes ? '<br><span class="hint">' + esc(x.notes) + '</span>' : '') +
+        (fit ? '<br><span class="hint">' + esc(stdLine(x)) + '</span><br><a href="fitness.html" class="chip-btn small" style="display:inline-block;margin-top:6px;text-decoration:none">' + esc(t('fitOpen')) + '</a>' : '') + join + '</div>' +
+        (me && ['signed', 'waitlist'].indexOf(me.status) >= 0 ? '<button class="btn outline small" data-ses-out="' + me.id + '">' + esc(t('sesWithdraw')) + '</button>' : '') + '</div>';
     }).join('') + '<div class="msg" id="sesMsg" hidden></div></div>';
   }
   function wireSignup(root) {
+    root.querySelectorAll('[data-waiver]').forEach(function (c) { c.onchange = function () { var b = root.querySelector('[data-ses-in="' + c.getAttribute('data-waiver') + '"]'); if (b) b.disabled = !c.checked; }; });
     root.querySelectorAll('[data-ses-in]').forEach(function (b) { b.onclick = async function () {
       b.disabled = true; var sid = parseInt(b.getAttribute('data-ses-in'), 10), x = SES.list.filter(function (y) { return y.id === sid; })[0];
       var n = SES.counts[String(sid)] || 0, status = x && x.capacity && n >= x.capacity ? 'waitlist' : 'signed';
-      var r = await sb.from('session_signups').insert({ org_id: S.me.org_id, session_id: sid, person_id: S.me.person_id, name: S.me.first_name + ' ' + S.me.last_name, status: status });
+      var row = { org_id: S.me.org_id, session_id: sid, person_id: S.me.person_id, name: S.me.first_name + ' ' + S.me.last_name, status: status };
+      if (x && x.kind === 'fitness') row.waiver_at = new Date().toISOString();
+      var r = await sb.from('session_signups').insert(row);
       if (r.error) { b.disabled = false; say('sesMsg', r.error.message, 'bad'); return; }
       await loadSessions_(); renderDay();
     }; });
@@ -234,37 +269,71 @@
       await loadSessions_(); renderDay();
     }; });
   }
-  // The results sheet for a fitness test: bib, six RSA times, a 7th when earned, interval pass/fail, verdict.
+
+  // ── The results sheet for a fitness test: three parts on one page, one verdict per referee.
   function fitSheetHtml(x, roster) {
     var std = fitStd(x), live = roster.filter(function (r) { return r.status !== 'withdrawn'; });
     if (!live.length) return '<div class="card"><div class="hint">' + esc(t('sesNobody')) + '</div></div>';
-    var statusWord = function (k) { return k === 'passed' ? t('sesPassed') : k === 'failed' ? t('sesFailed') : k === 'no_show' ? t('sesNoShow') : k === 'waitlist' ? t('sesWaitlisted') : ''; };
-    var rows = live.map(function (r) {
-      var times = r.rsa || [], v = rsaVerdict(times, std.rsa), ov = fitOverall(r, std.rsa), off = r.status === 'no_show';
-      var cell = function (i) { var val = times[i]; var bad = val != null && val !== '' && Number(val) > std.rsa; return '<td class="n"><input type="number" step="0.01" min="3" max="20" inputmode="decimal" class="fit-t' + (bad ? ' bad' : '') + '" data-fit-rsa="' + r.id + '" data-i="' + i + '" value="' + (val == null ? '' : esc(val)) + '"' + (off ? ' disabled' : '') + ' aria-label="' + esc(t('fitSprint')) + ' ' + (i + 1) + '"></td>'; };
+    var num = function (cls, attrs, val, extra) { return '<input type="number" inputmode="decimal" class="fit-t' + (cls ? ' ' + cls : '') + '" ' + attrs + ' value="' + (val == null ? '' : esc(val)) + '"' + (extra || '') + '>'; };
+    var th = function (l, n) { return '<th' + (n ? ' class="n"' : '') + '>' + esc(l) + '</th>'; };
+    var rowHead = function (r) { return '<td class="n">' + num('', 'min="1" max="999" step="1" data-fit-bib="' + r.id + '" aria-label="' + esc(t('fitBib')) + '"', r.bib) + '</td><td><b>' + refLink(r.name) + '</b>' + (r.waiver_at ? '' : '<div class="hint" style="color:var(--red)">' + esc(t('fitNoWaiver')) + '</div>') + '</td>'; };
+    // Part 1: sprints
+    var rows1 = live.map(function (r) {
+      var times = r.rsa || [], v = rsaVerdict(times, std.rsa), off = r.status === 'no_show';
+      var cell = function (i) { var val = times[i], bad = val != null && val !== '' && Number(val) > std.rsa; return '<td class="n">' + num(bad ? 'bad' : '', 'step="0.01" min="3" max="20" data-fit-rsa="' + r.id + '" data-i="' + i + '" aria-label="' + esc(t('fitSprint')) + ' ' + (i + 1) + '"', val, off ? ' disabled' : '') + '</td>'; };
       var seventh = v === 'seventh' || (times[6] != null && times[6] !== '') ? cell(6) : '<td class="n hint">' + (v === 'fail' ? esc(t('fitTwoMisses')) : '') + '</td>';
-      var intv = function (k, label) { return '<button class="chip-btn small' + (r.interval_result === k ? ' on' : '') + '" data-fit-int="' + r.id + '" data-k="' + k + '"' + (off ? ' disabled' : '') + '>' + esc(label) + '</button>'; };
-      var warn = '<button class="chip-btn small warn' + (r.interval_warnings ? ' on' : '') + '" data-fit-warn="' + r.id + '"' + (off ? ' disabled' : '') + ' title="' + esc(t('fitWarnHint')) + '">' + esc(t('fitWarn')) + (r.interval_warnings ? ' ' + r.interval_warnings : '') + '</button>';
-      return '<tr class="' + esc(ov) + '"><td class="n"><input type="number" min="1" max="999" inputmode="numeric" class="fit-t" data-fit-bib="' + r.id + '" value="' + (r.bib == null ? '' : r.bib) + '" aria-label="' + esc(t('fitBib')) + '"></td><td><b>' + refLink(r.name) + '</b></td>' +
-        [0, 1, 2, 3, 4, 5].map(cell).join('') + seventh +
-        '<td class="n">' + esc(v === 'pass' ? t('fitPass') : v === 'fail' ? t('fitFail') : v === 'seventh' ? t('fitSeventh') : '') + '</td>' +
-        '<td><div class="chips no-print" style="flex-wrap:nowrap">' + warn + intv('pass', t('fitPass')) + intv('fail', t('fitFail')) + '</div><span class="print-only">' + esc((r.interval_result === 'pass' ? t('fitPass') : r.interval_result === 'fail' ? t('fitFail') : '') + (r.interval_warnings ? ' (' + t('fitWarn').toLowerCase() + ')' : '')) + '</span></td>' +
-        '<td class="n"><b>' + esc(statusWord(ov)) + '</b><div class="no-print"><button class="chip-btn small' + (off ? ' on' : '') + '" data-fit-ns="' + r.id + '" style="white-space:nowrap">' + esc(t('sesMarkNoShow')) + '</button></div></td></tr>';
+      return '<tr>' + rowHead(r) + [0, 1, 2, 3, 4, 5].map(cell).join('') + seventh + '<td class="n ' + (v === 'pass' ? 'good' : v === 'fail' ? 'bad' : '') + '"><b>' + esc(v === 'pass' ? t('fitPass') : v === 'fail' ? t('fitFail') : v === 'seventh' ? t('fitSeventh') : '') + '</b></td></tr>';
     }).join('');
-    var passed = live.filter(function (r) { return fitOverall(r, std.rsa) === 'passed'; }).length, failed = live.filter(function (r) { return fitOverall(r, std.rsa) === 'failed'; }).length;
-    return '<div class="pad hint" style="padding-top:0">' + esc(stdLine(x)) + '. ' + esc(t('fitSheetHint')) + '</div>' +
-      '<div class="pad" style="padding-top:6px;overflow-x:auto"><table class="dt fit"><thead><tr><th>' + esc(t('fitBib')) + '</th><th>' + esc(t('fitName')) + '</th>' + [1, 2, 3, 4, 5, 6].map(function (i) { return '<th class="n">' + esc(t('fitSprint')) + ' ' + i + '</th>'; }).join('') + '<th class="n">' + esc(t('fitSeventhCol')) + '</th><th class="n">' + esc(t('fitRsa')) + '</th><th>' + esc(t('fitInterval')) + '</th><th class="n">' + esc(t('fitResult')) + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-      '<div class="pad hint" style="padding-top:6px">' + passed + ' ' + esc(t('sesPassed').toLowerCase()) + ', ' + failed + ' ' + esc(t('sesFailed').toLowerCase()) + ', ' + live.length + ' ' + esc(t('sesSignedUp')) + '</div>' +
+    var part1 = '<div class="disp h2 print-keep">' + esc(t('fitPart1')) + '</div><div class="pad hint" style="padding-top:0">' + esc(t('fitPart1Hint').replace('{rsa}', std.rsa.toFixed(1))) + '</div>' +
+      '<div class="pad" style="padding-top:6px;overflow-x:auto"><table class="dt fit"><thead><tr>' + th(t('fitBib'), 1) + th(t('fitName')) + [1, 2, 3, 4, 5, 6].map(function (i) { return th(t('fitSprint') + ' ' + i, 1); }).join('') + th(t('fitSeventhCol'), 1) + th(t('fitRsa'), 1) + '</tr></thead><tbody>' + rows1 + '</tbody></table></div>';
+    // Part 2: interval, run by run, with the pacer on this phone
+    var P = window.Pacer ? Pacer.state : { on: false, run: 0, phase: 'rest', left: 0 };
+    var cur = P.on ? P.run : SES.pacerRun;
+    var pacer = '<div class="card no-print pacer" style="gap:8px"><div style="display:flex;justify-content:space-between;align-items:flex-end;gap:8px"><div><b>' + esc(t('fitPacer')) + '</b><div class="hint">' + esc(t('fitPacerHint').replace('{run}', std.run).replace('{walk}', std.walk)) + '</div><div class="phase ' + (P.phase === 'run' ? 'run' : P.phase === 'walk' ? 'walk' : 'rest') + '" id="pcPhase">' + esc(P.on ? (P.phase === 'ready' ? t('fitReady') + ' ' + P.left : P.phase === 'run' ? t('fitRun') + ' ' + P.left : t('fitWalk') + ' ' + P.left) : t('fitRunNow')) + '</div></div><div style="text-align:right"><div class="big" id="pcCount">' + cur + '</div><div class="hint">' + esc(t('fitOfRuns').replace('{n}', INTERVAL_RUNS)) + '</div></div></div>' +
+      '<div class="actions" style="padding:0">' + (P.on ? '<button class="btn outline" id="pcStop">' + esc(t('fitStop')) + '</button>' : '<button class="btn primary" id="pcStart">' + esc(t('fitStart')) + '</button><button class="chip-btn" id="pcMinus" aria-label="-">&minus;</button><button class="chip-btn" id="pcPlus" aria-label="+">+</button>') + '</div>' +
+      '<div class="hint">' + esc(t('fitPacerHow')) + '</div></div>';
+    var rows2 = live.map(function (r) {
+      var off = r.status === 'no_show', v = intervalVerdict(r), out = !!r.interval_fail_run;
+      return '<tr>' + rowHead(r) +
+        '<td class="n">' + num(r.interval_warn_run ? 'warnd' : '', 'step="1" min="1" max="' + INTERVAL_RUNS + '" data-fit-warn-run="' + r.id + '" aria-label="' + esc(t('fitWarnRun')) + '"', r.interval_warn_run, off ? ' disabled' : '') + '</td>' +
+        '<td class="n">' + num(out ? 'bad' : '', 'step="1" min="1" max="' + INTERVAL_RUNS + '" data-fit-fail-run="' + r.id + '" aria-label="' + esc(t('fitOutRun')) + '"', r.interval_fail_run, off ? ' disabled' : '') + '</td>' +
+        '<td class="n">' + num('', 'step="1" min="0" max="' + INTERVAL_RUNS + '" data-fit-runs="' + r.id + '" aria-label="' + esc(t('fitRunsDone')) + '"', r.interval_runs, off || out ? ' disabled' : '') + '</td>' +
+        '<td class="no-print"><div class="chips" style="flex-wrap:nowrap">' + (off || out ? '' : '<button class="chip-btn small warn" data-fit-warn="' + r.id + '">' + esc(t('fitWarn')) + '</button><button class="chip-btn small" data-fit-out="' + r.id + '">' + esc(t('fitOut')) + '</button>' + (v === 'pass' ? '' : '<button class="chip-btn small" data-fit-done="' + r.id + '">' + esc(t('fitFinished')) + '</button>')) + '</div></td>' +
+        '<td class="n ' + (v === 'pass' ? 'good' : v === 'fail' ? 'bad' : '') + '"><b>' + esc(v === 'pass' ? t('fitPass') : v === 'fail' ? t('fitFail') : '') + '</b></td></tr>';
+    }).join('');
+    var part2 = '<div class="disp h2 print-keep">' + esc(t('fitPart2')) + '</div><div class="pad hint" style="padding-top:0">' + esc(t('fitPart2Hint')) + '</div>' + pacer +
+      '<div class="pad" style="padding-top:6px;overflow-x:auto"><table class="dt fit"><thead><tr>' + th(t('fitBib'), 1) + th(t('fitName')) + th(t('fitWarnRun'), 1) + th(t('fitOutRun'), 1) + th(t('fitRunsDone'), 1) + '<th class="no-print"></th>' + th(t('fitInterval'), 1) + '</tr></thead><tbody>' + rows2 + '</tbody></table></div>' +
+      '<div class="actions no-print"><button class="btn outline small" id="fitAllDone">' + esc(t('fitAllDone')) + '</button></div>';
+    // Part 3: CODA for assistant referees, only when used
+    var anyCoda = live.some(function (r) { return (r.coda || []).some(function (v) { return v != null && v !== ''; }); });
+    var rows3 = live.map(function (r) {
+      var times = r.coda || [], v = codaVerdict(times, std.coda), off = r.status === 'no_show';
+      var cell = function (i) { var val = times[i], bad = val != null && val !== '' && Number(val) > std.coda; return '<td class="n">' + num(bad ? 'bad' : '', 'step="0.01" min="5" max="30" data-fit-coda="' + r.id + '" data-i="' + i + '" aria-label="' + esc(t('fitTrial')) + ' ' + (i + 1) + '"', val, off ? ' disabled' : '') + '</td>'; };
+      return '<tr>' + rowHead(r) + cell(0) + cell(1) + '<td class="n ' + (v === 'pass' ? 'good' : v === 'fail' ? 'bad' : '') + '"><b>' + esc(v === 'pass' ? t('fitPass') : v === 'fail' ? t('fitFail') : '') + '</b></td></tr>';
+    }).join('');
+    var part3 = fold('fitcoda', t('fitPart3'), anyCoda ? live.filter(function (r) { return codaVerdict(r.coda, std.coda) !== 'none'; }).length : '', '<div class="pad hint" style="padding-top:0">' + esc(t('fitPart3Hint').replace('{coda}', std.coda.toFixed(1))) + '</div><div class="pad" style="padding-top:6px;overflow-x:auto"><table class="dt fit"><thead><tr>' + th(t('fitBib'), 1) + th(t('fitName')) + th(t('fitTrial') + ' 1', 1) + th(t('fitTrial') + ' 2', 1) + th(t('fitCoda'), 1) + '</tr></thead><tbody>' + rows3 + '</tbody></table></div>', anyCoda);
+    // Results
+    var rows4 = live.map(function (r) {
+      var ov = fitOverall(r, std), off = r.status === 'no_show', a = rsaVerdict(r.rsa, std.rsa), b = intervalVerdict(r), c = codaVerdict(r.coda, std.coda);
+      var pf = function (v) { return v === 'pass' ? t('fitPass') : v === 'fail' ? t('fitFail') : v === 'none' ? '' : t('fitIncomplete'); };
+      return '<tr class="' + esc(ov) + '"><td class="n">' + (r.bib == null ? '' : r.bib) + '</td><td><b>' + esc(r.name) + '</b></td><td class="n">' + esc(pf(a)) + '</td><td class="n">' + esc(pf(b)) + '</td><td class="n">' + esc(pf(c)) + '</td><td class="n"><b>' + esc(fitWord(ov)) + '</b></td>' +
+        '<td class="no-print"><div class="chips" style="flex-wrap:nowrap"><button class="chip-btn small' + (off ? ' on' : '') + '" data-fit-ns="' + r.id + '">' + esc(t('sesMarkNoShow')) + '</button><button class="chip-btn small" data-fit-drop="' + r.id + '">' + esc(t('fitRemove')) + '</button></div></td></tr>';
+    }).join('');
+    var counts = {}; live.forEach(function (r) { var k = fitOverall(r, std); counts[k] = (counts[k] || 0) + 1; });
+    var part4 = '<div class="disp h2 print-keep">' + esc(t('fitResults')) + '</div><div class="pad" style="padding-top:6px;overflow-x:auto"><table class="dt fit"><thead><tr>' + th(t('fitBib'), 1) + th(t('fitName')) + th(t('fitRsa'), 1) + th(t('fitInterval'), 1) + th(t('fitCoda'), 1) + th(t('fitResult'), 1) + '<th class="no-print"></th></tr></thead><tbody>' + rows4 + '</tbody></table></div>' +
+      '<div class="pad hint" style="padding-top:6px">' + ['passed', 'premium', 'failed', 'signed', 'no_show'].filter(function (k) { return counts[k]; }).map(function (k) { return counts[k] + ' ' + fitWord(k).toLowerCase(); }).join(', ') + '</div>';
+    return '<div class="pad hint" style="padding-top:0">' + esc(stdLine(x)) + '. ' + esc(t('fitSheetHint')) + '</div>' + part1 + part2 + part3 + part4 +
       '<div class="actions no-print"><button class="btn primary small" id="fitPrint">' + esc(t('fitPrint')) + '</button><a class="btn outline small" href="fitness.html">' + esc(t('fitOpen')) + '</a></div><div class="msg" id="fitMsg" hidden></div>';
   }
-  // Setup side: list, create, roster and results.
+
+  // ── Setup side: list, create, roster and results.
   function sessionsSetupHtml() {
     if (SES.open) {
-      var x = SES.list.filter(function (y) { return y.id === SES.open; })[0] || SES.pastOpen;
+      var x = sessionById(SES.open);
       if (!x) { SES.open = null; return sessionsSetupHtml(); }
       var roster = SES.roster || [], n = roster.filter(function (r) { return r.status !== 'withdrawn' && r.status !== 'waitlist'; }).length;
       var res = function (r, k, label) { return '<button class="chip-btn small' + (r.status === k ? ' on' : '') + '" data-ses-res="' + r.id + '" data-res="' + k + '">' + esc(label) + '</button>'; };
-      return '<div class="pad no-print" style="padding-top:12px;display:flex;gap:8px"><button class="btn outline small" id="sesBack">' + esc(t('back')) + '</button><button class="btn outline small" id="sesPrint">' + esc(t('print')) + '</button><button class="btn outline small" id="sesClose" style="margin-left:auto">' + esc(x.active ? t('sesCancel') : t('sesReopen')) + '</button></div>' +
+      return '<div class="pad no-print" style="padding-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn outline small" id="sesBack">' + esc(t('back')) + '</button><button class="btn outline small" id="sesPrint">' + esc(t('print')) + '</button><button class="btn outline small" id="sesClose" style="margin-left:auto">' + esc(x.active ? t('sesCancel') : t('sesReopen')) + '</button><button class="btn outline small" id="sesDelete">' + esc(t('sesDelete')) + '</button></div>' +
         '<div class="pad" style="padding-top:12px"><div class="disp" style="font-size:30px">' + esc(x.title) + '</div><div class="hint">' + esc(t('sesKind.' + x.kind)) + '. ' + sessionLine(x) + (x.address ? '. ' + esc(x.address) : '') + '</div><div class="hint">' + n + (x.capacity ? ' / ' + x.capacity : '') + ' ' + esc(t('sesSignedUp')) + '</div></div>' +
         (x.kind === 'fitness' ? fitSheetHtml(x, roster) :
         (roster.length ? roster.map(function (r) { return '<div class="card" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + refLink(r.name) + '</b><span class="hint">' + esc(r.status === 'waitlist' ? t('sesWaitlisted') : '') + '</span></div><div class="chips no-print">' + res(r, 'passed', t('sesMarkPassed')) + res(r, 'failed', t('sesMarkFailed')) + res(r, 'no_show', t('sesMarkNoShow')) + res(r, 'signed', t('sesMarkClear')) + '</div></div>'; }).join('') : '<div class="card"><div class="hint">' + esc(t('sesNobody')) + '</div></div>'));
@@ -273,7 +342,7 @@
     var inp = function (id, v, type, extra) { return '<input id="' + id + '" type="' + (type || 'text') + '" value="' + esc(v == null ? '' : v) + '" ' + (extra || '') + ' style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">'; };
     var form = !f ? '<div class="pad" style="padding-top:12px"><button class="btn outline" id="sesNew" style="width:100%">' + esc(t('sesNew')) + '</button></div>' :
       '<div class="card" style="gap:8px"><b>' + esc(t('sesNew')) + '</b><div class="chips">' + ['fitness', 'class', 'clinic'].map(function (k) { return '<button class="chip-btn small' + (f.kind === k ? ' on' : '') + '" data-ses-kind="' + k + '">' + esc(t('sesKind.' + k)) + '</button>'; }).join('') + '</div>' +
-      (f.kind === 'fitness' ? '<label class="hint">' + esc(t('fitStandard')) + '</label><div class="chips">' + ['national', 'regional'].map(function (k) { return '<button class="chip-btn small' + (f.standard === k ? ' on' : '') + '" data-ses-std="' + k + '">' + esc(t('fitStd.' + k)) + '</button>'; }).join('') + '</div><div class="hint">' + esc(stdLine({ standard: f.standard })) + '</div>' : '') +
+      (f.kind === 'fitness' ? '<label class="hint">' + esc(t('fitStandard')) + '</label><div class="chips">' + Object.keys(FIT).map(function (k) { return '<button class="chip-btn small' + (f.standard === k ? ' on' : '') + '" data-ses-std="' + k + '">' + esc(t('fitStd.' + k)) + '</button>'; }).join('') + '</div><div class="hint">' + esc(stdLine({ standard: f.standard })) + '</div>' : '') +
       '<label class="hint" for="sesTitle">' + esc(t('sesFieldTitle')) + '</label>' + inp('sesTitle', f.title) +
       '<div class="grid2"><div><label class="hint" for="sesDate">' + esc(t('eodDate')) + '</label>' + inp('sesDate', f.date, 'date') + '</div><div><label class="hint" for="sesCap">' + esc(t('sesCapacity')) + '</label>' + inp('sesCap', f.capacity, 'number', 'min="1"') + '</div></div>' +
       '<div class="grid2"><div><label class="hint" for="sesStart">' + esc(t('sesStart')) + '</label>' + inp('sesStart', f.start_time, 'time') + '</div><div><label class="hint" for="sesEnd">' + esc(t('sesEnd')) + '</label>' + inp('sesEnd', f.end_time, 'time') + '</div></div>' +
@@ -283,7 +352,14 @@
       '<label class="hint" for="sesNotes">' + esc(t('sesNotes')) + '</label><textarea id="sesNotes" style="min-height:70px">' + esc(f.notes || '') + '</textarea>' +
       '<label style="display:flex;gap:10px;align-items:center;min-height:44px"><input type="checkbox" id="sesBul"' + (f.bulletin ? ' checked' : '') + ' style="width:22px;height:22px"> ' + esc(t('sesBulletin')) + '</label>' +
       '<div class="actions" style="padding:0"><button class="btn primary" id="sesSave">' + esc(t('sesSave')) + '</button><button class="btn outline" id="sesCancelForm">' + esc(t('neverMind')) + '</button></div><div class="msg" id="sesFormMsg" hidden></div></div>';
-    return '<div class="disp h2">' + esc(t('sesSetupTitle')) + '</div>' + form + (SES.list.length ? '<div class="list">' + SES.list.map(function (x) { var n = SES.counts[String(x.id)] || 0; return '<a class="item" href="#" data-ses-open="' + x.id + '"><div><b>' + esc(t('sesKind.' + x.kind)) + ': ' + esc(x.title) + '</b><br><span class="hint">' + sessionLine(x) + '. ' + n + (x.capacity ? ' / ' + x.capacity : '') + ' ' + esc(t('sesSignedUp')) + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>' : '<div class="pad hint">' + esc(t('sesNone')) + '</div>');
+    var item = function (x) { var n = SES.counts[String(x.id)] || 0; return '<a class="item" href="#" data-ses-open="' + x.id + '"><div><b>' + esc(t('sesKind.' + x.kind)) + ': ' + esc(x.title) + '</b>' + (x.active ? '' : ' <span class="pill">' + esc(t('evOff')) + '</span>') + '<br><span class="hint">' + sessionLine(x) + '. ' + n + (x.capacity ? ' / ' + x.capacity : '') + ' ' + esc(t('sesSignedUp')) + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; };
+    return '<div class="disp h2">' + esc(t('sesSetupTitle')) + '</div>' + form + (SES.list.length ? '<div class="list">' + SES.list.map(item).join('') + '</div>' : '<div class="pad hint">' + esc(t('sesNone')) + '</div>') +
+      (SES.past.length ? fold('sespast', t('sesPast'), SES.past.length, '<div class="list">' + SES.past.map(item).join('') + '</div>', false) : '');
+  }
+  async function openSession(id) {
+    SES.open = id; busy(true);
+    var r = await sb.from('session_signups').select('id,person_id,name,status,result,bib,rsa,interval_warn_run,interval_fail_run,interval_runs,coda,waiver_at,created_at').eq('session_id', id).order('bib', { nullsFirst: false }).order('created_at');
+    busy(false); SES.roster = r.data || []; renderSetup();
   }
   function wireSessionsSetup(root) {
     var nb = $('sesNew'); if (nb) nb.onclick = function () { SES.form = { kind: 'fitness', standard: 'national', bulletin: true, title: '', date: todayStr(), capacity: '', start_time: '', end_time: '', venue: '', address: '', open_to: 'all', notes: '' }; renderSetup(); };
@@ -297,46 +373,56 @@
       var r = await sb.from('sessions').insert({ org_id: S.me.org_id, kind: f.kind, title: f.title, date: f.date, start_time: f.start_time, end_time: f.end_time, venue: f.venue, address: f.address, capacity: f.capacity, open_to: f.open_to, notes: f.notes, standard: f.kind === 'fitness' ? f.standard : null, created_by: S.me.first_name + ' ' + S.me.last_name });
       if (r.error) { sv.disabled = false; say('sesFormMsg', r.error.message, 'bad'); return; }
       // A bulletin so referees hear about it on Your day without anyone sending an email.
-      if (f.bulletin) { try { await post({ action: 'postAnnouncement', title: t('sesKind.' + f.kind) + ': ' + f.title, bodyText: t('sesBulletinBody').replace('{when}', sessionLine(f).replace(/&#39;/g, "'").replace(/&amp;/g, '&')) + (f.kind === 'fitness' ? ' ' + stdLine(f) + '.' : ''), startDate: todayStr(), endDate: f.date, severity: 'info', postedBy: S.me.first_name + ' ' + S.me.last_name }); } catch (e) {} }
+      if (f.bulletin) { try { await post({ action: 'postAnnouncement', title: t('sesKind.' + f.kind) + ': ' + f.title, bodyText: t('sesBulletinBody').replace('{when}', sessionLine(f).replace(/&#39;/g, "'").replace(/&amp;/g, '&')) + (f.kind === 'fitness' ? ' ' + stdLine(f) + '. ' + t('fitWaiverBulletin') : ''), startDate: todayStr(), endDate: f.date, severity: 'info', postedBy: S.me.first_name + ' ' + S.me.last_name }); } catch (e) {} }
       SES.form = null; await loadSessions_(); renderSetup();
     };
-    root.querySelectorAll('[data-ses-open]').forEach(function (a) { a.onclick = async function (e) { e.preventDefault(); SES.open = parseInt(a.getAttribute('data-ses-open'), 10); busy(true); var r = await sb.from('session_signups').select('id,person_id,name,status,result,bib,rsa,interval_result,interval_warnings,created_at').eq('session_id', SES.open).order('bib', { nullsFirst: false }).order('created_at'); busy(false); SES.roster = r.data || []; renderSetup(); }; });
+    root.querySelectorAll('[data-ses-open]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); openSession(parseInt(a.getAttribute('data-ses-open'), 10)); }; });
     var bk = $('sesBack'); if (bk) bk.onclick = function () { SES.open = null; renderSetup(); };
     var pr = $('sesPrint'); if (pr) pr.onclick = function () { window.print(); };
-    var cl = $('sesClose'); if (cl) cl.onclick = async function () { var x = SES.list.filter(function (y) { return y.id === SES.open; })[0]; if (!x || !window.confirm(t('sesCancelConfirm'))) return; await sb.from('sessions').update({ active: !x.active }).eq('id', x.id); SES.open = null; await loadSessions_(); renderSetup(); };
+    var cl = $('sesClose'); if (cl) cl.onclick = async function () { var x = sessionById(SES.open); if (!x || !window.confirm(t('sesCancelConfirm'))) return; await sb.from('sessions').update({ active: !x.active }).eq('id', x.id); SES.open = null; await loadSessions_(); renderSetup(); };
+    var dl = $('sesDelete'); if (dl) dl.onclick = async function () { var x = sessionById(SES.open); if (!x || !window.confirm(t('sesDeleteConfirm').replace('{title}', x.title))) return; var r = await sb.from('sessions').delete().eq('id', x.id); if (r.error) { say('fitMsg', r.error.message, 'bad'); return; } SES.open = null; await loadSessions_(); renderSetup(); };
     root.querySelectorAll('[data-ses-res]').forEach(function (b) { b.onclick = async function () {
       var id = parseInt(b.getAttribute('data-ses-res'), 10), st = b.getAttribute('data-res');
       var r = await sb.from('session_signups').update({ status: st, updated_at: new Date().toISOString() }).eq('id', id);
       if (r.error) return;
       SES.roster.forEach(function (x) { if (x.id === id) x.status = st; }); renderSetup();
     }; });
-    // Fitness sheet. Each cell saves on its own; the row's verdict is recomputed and written to status.
-    var ses = SES.list.filter(function (y) { return y.id === SES.open; })[0] || SES.pastOpen, std = ses ? fitStd(ses) : FIT.national;
+    // ── Fitness sheet. Each cell saves on its own; the verdict is recomputed and written to status.
+    var ses = sessionById(SES.open), std = ses ? fitStd(ses) : FIT.national;
     var rowOf = function (id) { return SES.roster.filter(function (y) { return y.id === id; })[0]; };
     var saveRow = async function (r, patch) {
       Object.keys(patch).forEach(function (k) { r[k] = patch[k]; });
-      var ov = fitOverall(r, std.rsa); if (ov !== r.status && (ov === 'passed' || ov === 'failed' || (ov === 'signed' && (r.status === 'passed' || r.status === 'failed')))) { patch.status = ov; r.status = ov; }
+      var ov = fitOverall(r, std), stored = ['passed', 'failed', 'premium'];
+      if (ov !== r.status && (stored.indexOf(ov) >= 0 || (ov === 'signed' && stored.indexOf(r.status) >= 0))) { patch.status = ov; r.status = ov; }
       patch.updated_at = new Date().toISOString();
       var res = await sb.from('session_signups').update(patch).eq('id', r.id);
       if (res.error) { say('fitMsg', res.error.message, 'bad'); return false; }
       return true;
     };
+    var numOrNull = function (v) { return v === '' ? null : Math.round(Number(v) * 100) / 100; };
+    var onNum = function (sel, fn) { root.querySelectorAll(sel).forEach(function (i) { i.onchange = async function () { var r = rowOf(parseInt(i.getAttribute(sel.slice(1, -1)), 10)); if (!r) return; if (await saveRow(r, fn(r, i))) renderSetup(); }; }); };
     root.querySelectorAll('[data-fit-bib]').forEach(function (i) { i.onchange = function () { var r = rowOf(parseInt(i.getAttribute('data-fit-bib'), 10)); if (r) saveRow(r, { bib: i.value ? parseInt(i.value, 10) : null }); }; });
-    root.querySelectorAll('[data-fit-rsa]').forEach(function (i) { i.onchange = async function () {
-      var r = rowOf(parseInt(i.getAttribute('data-fit-rsa'), 10)), k = parseInt(i.getAttribute('data-i'), 10); if (!r) return;
-      var times = (r.rsa || []).slice(); while (times.length < 7) times.push(null); times[k] = i.value === '' ? null : Math.round(Number(i.value) * 100) / 100;
-      if (await saveRow(r, { rsa: times })) renderSetup();
-    }; });
-    root.querySelectorAll('[data-fit-int]').forEach(function (b) { b.onclick = async function () { var r = rowOf(parseInt(b.getAttribute('data-fit-int'), 10)); if (!r) return; var k = b.getAttribute('data-k'); if (await saveRow(r, { interval_result: r.interval_result === k ? null : k })) renderSetup(); }; });
-    root.querySelectorAll('[data-fit-warn]').forEach(function (b) { b.onclick = async function () {
-      var r = rowOf(parseInt(b.getAttribute('data-fit-warn'), 10)); if (!r) return;
-      var n = r.interval_warnings || 0, patch;
-      if (n === 0) patch = { interval_warnings: 1 };
-      else if (n === 1) patch = { interval_warnings: 2, interval_result: 'fail' };
-      else patch = { interval_warnings: 0, interval_result: r.interval_result === 'fail' ? null : r.interval_result };
-      if (await saveRow(r, patch)) renderSetup();
-    }; });
+    onNum('[data-fit-rsa]', function (r, i) { var k = parseInt(i.getAttribute('data-i'), 10), times = (r.rsa || []).slice(); while (times.length < 7) times.push(null); times[k] = numOrNull(i.value); return { rsa: times }; });
+    onNum('[data-fit-coda]', function (r, i) { var k = parseInt(i.getAttribute('data-i'), 10), times = (r.coda || []).slice(); while (times.length < 2) times.push(null); times[k] = numOrNull(i.value); return { coda: times }; });
+    onNum('[data-fit-warn-run]', function (r, i) { return { interval_warn_run: i.value ? parseInt(i.value, 10) : null }; });
+    onNum('[data-fit-fail-run]', function (r, i) { var n = i.value ? parseInt(i.value, 10) : null; return { interval_fail_run: n, interval_runs: n ? n - 1 : r.interval_runs }; });
+    onNum('[data-fit-runs]', function (r, i) { return { interval_runs: i.value ? parseInt(i.value, 10) : null }; });
+    var curRun = function () { return window.Pacer && Pacer.state.on ? Pacer.state.run : SES.pacerRun; };
+    // Warning at the current run. A second late foot is Out at the current run.
+    root.querySelectorAll('[data-fit-warn]').forEach(function (b) { b.onclick = async function () { var r = rowOf(parseInt(b.getAttribute('data-fit-warn'), 10)); if (!r) return; var n = curRun() || 1; var patch = r.interval_warn_run ? { interval_fail_run: n, interval_runs: n - 1 } : { interval_warn_run: n }; if (await saveRow(r, patch)) renderSetup(); }; });
+    root.querySelectorAll('[data-fit-out]').forEach(function (b) { b.onclick = async function () { var r = rowOf(parseInt(b.getAttribute('data-fit-out'), 10)); if (!r) return; var n = curRun() || 1; if (await saveRow(r, { interval_fail_run: n, interval_runs: n - 1 })) renderSetup(); }; });
+    root.querySelectorAll('[data-fit-done]').forEach(function (b) { b.onclick = async function () { var r = rowOf(parseInt(b.getAttribute('data-fit-done'), 10)); if (!r) return; if (await saveRow(r, { interval_runs: INTERVAL_RUNS })) renderSetup(); }; });
+    var ad = $('fitAllDone'); if (ad) ad.onclick = async function () { if (!window.confirm(t('fitAllDoneConfirm'))) return; for (var i = 0; i < SES.roster.length; i++) { var r = SES.roster[i]; if (r.status === 'no_show' || r.status === 'withdrawn' || r.interval_fail_run || (r.interval_runs || 0) >= INTERVAL_RUNS) continue; await saveRow(r, { interval_runs: INTERVAL_RUNS }); } renderSetup(); };
     root.querySelectorAll('[data-fit-ns]').forEach(function (b) { b.onclick = async function () { var r = rowOf(parseInt(b.getAttribute('data-fit-ns'), 10)); if (!r) return; var st = r.status === 'no_show' ? 'signed' : 'no_show'; r.status = st; var res = await sb.from('session_signups').update({ status: st, updated_at: new Date().toISOString() }).eq('id', r.id); if (res.error) { say('fitMsg', res.error.message, 'bad'); return; } renderSetup(); }; });
+    root.querySelectorAll('[data-fit-drop]').forEach(function (b) { b.onclick = async function () { var r = rowOf(parseInt(b.getAttribute('data-fit-drop'), 10)); if (!r || !window.confirm(t('fitRemoveConfirm').replace('{name}', r.name))) return; var res = await sb.from('session_signups').delete().eq('id', r.id); if (res.error) { say('fitMsg', res.error.message, 'bad'); return; } SES.roster = SES.roster.filter(function (y) { return y.id !== r.id; }); renderSetup(); }; });
+    // The pacer: audio from this phone, run counter drives Warning and Out. Re-rendering never restarts it.
+    if (window.Pacer) {
+      Pacer.state.onTick = function (P) { var c = $('pcCount'), ph = $('pcPhase'); if (c) c.textContent = String(P.run); if (ph) { ph.className = 'phase ' + (P.phase === 'run' ? 'run' : P.phase === 'walk' ? 'walk' : 'rest'); ph.textContent = P.phase === 'ready' ? t('fitReady') + ' ' + P.left : P.phase === 'run' ? t('fitRun') + ' ' + P.left : P.phase === 'walk' ? t('fitWalk') + ' ' + P.left : t('fitRunNow'); } if (!P.on) { SES.pacerRun = P.run; if (SES.open) renderSetup(); } };
+      var ps = $('pcStart'); if (ps) ps.onclick = function () { Pacer.start(std.run, std.walk, INTERVAL_RUNS); renderSetup(); };
+      var pq = $('pcStop'); if (pq) pq.onclick = function () { Pacer.stop(); };
+    }
+    var pm = $('pcMinus'); if (pm) pm.onclick = function () { SES.pacerRun = Math.max(0, SES.pacerRun - 1); $('pcCount').textContent = String(SES.pacerRun); };
+    var pp = $('pcPlus'); if (pp) pp.onclick = function () { SES.pacerRun = Math.min(INTERVAL_RUNS, SES.pacerRun + 1); $('pcCount').textContent = String(SES.pacerRun); };
     var fp = $('fitPrint'); if (fp) fp.onclick = function () { window.print(); };
   }
 
@@ -1325,13 +1411,16 @@
       var noRules = SU.events.filter(function (e) { return e.active !== false && !e.rules_url; }).map(function (e) { return e.name || e.id; });
       var covered = {}; SU.events.forEach(function (e) { if (e.rules_url && e.league) covered[key(e.league)] = 1; if (e.rules_url && e.name) covered[key(e.name)] = 1; });
       var compNoRules = (SU.leagues || []).filter(function (c) { return !covered[key(c)] && !SU.events.some(function (e) { return e.rules_url && (key(e.name) === key(c) || (e.league && key(e.league) === key(c))); }); });
-      var rulesCard = (noRules.length || compNoRules.length) ? '<div class="card" style="border-color:var(--gold);gap:6px"><b>' + esc(t('rulesMissingTitle')) + '</b><div class="hint">' + esc(t('rulesMissingHint')) + '</div>' +
+      var rulesCard = (noRules.length || compNoRules.length) ? fold('rules', t('rulesMissingTitle'), noRules.length + compNoRules.length, '<div class="hint">' + esc(t('rulesMissingHint')) + '</div>' +
         (noRules.length ? '<div><b>' + esc(t('rulesMissingEvents')) + '</b> ' + noRules.map(esc).join(', ') + '</div>' : '') +
-        (compNoRules.length ? '<div><b>' + esc(t('rulesMissingComps')) + '</b> ' + compNoRules.slice(0, 25).map(esc).join(', ') + (compNoRules.length > 25 ? ' +' + (compNoRules.length - 25) : '') + '</div>' : '') + '</div>' : '';
-      if (SES.open) { $('setupBody').innerHTML = sessionsSetupHtml(); wireSessionsSetup($('setupBody')); return; }
-      $('setupBody').innerHTML = rulesCard + sessionsSetupHtml() + '<div class="disp h2">' + esc(t('setupEventsTitle')) + '</div><div class="pad" style="padding-top:12px"><button class="btn primary" id="evNew" style="width:100%">' + esc(t('newEvent')) + '</button></div><div class="list">' + SU.events.map(function (e) {
+        (compNoRules.length ? '<div><b>' + esc(t('rulesMissingComps')) + '</b> ' + compNoRules.map(esc).join(', ') + '</div>' : ''), false) : '';
+      var evItem = function (e) {
         return '<a class="item" href="#" data-ev="' + esc(e.id) + '"><div><b>' + esc(e.name || e.id) + '</b> <span class="pill' + (e.active ? ' ok' : '') + '">' + esc(e.active ? t('evOn') : t('evOff')) + '</span><br><span class="hint">' + esc(e.type || '') + ', ' + esc(e.start_date || '') + (e.end_date && e.end_date !== e.start_date ? ' to ' + esc(e.end_date) : '') + ', ' + esc((e.venues || []).join(', ')) + (e.game_prefix ? ', ' + esc(e.game_prefix) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
-      }).join('') + '</div>';
+      };
+      if (SES.open) { $('setupBody').innerHTML = sessionsSetupHtml(); wireSessionsSetup($('setupBody')); return; }
+      var tdy = todayStr(), evDone = SU.events.filter(function (e) { return (e.end_date || e.start_date || '') < tdy; }), evLive = SU.events.filter(function (e) { return evDone.indexOf(e) < 0; });
+      $('setupBody').innerHTML = rulesCard + sessionsSetupHtml() + '<div class="disp h2">' + esc(t('setupEventsTitle')) + '</div><div class="pad" style="padding-top:12px"><button class="btn primary" id="evNew" style="width:100%">' + esc(t('newEvent')) + '</button></div><div class="list">' + evLive.map(evItem).join('') + '</div>' +
+        (evDone.length ? fold('evdone', t('evCompleted'), evDone.length, '<div class="list">' + evDone.map(evItem).join('') + '</div>', false) : '');
       wireSessionsSetup($('setupBody'));
       $('evNew').onclick = function () { SU.ev = blankEvent(); SU.check = null; renderSetup(); };
       $('setupBody').querySelectorAll('[data-ev]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); var src = SU.events.filter(function (x) { return x.id === a.getAttribute('data-ev'); })[0]; SU.ev = JSON.parse(JSON.stringify(src)); SU.ev.venues = SU.ev.venues || []; SU.ev.tools = SU.ev.tools || []; SU.ev.alert_emails = SU.ev.alert_emails || []; SU.check = null; renderSetup(); }; });
@@ -1729,7 +1818,7 @@
     }
     // Fitness tests, by standard, for the year in view
     var fitRows = (ST.fit || []).filter(function (r) { return Number(r.year) === Number(Y); });
-    if (fitRows.length) html += '<div class="card" style="gap:6px"><b>' + esc(t('stFitness')) + '</b>' + hbars(fitRows.map(function (r) { return { l: t('fitStd.' + (FIT[r.standard] ? r.standard : 'national')) + ', ' + t('sesPassed').toLowerCase() + (Number(r.tested) ? ' (' + pct(Number(r.passed), Number(r.tested)) + '% ' + t('stOfTested').replace('{n}', r.tested) + ')' : ''), v: Number(r.passed) }; }), Number(Y)) + '</div>';
+    if (fitRows.length) html += '<div class="card" style="gap:6px"><b>' + esc(t('stFitness')) + '</b>' + hbars(fitRows.map(function (r) { return { l: t('fitStd.' + stdKey(r)) + ', ' + t('sesPassed').toLowerCase() + (Number(r.tested) ? ' (' + pct(Number(r.passed), Number(r.tested)) + '% ' + t('stOfTested').replace('{n}', r.tested) + ')' : ''), v: Number(r.passed) }; }), Number(Y)) + '</div>';
     // Where they are, experience, ethnicity, compliance, registration month
     var regions = [['denver', t('regDenver')], ['north', t('regNorth')], ['springs', t('regSprings')], ['foothills', t('regFoothills')], ['west', t('regWest')], ['mountains', t('regMountains')], ['boulder', t('regBoulder')], ['pueblo', t('regPueblo')], ['south', t('regSouth')], ['southwest', t('regSouthwest')], ['plains', t('regPlains')], ['outside', t('regOutside')]];
     var regItems = regions.map(function (b) { return { l: b[1], v: stVal(Y, 'region', b[0]) || 0, d: d('region', b[0]) }; }).filter(function (i) { return i.v; }).sort(function (a, b) { return b.v - a.v; });

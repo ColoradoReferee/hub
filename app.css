@@ -216,7 +216,13 @@ table.fit td { padding: 4px 4px; vertical-align: middle; }
 table.fit input.fit-t { width: 62px; padding: 8px 4px; font: inherit; text-align: right; border: 1px solid var(--muted); border-radius: 8px; background: var(--surface); color: var(--ink); min-height: 40px; }
 table.fit input.fit-t.bad { border-color: var(--red); color: var(--red); font-weight: 700; }
 table.fit tr.passed td:last-child { color: var(--green); }
-.chip-btn.warn.on { background: var(--gold); color: var(--navy); border-color: var(--gold); }
+.chip-btn.warn { border-color: var(--gold); }
+table.fit input.fit-t.warnd { border-color: var(--gold); font-weight: 700; }
+table.fit td.good { color: var(--green); } table.fit td.bad { color: var(--red); }
+table.fit tr.premium td:last-child { color: #8a6500; }
+.pacer .big { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 56px; line-height: 1; }
+.pacer .phase { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 24px; }
+.pacer .phase.run { color: var(--green); } .pacer .phase.walk { color: #8a6500; } .pacer .phase.rest { color: var(--muted); }
 .pill.fitbadge { align-self: flex-start; }
 table.fit tr.failed td:last-child { color: var(--red); }
 .print-only { display: none; }
