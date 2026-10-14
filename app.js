@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.13-u';
+  var VERSION = '2026.10.14-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -167,6 +167,31 @@
   }
   document.addEventListener('toggle', function (e) { var d = e.target; if (d && d.matches && d.matches('details.fold')) FOLD[d.getAttribute('data-fold')] = d.open; }, true);
 
+  // ── Your year: the wrap-up and the games leaderboard ─────────────
+  // Shown from WRAP_FROM (month, day) through January of the next year. Everyone sees the
+  // leaderboard; a club name filters it to games that club played, for club bonuses.
+  var WRAP_FROM = [11, 15], WRAP = { me: null, board: null, club: '', year: null, open: false };
+  function wrapYear() { var d = new Date(), m = d.getMonth() + 1, day = d.getDate(); if (m === 1) return d.getFullYear() - 1; if (m > WRAP_FROM[0] || (m === WRAP_FROM[0] && day >= WRAP_FROM[1])) return d.getFullYear(); return null; }
+  async function renderWrap() {
+    var el = $('wrapLine'); if (!el) return;
+    var y = wrapYear(); if (!y) { el.innerHTML = ''; return; }
+    if (WRAP.year !== y || !WRAP.me) {
+      WRAP.year = y;
+      var r = await Promise.all([sb.rpc('my_season', { p_year: y }), sb.rpc('leaderboard', { p_year: y, p_club: WRAP.club || null, p_limit: 25 })]);
+      WRAP.me = r[0].data || {}; WRAP.board = r[1].data || [];
+    }
+    var m = WRAP.me, stat = function (n, l) { return '<div class="stat"><b>' + esc(n == null ? '0' : String(n)) + '</b><i>' + esc(l) + '</i></div>'; };
+    var mine = '<div class="stats">' + stat(m.games, t('wrapGames')) + stat(m.as_center, t('refCenter')) + stat(m.venues, t('wrapVenues')) + '</div>' +
+      '<div class="stats">' + stat(m.notes, t('wrapNotes')) + stat(m.place ? '#' + m.place : '', t('wrapPlace')) + stat(m.busiest_month || '', t('wrapBusiest')) + '</div>' +
+      (m.fitness_date ? '<div class="pad" style="padding-top:6px">' + fitBadgeHtml({ date: m.fitness_date, standard: m.fitness_standard }) + '</div>' : '') +
+      (m.first_game ? '<div class="pad hint" style="padding-top:6px">' + esc(t('refFirst')) + ' ' + esc(dayLong(m.first_game)) + ', ' + esc(t('refLast')) + ' ' + esc(dayLong(m.last_game)) + '.</div>' : '<div class="pad hint">' + esc(t('wrapNoGames')) + '</div>');
+    var board = '<div class="pad" style="padding-top:10px"><div class="go"><input id="wrapClub" type="search" value="' + esc(WRAP.club) + '" placeholder="' + esc(t('wrapClubPh')) + '" autocomplete="off" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn outline small" id="wrapGo">' + esc(t('go')) + '</button></div></div>' +
+      (WRAP.board.length ? '<table class="dt" style="margin:8px 20px 0;width:calc(100% - 40px)"><thead><tr><th class="n">#</th><th>' + esc(t('fitName')) + '</th><th class="n">' + esc(t('wrapGames')) + '</th><th class="n">' + esc(t('refCenter')) + '</th></tr></thead><tbody>' + WRAP.board.map(function (r, i) { return '<tr' + (r.is_me ? ' class="mine"' : '') + '><td class="n">' + (i + 1) + '</td><td>' + esc(r.name) + '</td><td class="n">' + esc(String(r.games)) + '</td><td class="n">' + esc(String(r.as_center)) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="pad hint">' + esc(t('wrapNobody')) + '</div>') +
+      '<div class="pad hint" style="padding-top:8px">' + esc(t('wrapBoardHint')) + '</div>';
+    el.innerHTML = fold('wrap', t('wrapTitle').replace('{y}', y), m.games || '', mine + '<div class="disp h2 print-keep" style="padding-top:10px">' + esc(t('wrapBoard').replace('{y}', y)) + '</div>' + board, true);
+    var go = async function () { WRAP.club = $('wrapClub').value.trim(); WRAP.open = true; busy(true); var r = await sb.rpc('leaderboard', { p_year: y, p_club: WRAP.club || null, p_limit: 25 }); busy(false); WRAP.board = r.data || []; renderWrap(); };
+    $('wrapGo').onclick = go; $('wrapClub').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } };
+  }
   // ── Sessions: fitness tests, classes, clinics ────────────────────
   var SES = { list: [], past: [], mine: [], counts: {}, open: null, roster: [], form: null, badge: null, pacerRun: 0 };
   function runsSessions() { return iCan('setup') || iCan('review'); }
@@ -488,6 +513,7 @@
     var coachedHere = S.games.some(function (x) { return (S.coachedVenues || []).indexOf(x.venue) >= 0; });
     var myEval = (ER.mine || []).filter(function (r) { return r.ref_person_id === S.me.person_id && r.status === 'assigned' && r.game_date >= todayStr(); })[0];
     $('sessionsLine').innerHTML = signupCardHtml(); wireSignup($('sessionsLine'));
+    renderWrap();
     $('evalLine').innerHTML = myEval ? '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('evalReqTitle')) + '</b><div>' + esc(dayLong(myEval.game_date)) + ', ' + esc(myEval.venue || '') + '. ' + esc(t('evalPurpose.' + myEval.purpose)) + '. ' + esc(t('evalStatus.assigned')) + '</div></div>' : '';
     $('bulletins').innerHTML = (coachedHere ? '<div class="bulletin"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="9" stroke="currentColor" stroke-width="2"></circle><path d="M7 11.5l3 3 5-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><div class="text">' + esc(t('coachHereToday')) + ' <a href="#" id="badgeLink">' + esc(t('lanyard')) + '</a><div id="badgeBox" hidden style="margin-top:8px"><img src="assets/badge.png" alt="" style="width:130px;border-radius:8px"><div class="hint">' + esc(t('badgeCaption')) + '</div></div></div></div>' : '') + S.bulletins.slice(0, 2).map(function (b) {
       return '<div class="bulletin"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="9" stroke="currentColor" stroke-width="2"></circle><path d="M11 6v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><circle cx="11" cy="15.5" r="1.2" fill="currentColor"></circle></svg><div class="text">' + (b.title ? '<b>' + esc(b.title) + '</b> ' : '') + esc(b.body || '') + ' <span>' + esc(t('fromState')) + '.</span></div></div>';
@@ -1970,32 +1996,34 @@
   // ── Staff roster ─────────────────────────────────────────────────
   var STAFF = { rows: null, filter: '' };
   // ── Not yet registered: the renewal campaign list ─────────────────
-  var REG = { rows: null, season: null, filter: 'all', batch: 0 };
+  var REG = { rows: null, season: null, filter: 'all', batch: 0, lapsed: false };
   function regSeason() { var d = new Date(); return d.getMonth() >= 8 ? d.getFullYear() + 1 : d.getFullYear(); }
   function regFiltered() {
     var f = REG.filter;
     return (REG.rows || []).filter(function (p) { return f === 'all' || (f === 'first' && p.first_year) || (f === '20_24' && p.age_band === '20_24') || (f === 'u18' && p.age_band === 'u18') || (f === 'upgrade' && p.level !== 'grassroots'); });
   }
   async function renderUnregistered() {
-    REG.season = regSeason();
+    REG.season = regSeason() - (REG.lapsed ? 1 : 0);
     if (!REG.rows) { busy(true); var r = await sb.rpc('unregistered', { p_season: REG.season }); busy(false); REG.rows = r.data || []; REG.batch = 0; }
     var rows = regFiltered(), emails = rows.map(function (p) { return p.email; }).filter(Boolean), BATCH = 200, nb = Math.max(1, Math.ceil(emails.length / BATCH));
     if (REG.batch >= nb) REG.batch = 0;
     var chip = function (k, label, n) { return '<button class="chip-btn small' + (REG.filter === k ? ' on' : '') + '" data-reg-f="' + k + '">' + esc(label) + ' ' + n + '</button>'; };
     var all = REG.rows, cnt = function (fn) { return all.filter(fn).length; };
     $('personCard').innerHTML = '';
-    $('peopleResults').innerHTML = '<div class="pad" style="padding-top:12px"><div class="disp" style="font-size:30px">' + esc(t('regListTitle').replace('{y}', REG.season)) + '</div><div class="disp" style="font-size:44px;color:var(--red)">' + fmtN(all.length) + '</div><div class="hint">' + esc(t('regListLead').replace('{prev}', REG.season - 1)) + '</div>' +
+    $('peopleResults').innerHTML = '<div class="pad" style="padding-top:12px"><div class="chips"><button class="chip-btn small' + (!REG.lapsed ? ' on' : '') + '" data-reg-mode="next">' + esc(t('regModeNext').replace('{y}', regSeason())) + '</button><button class="chip-btn small' + (REG.lapsed ? ' on' : '') + '" data-reg-mode="lapsed">' + esc(t('regModeLapsed').replace('{y}', regSeason() - 1)) + '</button></div>' +
+      '<div class="disp" style="font-size:30px;margin-top:10px">' + esc((REG.lapsed ? t('regLapsedTitle') : t('regListTitle')).replace('{y}', REG.season)) + '</div><div class="disp" style="font-size:44px;color:var(--red)">' + fmtN(all.length) + '</div><div class="hint">' + esc((REG.lapsed ? t('regLapsedLead') : t('regListLead')).replace('{prev}', REG.season - 1).replace('{y}', REG.season)) + '</div>' +
       '<div class="chips" style="margin-top:8px">' + chip('all', t('regAll'), all.length) + chip('first', t('regFirstYear'), cnt(function (p) { return p.first_year; })) + chip('u18', t('regU18'), cnt(function (p) { return p.age_band === 'u18'; })) + chip('20_24', t('reg2024'), cnt(function (p) { return p.age_band === '20_24'; })) + chip('upgrade', t('regUpgrade'), cnt(function (p) { return p.level !== 'grassroots'; })) + '</div></div>' +
       '<div class="card" style="gap:8px"><b>' + esc(t('regEmailTitle').replace('{n}', fmtN(emails.length))) + '</b><div class="hint">' + esc(t('regEmailHint')) + '</div>' +
       '<div class="actions" style="padding:0;flex-wrap:wrap"><button class="btn primary small" id="regCopy">' + esc(nb > 1 ? t('regCopyBatch').replace('{i}', REG.batch + 1).replace('{n}', nb) : t('regCopy')) + '</button>' + (nb > 1 ? '<button class="btn outline small" id="regNext">' + esc(t('regNextBatch')) + '</button>' : '') + '<button class="btn outline small" id="regCsv">' + esc(t('regCsv')) + '</button></div><div class="msg" id="regMsg" hidden></div></div>' +
       (rows.length ? '<div class="list">' + rows.slice(0, 200).map(function (p) { return '<a class="item" href="#" data-person="' + p.id + '"><div><b>' + esc(p.first_name + ' ' + p.last_name) + '</b><br><span class="hint">' + esc([p.city, p.first_year ? t('regFirstYear') : (p.seasons + ' ' + t('regSeasons')), p.level !== 'grassroots' ? t('fitStd.' + p.level) : ''].filter(Boolean).join(', ')) + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + (rows.length > 200 ? '<div class="pad hint">' + esc(t('showingFirst').replace('{n}', 200)) + '</div>' : '') + '</div>' : '<div class="card"><div class="hint">' + esc(t('regNobody')) + '</div></div>');
+    $('peopleResults').querySelectorAll('[data-reg-mode]').forEach(function (b) { b.onclick = function () { REG.lapsed = b.getAttribute('data-reg-mode') === 'lapsed'; REG.rows = null; REG.batch = 0; renderUnregistered(); }; });
     $('peopleResults').querySelectorAll('[data-reg-f]').forEach(function (b) { b.onclick = function () { REG.filter = b.getAttribute('data-reg-f'); REG.batch = 0; renderUnregistered(); }; });
     $('regCopy').onclick = async function () { var slice = emails.slice(REG.batch * BATCH, (REG.batch + 1) * BATCH).join(', '); try { await navigator.clipboard.writeText(slice); say('regMsg', t('regCopied').replace('{n}', slice ? slice.split(', ').length : 0), 'good'); } catch (e) { window.prompt(t('regCopyManual'), slice); } };
     var nx = $('regNext'); if (nx) nx.onclick = function () { REG.batch = (REG.batch + 1) % nb; renderUnregistered(); };
     $('regCsv').onclick = function () {
       var head = ['first_name', 'last_name', 'email', 'phone', 'city', 'age_band', 'first_year', 'seasons', 'level'];
       var csv = head.join(',') + '\n' + rows.map(function (p) { return head.map(function (k) { var v = p[k] == null ? '' : String(p[k]); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(','); }).join('\n');
-      var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'not-registered-' + REG.season + '-' + REG.filter + '.csv'; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+      var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = (REG.lapsed ? 'lapsed-' : 'not-registered-') + REG.season + '-' + REG.filter + '.csv'; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
     };
     $('peopleResults').querySelectorAll('[data-person]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); openPerson(a.getAttribute('data-person')); }; });
   }
@@ -2362,7 +2390,7 @@
     $('peopleQ').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); } };
     $('staffBtn').onclick = function () { renderStaff(); };
     $('linkBtn').onclick = function () { LINK.rows = null; LINK.pick = null; renderLinks(); };
-    $('regBtn').onclick = function () { REG.rows = null; renderUnregistered(); };
+    $('regBtn').onclick = function () { REG.rows = null; REG.lapsed = false; renderUnregistered(); };
     $('peopleGo').onclick = function () { clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); };
     document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('[data-tab="staff"]'); if (a && a.getAttribute('href') === '#ops') OPS.openStaff = true; });
     $('signOut').onclick = async function (e) { e.preventDefault(); liveStop(); await sb.auth.signOut(); S.me = null; location.hash = ''; show('s-signin'); };
