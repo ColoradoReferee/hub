@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Fitness test · Colorado Referees</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
-<link rel="stylesheet" href="app.css?v=2026.10.14-k">
+<link rel="stylesheet" href="app.css?v=2026.10.14-l">
 <style>
   .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 20px 0; }
   .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
@@ -42,47 +42,48 @@
 <body>
 <div class="app">
   <div class="top">
-    <a class="backlink" href="index.html#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>Your day</a>
+    <a class="backlink" href="index.html#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="back">Your day</span></a>
     <div class="tools">
+      <button class="linkbtn" id="langBtn" style="background:none;border:0;cursor:pointer;color:var(--ink)">Español</button>
       <button class="iconbtn" id="themeBtn" aria-label="Switch between light and dark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
       <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
     </div>
   </div>
 
   <div class="pad" style="padding-top:16px">
-    <div class="lead">Colorado Soccer Referee Program</div>
-    <div class="disp" style="font-size:44px">FITNESS TEST</div>
-    <div class="lead" style="margin-top:6px">The FIFA fitness test for referees: six sprints, then forty runs. Colorado uses two sets of times: the <b>FIFA men's international</b> standard for the National test and the <b>FIFA women's international</b> standard for the Regional test.</div>
+    <div class="lead" data-t="program">Colorado Soccer Referee Program</div>
+    <div class="disp" style="font-size:44px" data-t="title">FITNESS TEST</div>
+    <div class="lead" style="margin-top:6px" data-t="intro">The FIFA fitness test for referees: six sprints, then forty runs. Colorado uses two sets of times: the <b>FIFA men's international</b> standard for the National test and the <b>FIFA women's international</b> standard for the Regional test.</div>
   </div>
 
-  <div class="jump"><a href="#rsa">Test 1: sprints</a><a href="#interval">Test 2: interval</a><a href="#standards">All standards</a><a href="#pacer">Pacer and audio</a><a href="#ar">Assistant referees</a></div>
+  <div class="jump"><a href="#rsa" data-t="j1">Test 1: sprints</a><a href="#interval" data-t="j2">Test 2: interval</a><a href="#standards" data-t="j3">All standards</a><a href="#pacer" data-t="j4">Pacer and audio</a><a href="#ar" data-t="j5">Assistant referees</a></div>
 
-  <div class="rules-h" id="rsa">TEST 1: REPEATED SPRINT ABILITY (RSA)</div>
+  <div class="rules-h" id="rsa" data-t="h1">TEST 1: REPEATED SPRINT ABILITY (RSA)</div>
   <div class="diagram"><svg viewBox="0 0 360 110" role="img" aria-label="Six 40 metre sprints with a walk back">
     <line x1="30" y1="25" x2="30" y2="55" class="lane"/><line x1="330" y1="25" x2="330" y2="55" class="lane"/>
     <line x1="18" y1="28" x2="18" y2="52" class="lane" stroke-dasharray="3 3"/>
     <path d="M18 40 H330" class="run"/>
     <path d="M330 70 H30" class="walk"/>
     <polygon points="30,52 34,60 26,60" class="cone"/><polygon points="330,52 334,60 326,60" class="cone"/>
-    <text x="4" y="18" font-size="9">Start line, 1.5 m before the gate</text><text x="258" y="18">Gate at 40 m</text>
-    <text x="110" y="86">Walk back within 60 seconds, then go again</text>
-    <text x="44" y="104" font-weight="700">6 sprints. One miss earns a 7th. Two misses is a fail.</text>
+    <text x="4" y="18" font-size="9" data-t="svg1a">Start line, 1.5 m before the gate</text><text x="258" y="18" data-t="svg1b">Gate at 40 m</text>
+    <text x="110" y="86" data-t="svg1c">Walk back within 60 seconds, then go again</text>
+    <text x="44" y="104" font-weight="700" data-t="svg1d">6 sprints. One miss earns a 7th. Two misses is a fail.</text>
   </svg></div>
-  <div class="rule gold"><b>6 × 40 m, maximum 60 seconds recovery</b><p>Timing gates at 0 and 40 m; the start line is 1.5 m before the first gate. Walk back to the start during the recovery. Every sprint must be at or under the reference time.</p></div>
-  <div class="rule"><b>One missed sprint earns a 7th</b><p>A referee who misses the time on one of the six runs a 7th sprint straight after the 6th. Miss two and the test is failed. A fall or a trip earns an extra trial, not a fail.</p></div>
-  <div class="rule"><b>Colorado reference times</b><p><b>National test: 6.0 s</b> (FIFA men's international). <b>Regional test: 6.4 s</b> (FIFA women's international).</p></div>
+  <div class="rule gold" data-t="r1"><b>6 × 40 m, maximum 60 seconds recovery</b><p>Timing gates at 0 and 40 m; the start line is 1.5 m before the first gate. Walk back to the start during the recovery. Every sprint must be at or under the reference time.</p></div>
+  <div class="rule" data-t="r2"><b>One missed sprint earns a 7th</b><p>A referee who misses the time on one of the six runs a 7th sprint straight after the 6th. Miss two and the test is failed. A fall or a trip earns an extra trial, not a fail.</p></div>
+  <div class="rule" data-t="r3"><b>Colorado reference times</b><p><b>National test: 6.0 s</b> (FIFA men's international). <b>Regional test: 6.4 s</b> (FIFA women's international).</p></div>
 
-  <div class="rules-h" id="interval">TEST 2: INTERVAL TEST</div>
+  <div class="rules-h" id="interval" data-t="h2">TEST 2: INTERVAL TEST</div>
   <div class="diagram"><svg viewBox="0 0 360 170" role="img" aria-label="A 400 metre track with 75 metre runs and 25 metre walks">
     <path d="M100 25 H260 A60 60 0 0 1 320 85 A60 60 0 0 1 260 145 H100 A60 60 0 0 1 40 85 A60 60 0 0 1 100 25 Z" class="lane"/>
     <path d="M100 25 H260 A60 60 0 0 1 320 85 A60 60 0 0 1 260 145 H100 A60 60 0 0 1 40 85 A60 60 0 0 1 100 25 Z" class="run" pathLength="400" style="stroke-dasharray:75 25"/>
     <path d="M100 25 H260 A60 60 0 0 1 320 85 A60 60 0 0 1 260 145 H100 A60 60 0 0 1 40 85 A60 60 0 0 1 100 25 Z" class="walk" pathLength="400" style="stroke-dasharray:0 75 25 0"/>
     <polygon points="100,18 104,26 96,26" class="cone"/>
-    <text x="104" y="16">Start. Run 75 m</text><text x="262" y="16" font-size="10">Walk 25 m</text>
-    <text x="118" y="78">4 runs and 4 walks per lap</text><text x="110" y="96" font-weight="700">10 laps. 40 runs. 4,000 m.</text>
-    <line x1="120" y1="112" x2="150" y2="112" class="run"/><text x="156" y="116">run</text><line x1="190" y1="112" x2="220" y2="112" class="walk" style="stroke-dasharray:none"/><text x="226" y="116">walk</text>
+    <text x="104" y="16" data-t="svg2a">Start. Run 75 m</text><text x="262" y="16" font-size="10" data-t="svg2b">Walk 25 m</text>
+    <text x="118" y="78" data-t="svg2c">4 runs and 4 walks per lap</text><text x="110" y="96" font-weight="700" data-t="svg2d">10 laps. 40 runs. 4,000 m.</text>
+    <line x1="120" y1="112" x2="150" y2="112" class="run"/><text x="156" y="116" data-t="svg2e">run</text><line x1="190" y1="112" x2="220" y2="112" class="walk" style="stroke-dasharray:none"/><text x="226" y="116" data-t="svg2f">walk</text>
   </svg></div>
-  <div class="pad hint" style="padding-top:8px">On a field instead of a track: the 75 m run goes from one penalty area line to the other, and the 25 m walk is split into 12.5 m at each end, turning around before the next run. Same times, same count.</div>
+  <div class="pad hint" style="padding-top:8px" data-t="fieldNote">On a field instead of a track: the 75 m run goes from one penalty area line to the other, and the 25 m walk is split into 12.5 m at each end, turning around before the next run. Same times, same count.</div>
   <div class="diagram"><svg viewBox="0 0 360 130" role="img" aria-label="The interval test laid out on a soccer field">
     <rect x="20" y="10" width="320" height="110" rx="4" style="fill:rgba(39,174,96,.12);stroke:var(--muted);stroke-width:1.5"/>
     <line x1="180" y1="10" x2="180" y2="120" class="lane"/><circle cx="180" cy="55" r="14" class="lane"/>
@@ -90,72 +91,230 @@
     <path d="M66 80 H294" class="run"/><path d="M294 96 H66" class="run"/>
     <path d="M66 80 H34" class="walk" style="stroke-dasharray:none"/><path d="M294 80 H326" class="walk" style="stroke-dasharray:none"/>
     <path d="M294 96 H326" class="walk" style="stroke-dasharray:none"/><path d="M66 96 H34" class="walk" style="stroke-dasharray:none"/>
-    <text x="100" y="74" font-size="10">Run 75 m</text><text x="230" y="110" font-size="10">Run 75 m</text>
-    <text x="24" y="22" font-size="9">Walk 12.5 m</text><text x="288" y="22" font-size="9">Walk 12.5 m</text>
-    <text x="40" y="128" font-size="9" font-weight="700">Start / finish</text><text x="280" y="128" font-size="9" font-weight="700">Start / finish</text>
+    <text x="100" y="74" font-size="10" data-t="svg3a">Run 75 m</text><text x="230" y="110" font-size="10" data-t="svg3b">Run 75 m</text>
+    <text x="24" y="22" font-size="9" data-t="svg3c">Walk 12.5 m</text><text x="288" y="22" font-size="9" data-t="svg3d">Walk 12.5 m</text>
+    <text x="40" y="128" font-size="9" font-weight="700" data-t="svg3e">Start / finish</text><text x="280" y="128" font-size="9" font-weight="700" data-t="svg3f">Start / finish</text>
   </svg></div>
-  <div class="rule gold"><b>40 × 75 m run, 25 m walk</b><p>Ten laps of a 400 m track. An audio signal starts each run and marks the end of each run and walk. Every run ends inside the walking area: a line 1.5 m before and 1.5 m after the 75 m mark.</p></div>
-  <div class="rule"><b>One warning, then out</b><p>A foot late into the walking area once earns a clear warning. A second time and the test leader stops the referee: the test is failed.</p></div>
-  <div class="rule"><b>Colorado reference times</b><p><b>National test: 15 s run, 18 s walk</b> (FIFA men's international). <b>Regional test: 17 s run, 20 s walk</b> (FIFA women's international).</p></div>
-  <div class="rule"><b>Between the tests</b><p>Test 1 to Test 2: 6 to 8 minutes. Warm up before Test 1 as you would for a match.</p></div>
+  <div class="rule gold" data-t="r4"><b>40 × 75 m run, 25 m walk</b><p>Ten laps of a 400 m track. An audio signal starts each run and marks the end of each run and walk. Every run ends inside the walking area: a line 1.5 m before and 1.5 m after the 75 m mark.</p></div>
+  <div class="rule" data-t="r5"><b>One warning, then out</b><p>A foot late into the walking area once earns a clear warning. A second time and the test leader stops the referee: the test is failed.</p></div>
+  <div class="rule" data-t="r6"><b>Colorado reference times</b><p><b>National test: 15 s run, 18 s walk</b> (FIFA men's international). <b>Regional test: 17 s run, 20 s walk</b> (FIFA women's international).</p></div>
+  <div class="rule" data-t="r7"><b>Between the tests</b><p>Test 1 to Test 2: 6 to 8 minutes. Warm up before Test 1 as you would for a match.</p></div>
 
-  <div class="rules-h" id="standards">ALL STANDARDS, FOR REFERENCE</div>
-  <div class="pad hint">FIFA Fitness Tests for Referees, 2016 edition. The Colorado rows are highlighted. Some Regional referees are set to the category 3 times by the Referee Department. Other categories are listed for knowledge; a federation may set its own.</div>
-  <table class="std"><thead><tr><th>Category</th><th>RSA, 6 × 40 m</th><th>Interval run</th><th>Interval walk</th></tr></thead><tbody>
-    <tr class="co"><td>Men, international. <b>Colorado National test, FIFA test</b></td><td class="n">6.0 s</td><td class="n">15 s</td><td class="n">18 s</td></tr>
-    <tr><td>Men, category 1</td><td class="n">6.0 s</td><td class="n">15 s</td><td class="n">20 s</td></tr>
-    <tr><td>Men, category 2</td><td class="n">6.1 s</td><td class="n">15 s</td><td class="n">22 s</td></tr>
-    <tr><td>Men, category 3</td><td class="n">6.2 s</td><td class="n">16 s</td><td class="n">24 s</td></tr>
-    <tr class="co"><td>Women, international. <b>Colorado Regional test</b></td><td class="n">6.4 s</td><td class="n">17 s</td><td class="n">20 s</td></tr>
-    <tr><td>Women, category 1</td><td class="n">6.4 s</td><td class="n">17 s</td><td class="n">22 s</td></tr>
-    <tr><td>Women, category 2</td><td class="n">6.5 s</td><td class="n">17 s</td><td class="n">24 s</td></tr>
-    <tr class="co"><td>Women, category 3. <b>Colorado Regional test, category 3 times, where assigned</b></td><td class="n">6.6 s</td><td class="n">18 s</td><td class="n">26 s</td></tr>
+  <div class="rules-h" id="standards" data-t="h3">ALL STANDARDS, FOR REFERENCE</div>
+  <div class="pad hint" data-t="stdNote">FIFA Fitness Tests for Referees, 2016 edition. The Colorado rows are highlighted. Some Regional referees are set to the category 3 times by the Referee Department. Other categories are listed for knowledge; a federation may set its own.</div>
+  <table class="std"><thead><tr><th data-t="thCat">Category</th><th data-t="thRsa">RSA, 6 × 40 m</th><th data-t="thRun">Interval run</th><th data-t="thWalk">Interval walk</th></tr></thead><tbody>
+    <tr class="co"><td data-t="c1">Men, international. <b>Colorado National test, FIFA test</b></td><td class="n">6.0 s</td><td class="n">15 s</td><td class="n">18 s</td></tr>
+    <tr><td data-t="c2">Men, category 1</td><td class="n">6.0 s</td><td class="n">15 s</td><td class="n">20 s</td></tr>
+    <tr><td data-t="c3">Men, category 2</td><td class="n">6.1 s</td><td class="n">15 s</td><td class="n">22 s</td></tr>
+    <tr><td data-t="c4">Men, category 3</td><td class="n">6.2 s</td><td class="n">16 s</td><td class="n">24 s</td></tr>
+    <tr class="co"><td data-t="c5">Women, international. <b>Colorado Regional test</b></td><td class="n">6.4 s</td><td class="n">17 s</td><td class="n">20 s</td></tr>
+    <tr><td data-t="c6">Women, category 1</td><td class="n">6.4 s</td><td class="n">17 s</td><td class="n">22 s</td></tr>
+    <tr><td data-t="c7">Women, category 2</td><td class="n">6.5 s</td><td class="n">17 s</td><td class="n">24 s</td></tr>
+    <tr class="co"><td data-t="c8">Women, category 3. <b>Colorado Regional test, category 3 times, where assigned</b></td><td class="n">6.6 s</td><td class="n">18 s</td><td class="n">26 s</td></tr>
   </tbody></table>
 
-  <div class="rules-h" id="ar">ASSISTANT REFEREES</div>
-  <div class="pad hint">The AR test has three parts. Colorado runs the referee test above for everyone; this is here for referees heading to National AR or FIFA.</div>
-  <div class="rule"><b>Test 1: CODA (change of direction)</b><p>10 m forward, 8 m sideways left, 8 m sideways right, 10 m forward. International reference: men 10.0 s, women 11.0 s. Two failed trials is a fail.</p></div>
-  <div class="rule"><b>Test 2: RSA, 5 × 30 m</b><p>Maximum 30 seconds recovery. International reference: men 4.7 s, women 5.1 s. One miss earns a 6th trial; two misses is a fail.</p></div>
-  <div class="rule"><b>Test 3: Interval, 40 × 75 m run and 25 m walk</b><p>Same track as the referees. International reference: men 15 s run, 20 s walk; women 17 s run, 22 s walk.</p></div>
+  <div class="rules-h" id="ar" data-t="h4">ASSISTANT REFEREES</div>
+  <div class="pad hint" data-t="arNote">The AR test has three parts. Colorado runs the referee test above for everyone; this is here for referees heading to National AR or FIFA.</div>
+  <div class="rule" data-t="a1"><b>Test 1: CODA (change of direction)</b><p>10 m forward, 8 m sideways left, 8 m sideways right, 10 m forward. International reference: men 10.0 s, women 11.0 s. Two failed trials is a fail.</p></div>
+  <div class="rule" data-t="a2"><b>Test 2: RSA, 5 × 30 m</b><p>Maximum 30 seconds recovery. International reference: men 4.7 s, women 5.1 s. One miss earns a 6th trial; two misses is a fail.</p></div>
+  <div class="rule" data-t="a3"><b>Test 3: Interval, 40 × 75 m run and 25 m walk</b><p>Same track as the referees. International reference: men 15 s run, 20 s walk; women 17 s run, 22 s walk.</p></div>
 
-  <div class="rules-h" id="pacer">PACER AND AUDIO</div>
-  <div class="pad hint">The interval test runs to a signal: a long tone starts each run, a short tone ends it, a short tone ends the walk. Play it here, or download the audio to your phone and play it from any speaker, for training or on test day. Pick the times first.</div>
+  <div class="rules-h" id="pacer" data-t="h5">PACER AND AUDIO</div>
+  <div class="pad hint" data-t="pacerNote">The interval test runs to a signal: a long tone starts each run, a short tone ends it, a short tone ends the walk. Play it here, or download the audio to your phone and play it from any speaker, for training or on test day. Pick the times first.</div>
   <div class="pacer">
     <div class="chips" id="pacerPick">
-      <button class="chip-btn on" data-run="15" data-walk="18">National 15 / 18</button>
-      <button class="chip-btn" data-run="17" data-walk="20">Regional 17 / 20</button>
-      <button class="chip-btn" data-run="18" data-walk="26">Regional, category 3, 18 / 26</button>
+      <button class="chip-btn on" data-run="15" data-walk="18" data-t="p1">National 15 / 18</button>
+      <button class="chip-btn" data-run="17" data-walk="20" data-t="p2">Regional 17 / 20</button>
+      <button class="chip-btn" data-run="18" data-walk="26" data-t="p3">Regional, category 3, 18 / 26</button>
       <button class="chip-btn" data-run="15" data-walk="20">15 / 20</button>
       <button class="chip-btn" data-run="17" data-walk="22">17 / 22</button>
     </div>
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:10px"><div><div class="hint" id="pacerLabel"></div><div class="phase rest" id="pacerPhase">Ready</div></div><div class="big" id="pacerCount">0</div></div>
-    <div class="hint" style="text-align:right">of 40 runs</div>
-    <div class="actions" style="padding:12px 0 0"><button class="btn primary" id="pacerStart">START</button><button class="btn outline" id="pacerStop" disabled>Stop</button><button class="btn outline" id="pacerDl">Download audio</button></div>
-    <div class="hint" style="margin-top:8px">Start plays a 10-second countdown first. The download is a 10 MB WAV file that plays on any phone or speaker.</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:10px"><div><div class="hint" id="pacerLabel"></div><div class="phase rest" id="pacerPhase" data-t="ready">Ready</div></div><div class="big" id="pacerCount">0</div></div>
+    <div class="hint" style="text-align:right" data-t="of40">of 40 runs</div>
+    <div class="actions" style="padding:12px 0 0"><button class="btn primary" id="pacerStart" data-t="start">START</button><button class="btn outline" id="pacerStop" disabled data-t="stop">Stop</button><button class="btn outline" id="pacerDl" data-t="dl">Download audio</button></div>
+    <div class="hint" style="margin-top:8px" data-t="dlNote">Start plays a 10-second countdown first. The download is a 10 MB WAV file that plays on any phone or speaker.</div>
   </div>
 
-  <div class="pad hint" style="margin-top:18px">Standards from FIFA Fitness Tests for Referees (2016). Colorado's choice of the men's and women's international times for the National and Regional tests is set by the Referee Department. Questions: refeducation@coloradoreferees.com.</div>
-  <div class="foot" style="flex-direction:column"><a class="btn help" href="index.html#help">I NEED HELP</a></div>
-  <div class="credit"><span class="chip"><img src="assets/jareferee-mark.png" alt=""></span><a href="https://jareferee.com">Built with JAReferee</a><span class="ver">v2026.10.14-k</span></div>
+  <div class="pad hint" style="margin-top:18px" data-t="foot">Standards from FIFA Fitness Tests for Referees (2016). Colorado's choice of the men's and women's international times for the National and Regional tests is set by the Referee Department. Questions: refeducation@coloradoreferees.com.</div>
+  <div class="foot" style="flex-direction:column"><a class="btn help" href="index.html#help" data-t="help">I NEED HELP</a></div>
+  <div class="credit"><span class="chip"><img src="assets/jareferee-mark.png" alt=""></span><a href="https://jareferee.com">Built with JAReferee</a><span class="ver">v2026.10.14-l</span></div>
 </div>
-<script src="pacer.js?v=2026.10.14-k"></script>
+<script src="pacer.js?v=2026.10.14-l"></script>
 <script>
 (function () {
   var run = 15, walk = 18, $ = function (id) { return document.getElementById(id); };
-  function label() { $('pacerLabel').textContent = 'Run ' + run + ' s, walk ' + walk + ' s. 40 runs, about ' + Math.round(40 * (run + walk) / 60) + ' minutes.'; }
+  // Two languages; the Hub's choice (hub-lang) carries over.
+  var T = { en: {
+    "program": "Colorado Soccer Referee Program",
+    "title": "FITNESS TEST",
+    "intro": "The FIFA fitness test for referees: six sprints, then forty runs. Colorado uses two sets of times: the <b>FIFA men's international</b> standard for the National test and the <b>FIFA women's international</b> standard for the Regional test.",
+    "j1": "Test 1: sprints",
+    "j2": "Test 2: interval",
+    "j3": "All standards",
+    "j4": "Pacer and audio",
+    "j5": "Assistant referees",
+    "h1": "TEST 1: REPEATED SPRINT ABILITY (RSA)",
+    "svg1a": "Start line, 1.5 m before the gate",
+    "svg1b": "Gate at 40 m",
+    "svg1c": "Walk back within 60 seconds, then go again",
+    "svg1d": "6 sprints. One miss earns a 7th. Two misses is a fail.",
+    "r1": "<b>6 × 40 m, maximum 60 seconds recovery</b><p>Timing gates at 0 and 40 m; the start line is 1.5 m before the first gate. Walk back to the start during the recovery. Every sprint must be at or under the reference time.</p>",
+    "r2": "<b>One missed sprint earns a 7th</b><p>A referee who misses the time on one of the six runs a 7th sprint straight after the 6th. Miss two and the test is failed. A fall or a trip earns an extra trial, not a fail.</p>",
+    "r3": "<b>Colorado reference times</b><p><b>National test: 6.0 s</b> (FIFA men's international). <b>Regional test: 6.4 s</b> (FIFA women's international).</p>",
+    "h2": "TEST 2: INTERVAL TEST",
+    "svg2a": "Start. Run 75 m",
+    "svg2b": "Walk 25 m",
+    "svg2c": "4 runs and 4 walks per lap",
+    "svg2d": "10 laps. 40 runs. 4,000 m.",
+    "svg2e": "run",
+    "svg2f": "walk",
+    "fieldNote": "On a field instead of a track: the 75 m run goes from one penalty area line to the other, and the 25 m walk is split into 12.5 m at each end, turning around before the next run. Same times, same count.",
+    "svg3a": "Run 75 m",
+    "svg3b": "Run 75 m",
+    "svg3c": "Walk 12.5 m",
+    "svg3d": "Walk 12.5 m",
+    "svg3e": "Start / finish",
+    "svg3f": "Start / finish",
+    "r4": "<b>40 × 75 m run, 25 m walk</b><p>Ten laps of a 400 m track. An audio signal starts each run and marks the end of each run and walk. Every run ends inside the walking area: a line 1.5 m before and 1.5 m after the 75 m mark.</p>",
+    "r5": "<b>One warning, then out</b><p>A foot late into the walking area once earns a clear warning. A second time and the test leader stops the referee: the test is failed.</p>",
+    "r6": "<b>Colorado reference times</b><p><b>National test: 15 s run, 18 s walk</b> (FIFA men's international). <b>Regional test: 17 s run, 20 s walk</b> (FIFA women's international).</p>",
+    "r7": "<b>Between the tests</b><p>Test 1 to Test 2: 6 to 8 minutes. Warm up before Test 1 as you would for a match.</p>",
+    "h3": "ALL STANDARDS, FOR REFERENCE",
+    "stdNote": "FIFA Fitness Tests for Referees, 2016 edition. The Colorado rows are highlighted. Some Regional referees are set to the category 3 times by the Referee Department. Other categories are listed for knowledge; a federation may set its own.",
+    "thCat": "Category",
+    "thRsa": "RSA, 6 × 40 m",
+    "thRun": "Interval run",
+    "thWalk": "Interval walk",
+    "c1": "Men, international. <b>Colorado National test, FIFA test</b>",
+    "c2": "Men, category 1",
+    "c3": "Men, category 2",
+    "c4": "Men, category 3",
+    "c5": "Women, international. <b>Colorado Regional test</b>",
+    "c6": "Women, category 1",
+    "c7": "Women, category 2",
+    "c8": "Women, category 3. <b>Colorado Regional test, category 3 times, where assigned</b>",
+    "h4": "ASSISTANT REFEREES",
+    "arNote": "The AR test has three parts. Colorado runs the referee test above for everyone; this is here for referees heading to National AR or FIFA.",
+    "a1": "<b>Test 1: CODA (change of direction)</b><p>10 m forward, 8 m sideways left, 8 m sideways right, 10 m forward. International reference: men 10.0 s, women 11.0 s. Two failed trials is a fail.</p>",
+    "a2": "<b>Test 2: RSA, 5 × 30 m</b><p>Maximum 30 seconds recovery. International reference: men 4.7 s, women 5.1 s. One miss earns a 6th trial; two misses is a fail.</p>",
+    "a3": "<b>Test 3: Interval, 40 × 75 m run and 25 m walk</b><p>Same track as the referees. International reference: men 15 s run, 20 s walk; women 17 s run, 22 s walk.</p>",
+    "h5": "PACER AND AUDIO",
+    "pacerNote": "The interval test runs to a signal: a long tone starts each run, a short tone ends it, a short tone ends the walk. Play it here, or download the audio to your phone and play it from any speaker, for training or on test day. Pick the times first.",
+    "p1": "National 15 / 18",
+    "p2": "Regional 17 / 20",
+    "p3": "Regional, category 3, 18 / 26",
+    "ready": "Ready",
+    "of40": "of 40 runs",
+    "start": "START",
+    "stop": "Stop",
+    "dl": "Download audio",
+    "dlNote": "Start plays a 10-second countdown first. The download is a 10 MB WAV file that plays on any phone or speaker.",
+    "foot": "Standards from FIFA Fitness Tests for Referees (2016). Colorado's choice of the men's and women's international times for the National and Regional tests is set by the Referee Department. Questions: refeducation@coloradoreferees.com.",
+    "help": "I NEED HELP",
+    "back": "Your day",
+    "label": "Run {r} s, walk {w} s. 40 runs, about {m} minutes.",
+    "getReady": "Get ready {n}",
+    "run": "RUN {n}",
+    "walk": "WALK {n}",
+    "done": "Done",
+    "stopped": "Stopped",
+    "lang": "Español",
+    "docTitle": "Fitness test · Colorado Referees"
+  }, es: {
+    "back": "Tu día",
+    "program": "Programa de Árbitros de Colorado Soccer",
+    "title": "PRUEBA FÍSICA",
+    "intro": "La prueba física FIFA para árbitros: seis sprints y luego cuarenta carreras. Colorado usa dos juegos de tiempos: el estándar <b>internacional masculino FIFA</b> para la prueba Nacional y el estándar <b>internacional femenino FIFA</b> para la prueba Regional.",
+    "j1": "Prueba 1: sprints",
+    "j2": "Prueba 2: intervalos",
+    "j3": "Todos los estándares",
+    "j4": "Pacer y audio",
+    "j5": "Árbitros asistentes",
+    "h1": "PRUEBA 1: VELOCIDAD REPETIDA (RSA)",
+    "svg1a": "Línea de salida, 1.5 m antes de la puerta",
+    "svg1b": "Puerta a 40 m",
+    "svg1c": "Regresa caminando en 60 s y repite",
+    "svg1d": "6 sprints. Un fallo da un 7º. Dos fallos es reprobar.",
+    "r1": "<b>6 × 40 m, máximo 60 segundos de recuperación</b><p>Puertas de cronometraje en 0 y 40 m; la línea de salida está 1.5 m antes de la primera puerta. Regresa caminando a la salida durante la recuperación. Cada sprint debe estar en o por debajo del tiempo de referencia.</p>",
+    "r2": "<b>Un sprint fallado da un 7º</b><p>El árbitro que falla el tiempo en uno de los seis corre un 7º sprint justo después del 6º. Dos fallos y la prueba está reprobada. Una caída o un tropiezo da un intento extra, no un fallo.</p>",
+    "r3": "<b>Tiempos de referencia en Colorado</b><p><b>Prueba Nacional: 6.0 s</b> (internacional masculino FIFA). <b>Prueba Regional: 6.4 s</b> (internacional femenino FIFA).</p>",
+    "h2": "PRUEBA 2: PRUEBA DE INTERVALOS",
+    "svg2a": "Salida. Corre 75 m",
+    "svg2b": "Camina 25 m",
+    "svg2c": "4 carreras y 4 caminatas por vuelta",
+    "svg2d": "10 vueltas. 40 carreras. 4,000 m.",
+    "svg2e": "correr",
+    "svg2f": "caminar",
+    "fieldNote": "En una cancha en lugar de una pista: la carrera de 75 m va de una línea del área penal a la otra, y la caminata de 25 m se divide en 12.5 m en cada extremo, dando la vuelta antes de la siguiente carrera. Mismos tiempos, misma cuenta.",
+    "svg3a": "Corre 75 m",
+    "svg3b": "Corre 75 m",
+    "svg3c": "Camina 12.5 m",
+    "svg3d": "Camina 12.5 m",
+    "svg3e": "Salida / meta",
+    "svg3f": "Salida / meta",
+    "r4": "<b>40 × 75 m corriendo, 25 m caminando</b><p>Diez vueltas a una pista de 400 m. Una señal de audio inicia cada carrera y marca el final de cada carrera y de cada caminata. Cada carrera termina dentro de la zona de caminata: una línea 1.5 m antes y 1.5 m después de la marca de 75 m.</p>",
+    "r5": "<b>Una advertencia y luego fuera</b><p>Llegar tarde con el pie a la zona de caminata una vez da una advertencia clara. La segunda vez el responsable de la prueba detiene al árbitro: la prueba está reprobada.</p>",
+    "r6": "<b>Tiempos de referencia en Colorado</b><p><b>Prueba Nacional: 15 s corriendo, 18 s caminando</b> (internacional masculino FIFA). <b>Prueba Regional: 17 s corriendo, 20 s caminando</b> (internacional femenino FIFA).</p>",
+    "r7": "<b>Entre las pruebas</b><p>De la Prueba 1 a la Prueba 2: 6 a 8 minutos. Calienta antes de la Prueba 1 como lo harías para un partido.</p>",
+    "h3": "TODOS LOS ESTÁNDARES, COMO REFERENCIA",
+    "stdNote": "Pruebas Físicas FIFA para Árbitros, edición 2016. Las filas de Colorado están resaltadas. El Departamento de Arbitraje asigna a algunos árbitros Regionales los tiempos de la categoría 3. Las otras categorías se muestran como información; cada federación puede fijar las suyas.",
+    "thCat": "Categoría",
+    "thRsa": "RSA, 6 × 40 m",
+    "thRun": "Carrera",
+    "thWalk": "Caminata",
+    "c1": "Hombres, internacional. <b>Prueba Nacional de Colorado, prueba FIFA</b>",
+    "c2": "Hombres, categoría 1",
+    "c3": "Hombres, categoría 2",
+    "c4": "Hombres, categoría 3",
+    "c5": "Mujeres, internacional. <b>Prueba Regional de Colorado</b>",
+    "c6": "Mujeres, categoría 1",
+    "c7": "Mujeres, categoría 2",
+    "c8": "Mujeres, categoría 3. <b>Prueba Regional de Colorado, tiempos de categoría 3, donde se asignen</b>",
+    "h4": "ÁRBITROS ASISTENTES",
+    "arNote": "La prueba de AA tiene tres partes. Colorado aplica la prueba de árbitros de arriba a todos; esto está aquí para quienes van hacia AA Nacional o FIFA.",
+    "a1": "<b>Prueba 1: CODA (cambio de dirección)</b><p>10 m al frente, 8 m lateral a la izquierda, 8 m lateral a la derecha, 10 m al frente. Referencia internacional: hombres 10.0 s, mujeres 11.0 s. Dos intentos fallados es reprobar.</p>",
+    "a2": "<b>Prueba 2: RSA, 5 × 30 m</b><p>Máximo 30 segundos de recuperación. Referencia internacional: hombres 4.7 s, mujeres 5.1 s. Un fallo da un 6º intento; dos fallos es reprobar.</p>",
+    "a3": "<b>Prueba 3: Intervalos, 40 × 75 m corriendo y 25 m caminando</b><p>La misma pista que los árbitros. Referencia internacional: hombres 15 s corriendo, 20 s caminando; mujeres 17 s corriendo, 22 s caminando.</p>",
+    "h5": "PACER Y AUDIO",
+    "pacerNote": "La prueba de intervalos corre con una señal: un tono largo inicia cada carrera, un tono corto la termina y un tono corto termina la caminata. Reprodúcela aquí o descarga el audio a tu teléfono y ponlo en cualquier bocina, para entrenar o el día de la prueba. Primero elige los tiempos.",
+    "p1": "Nacional 15 / 18",
+    "p2": "Regional 17 / 20",
+    "p3": "Regional, categoría 3, 18 / 26",
+    "ready": "Listo",
+    "of40": "de 40 carreras",
+    "start": "INICIAR",
+    "stop": "Detener",
+    "dl": "Descargar audio",
+    "dlNote": "Iniciar reproduce primero una cuenta regresiva de 10 segundos. La descarga es un archivo WAV de 10 MB que suena en cualquier teléfono o bocina.",
+    "foot": "Estándares de las Pruebas Físicas FIFA para Árbitros (2016). La elección en Colorado de los tiempos internacionales masculinos y femeninos para las pruebas Nacional y Regional la fija el Departamento de Arbitraje. Preguntas: refeducation@coloradoreferees.com.",
+    "help": "NECESITO AYUDA",
+    "label": "Corre {r} s, camina {w} s. 40 carreras, unos {m} minutos.",
+    "getReady": "Prepárate {n}",
+    "run": "CORRE {n}",
+    "walk": "CAMINA {n}",
+    "done": "Listo",
+    "stopped": "Detenido",
+    "lang": "English",
+    "docTitle": "Prueba física · Árbitros de Colorado"
+  } };
+  var LANG = 'en'; try { LANG = localStorage.getItem('hub-lang') === 'es' ? 'es' : 'en'; } catch (e) {}
+  function t(k) { return T[LANG][k] || T.en[k] || k; }
+  function applyLang() { document.documentElement.lang = LANG; document.title = t('docTitle'); document.querySelectorAll('[data-t]').forEach(function (el) { el.innerHTML = t(el.getAttribute('data-t')); }); $('langBtn').textContent = t('lang'); label(); }
+  $('langBtn').onclick = function () { LANG = LANG === 'es' ? 'en' : 'es'; try { localStorage.setItem('hub-lang', LANG); } catch (e) {} applyLang(); };
+  function label() { $('pacerLabel').textContent = t('label').replace('{r}', run).replace('{w}', walk).replace('{m}', Math.round(40 * (run + walk) / 60)); }
   function phase(cls, text) { var p = $('pacerPhase'); p.className = 'phase ' + cls; p.textContent = text; }
   document.querySelectorAll('#pacerPick [data-run]').forEach(function (b) { b.onclick = function () { if (Pacer.state.on) return; run = +b.getAttribute('data-run'); walk = +b.getAttribute('data-walk'); document.querySelectorAll('#pacerPick .chip-btn').forEach(function (c) { c.classList.toggle('on', c === b); }); label(); }; });
   Pacer.state.onTick = function (P) {
     $('pacerCount').textContent = String(P.run);
-    if (P.phase === 'ready') phase('rest', 'Get ready ' + P.left);
-    else if (P.phase === 'run') phase('run', 'RUN ' + P.left);
-    else if (P.phase === 'walk') phase('walk', 'WALK ' + P.left);
-    else { phase('rest', P.phase === 'done' ? 'Done' : 'Stopped'); $('pacerStart').disabled = false; $('pacerStop').disabled = true; }
+    if (P.phase === 'ready') phase('rest', t('getReady').replace('{n}', P.left));
+    else if (P.phase === 'run') phase('run', t('run').replace('{n}', P.left));
+    else if (P.phase === 'walk') phase('walk', t('walk').replace('{n}', P.left));
+    else { phase('rest', P.phase === 'done' ? t('done') : t('stopped')); $('pacerStart').disabled = false; $('pacerStop').disabled = true; }
   };
   $('pacerStart').onclick = function () { $('pacerStart').disabled = true; $('pacerStop').disabled = false; Pacer.start(run, walk, 40); };
   $('pacerStop').onclick = function () { Pacer.stop(); };
   $('pacerDl').onclick = function () { Pacer.download(run, walk, 40); };
-  label();
+  applyLang();
   try { var th = localStorage.getItem('hub-theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}
   $('themeBtn').onclick = function () { var cur = document.documentElement.getAttribute('data-theme'); var dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches; var next = dark ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', next); try { localStorage.setItem('hub-theme', next); } catch (e) {} };
 })();

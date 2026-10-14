@@ -8,7 +8,7 @@
 <link rel="icon" href="assets/jareferee-mark.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=2026.10.14-k">
+<link rel="stylesheet" href="app.css?v=2026.10.14-l">
 <style>
   .pub .top { padding: 10px 20px 0; display: flex; justify-content: space-between; align-items: center; }
   .pub .top img { width: 36px; height: 40px; object-fit: contain; }
@@ -22,17 +22,17 @@
 </head>
 <body class="pub">
 <div class="app">
-  <div class="top"><div><div class="lead" id="eventName"></div><div class="disp" style="font-size:34px" id="venueName">Field map</div></div><img id="mark" alt=""></div>
+  <div class="top"><div><div class="lead" id="eventName"></div><div class="disp" style="font-size:34px" id="venueName" data-t="fieldMap">Field map</div></div><div style="display:flex;align-items:center;gap:10px"><button class="linkbtn" id="langBtn" style="background:none;border:0;cursor:pointer;color:var(--ink)">Español</button><img id="mark" alt=""></div></div>
   <div class="pad" id="tools" style="padding-top:8px"></div>
   <div class="pad" id="canvas" style="padding-top:0"></div>
   <div id="sheet"></div>
-  <div class="disp h2" id="teamsHead" hidden>Teams today</div>
+  <div class="disp h2" id="teamsHead" hidden data-t="teamsToday">Teams today</div>
   <div class="teams" id="teams"></div>
-  <div class="foot"><a href="index.html">Site staff and referees: open the Hub</a><br><span class="ver"></span> · Built with JAReferee</div>
+  <div class="foot"><a href="index.html" data-t="openHub">Site staff and referees: open the Hub</a><br><span class="ver"></span> · Built with JAReferee</div>
 </div>
 <div id="busy" style="display:none" aria-live="polite"><span class="ball">&#9917;</span></div>
 <script src="config.js"></script>
-<script src="fieldmap.js?v=2026.10.14-k"></script>
+<script src="fieldmap.js?v=2026.10.14-l"></script>
 <script>
 (function () {
   var C = window.HUB, q = new URLSearchParams(location.search);
@@ -40,9 +40,21 @@
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function key(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+  // Two languages. The Hub's choice wins; a visitor with no choice gets their phone's language.
+  var T = {
+    en: { fieldMap: 'Field map', fieldMaps: 'Field maps', teamsToday: 'Teams today', openHub: 'Site staff and referees: open the Hub', field: 'Field', gamesToday: '{n} games today', oneGame: '1 game today', noGames: 'No games today', playing: 'Playing', finished: 'Finished', upcoming: 'Upcoming', on: 'on', fieldsMatch: '{n} fields match. Tap one.', nothing: 'Nothing matches. Try a team name or a field number.', search: 'Your team, a field number, a game number', go: 'Go', youAreHere: 'You are here', hq: 'Referee HQ', hqHint: 'Site coordinators are here. Lost and found, first aid, and questions about the schedule.', legLive: 'Playing now', legDone: 'Finished', legNext: 'Game coming', tapField: '{n} games today. Tap a field, or search for your team.', noneYet: 'No games posted for this day yet.', titleTail: ', field map', lang: 'Español' },
+    es: { fieldMap: 'Mapa de canchas', fieldMaps: 'Mapas de canchas', teamsToday: 'Equipos de hoy', openHub: 'Personal de sede y árbitros: abrir el Hub', field: 'Cancha', gamesToday: '{n} partidos hoy', oneGame: '1 partido hoy', noGames: 'Sin partidos hoy', playing: 'En juego', finished: 'Terminado', upcoming: 'Próximo', on: 'en', fieldsMatch: '{n} canchas coinciden. Toca una.', nothing: 'No hay coincidencias. Prueba el nombre del equipo o el número de cancha.', search: 'Tu equipo, número de cancha o de partido', go: 'Ir', youAreHere: 'Estás aquí', hq: 'Carpa de árbitros', hqHint: 'Aquí están los coordinadores de sede. Objetos perdidos, primeros auxilios y preguntas sobre el calendario.', legLive: 'En juego', legDone: 'Terminado', legNext: 'Próximo partido', tapField: '{n} partidos hoy. Toca una cancha o busca tu equipo.', noneYet: 'Todavía no hay partidos publicados para este día.', titleTail: ', mapa de canchas', lang: 'English' }
+  };
+  var LANG = 'en';
+  try { LANG = localStorage.getItem('hub-lang') || ((navigator.language || '').toLowerCase().indexOf('es') === 0 ? 'es' : 'en'); } catch (e) {}
+  if (!T[LANG]) LANG = 'en';
+  function t(k, n) { return (T[LANG][k] || T.en[k] || k).replace('{n}', n); }
+  function applyLang() { document.documentElement.lang = LANG; document.querySelectorAll('[data-t]').forEach(function (el) { el.textContent = t(el.getAttribute('data-t')); }); $('langBtn').textContent = t('lang'); }
+  $('langBtn').onclick = function () { LANG = LANG === 'es' ? 'en' : 'es'; try { localStorage.setItem('hub-lang', LANG); } catch (e) {} location.reload(); };
+  applyLang();
   try { var th = localStorage.getItem('hub-theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}
   if (C && C.marks) $('mark').src = C.marks.program || C.marks.ja;
-  document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v2026.10.14-k'; });
+  document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v2026.10.14-l'; });
 
   var ALL = null, LAYOUT = null, GAMES = [], FM = null, TEAM = '';
   function timeOf(g) { var m = /(\d{1,2}):(\d{2})\s*(AM|PM)?/i.exec(g.time || ''); if (!m) return null; var h = Number(m[1]) % 12 + (/pm/i.test(m[3] || '') ? 12 : 0); var d = new Date(DATE + 'T00:00:00'); d.setHours(h, Number(m[2]), 0, 0); return d.getTime(); }
@@ -62,10 +74,10 @@
   }
   function sheet(id) {
     var gs = GAMES.filter(function (g) { return fieldId(g) === id; }).sort(function (a, b) { return (timeOf(a) || 0) - (timeOf(b) || 0); });
-    var html = '<div class="pad" style="padding-top:12px"><div class="disp" style="font-size:30px">Field ' + esc(id) + '</div><div class="hint">' + (gs.length ? gs.length + ' games today' : 'No games today') + '</div></div>';
+    var html = '<div class="pad" style="padding-top:12px"><div class="disp" style="font-size:30px">' + t('field') + ' ' + esc(id) + '</div><div class="hint">' + (gs.length === 1 ? t('oneGame') : gs.length ? t('gamesToday', gs.length) : t('noGames')) + '</div></div>';
     html += gs.length ? '<div class="list">' + gs.map(function (g) {
       var st = state(g), score = g.homeScore != null && g.awayScore != null ? '<span class="score">' + esc(g.homeScore) + ' : ' + esc(g.awayScore) + '</span>' : '';
-      return '<div class="item' + (st === 'live' ? ' now' : '') + '" style="cursor:default"><div><b>' + esc(g.time || '') + (g.gameNumber ? ' · ' + esc(g.gameNumber) : '') + '</b> <span class="pill' + (st === 'live' ? ' ok' : '') + '">' + (st === 'live' ? 'Playing' : st === 'done' ? (g.status || 'Finished') : 'Upcoming') + '</span><br>' + esc(g.home) + ' v ' + esc(g.away) + '<br><span class="hint">' + esc(g.division || '') + '</span></div>' + score + '</div>';
+      return '<div class="item' + (st === 'live' ? ' now' : '') + '" style="cursor:default"><div><b>' + esc(g.time || '') + (g.gameNumber ? ' · ' + esc(g.gameNumber) : '') + '</b> <span class="pill' + (st === 'live' ? ' ok' : '') + '">' + (st === 'live' ? t('playing') : st === 'done' ? t('finished') : t('upcoming')) + '</span><br>' + esc(g.home) + ' v ' + esc(g.away) + '<br><span class="hint">' + esc(g.division || '') + '</span></div>' + score + '</div>';
     }).join('') + '</div>' : '';
     $('sheet').innerHTML = html;
   }
@@ -76,7 +88,7 @@
     $('teamsHead').hidden = !names.length;
     $('teams').innerHTML = names.length ? '<div class="list">' + names.map(function (tm) {
       var gs = byTeam[tm].sort(function (a, b) { return (timeOf(a) || 0) - (timeOf(b) || 0); });
-      return '<a class="item" href="#" data-team="' + esc(tm) + '"><div><b>' + esc(tm) + '</b><br><span class="hint">' + gs.map(function (g) { return esc(g.time || '') + ' on ' + esc(fieldId(g) || g.field || '?'); }).join(', ') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
+      return '<a class="item" href="#" data-team="' + esc(tm) + '"><div><b>' + esc(tm) + '</b><br><span class="hint">' + gs.map(function (g) { return esc(g.time || '') + ' ' + t('on') + ' ' + esc(fieldId(g) || g.field || '?'); }).join(', ') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
     }).join('') + '</div>' : '';
     $('teams').querySelectorAll('[data-team]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); find(a.getAttribute('data-team')); window.scrollTo({ top: 0, behavior: 'smooth' }); }; });
   }
@@ -84,7 +96,7 @@
     var s = key(qs); $('q').value = qs; if (!s) { FM.highlight([]); return; }
     var ids = FM.ids.filter(function (id) { return id.toLowerCase() === s || id.toLowerCase() === FieldMap.fieldKey(s).toLowerCase(); });
     if (!ids.length) ids = FM.ids.filter(function (id) { return GAMES.some(function (g) { return fieldId(g) === id && [g.home, g.away, g.division, g.gameNumber, g.homeClub, g.awayClub].some(function (v) { return key(v).indexOf(s) >= 0; }); }); });
-    FM.highlight(ids); if (ids.length === 1) { FM.select(ids[0]); sheet(ids[0]); } else if (ids.length) { $('sheet').innerHTML = '<div class="pad hint">' + ids.length + ' fields match. Tap one.</div>'; } else { $('sheet').innerHTML = '<div class="pad hint">Nothing matches. Try a team name or a field number.</div>'; }
+    FM.highlight(ids); if (ids.length === 1) { FM.select(ids[0]); sheet(ids[0]); } else if (ids.length) { $('sheet').innerHTML = '<div class="pad hint">' + t('fieldsMatch', ids.length) + '</div>'; } else { $('sheet').innerHTML = '<div class="pad hint">' + esc(t('nothing')) + '</div>'; }
   }
   function slugMatch(all, venue) {
     var slug = FieldMap.slug(venue); if (all[slug]) return slug;
@@ -95,14 +107,14 @@
     // Layouts from the venues table (no sign-in needed), the file as a fallback.
     ALL = {};
     try { var vr = await fetch(C.supabaseUrl + '/rest/v1/rpc/venue_layouts', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: C.publishableKey, Authorization: 'Bearer ' + C.publishableKey }, body: JSON.stringify({ p_org: C.org }) }).then(function (r) { return r.json(); }); (Array.isArray(vr) ? vr : []).forEach(function (v) { if (v.layout) ALL[v.slug] = v.layout; }); } catch (e) {}
-    if (!Object.keys(ALL).length) { try { ALL = await fetch('fieldmaps.json?v=2026.10.14-k').then(function (r) { return r.json(); }); } catch (e) { ALL = {}; } }
+    if (!Object.keys(ALL).length) { try { ALL = await fetch('fieldmaps.json?v=2026.10.14-l').then(function (r) { return r.json(); }); } catch (e) { ALL = {}; } }
     var slug = VENUE ? slugMatch(ALL, VENUE) : null;
     if (!slug) {
-      $('venueName').textContent = 'Field maps';
+      $('venueName').textContent = t('fieldMaps');
       $('canvas').innerHTML = '<div class="list">' + Object.keys(ALL).map(function (k) { return '<a class="item" href="?venue=' + encodeURIComponent(ALL[k].name) + (EVENT ? '&event=' + encodeURIComponent(EVENT) : '') + '"><div><b>' + esc(ALL[k].name) + '</b></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>';
       $('busy').style.display = 'none'; return;
     }
-    LAYOUT = ALL[slug]; $('venueName').textContent = LAYOUT.name; document.title = LAYOUT.name + ', field map';
+    LAYOUT = ALL[slug]; $('venueName').textContent = LAYOUT.name; document.title = LAYOUT.name + t('titleTail');
     try {
       var url = C.backend + '?action=steamboatScores&date=' + encodeURIComponent(DATE) + (EVENT ? '&event=' + encodeURIComponent(EVENT) : '');
       var r = await fetch(url).then(function (x) { return x.json(); });
@@ -110,13 +122,13 @@
       if (r && (r.eventName || r.event)) $('eventName').textContent = r.eventName || r.event;
       if (r && r.dates && r.dates.length > 1) $('tools').insertAdjacentHTML('afterbegin', '<div class="daychips">' + r.dates.map(function (d) { return '<a class="chip-btn' + (d === DATE ? ' on' : '') + '" style="text-decoration:none" href="?venue=' + encodeURIComponent(VENUE) + '&date=' + d + (EVENT ? '&event=' + encodeURIComponent(EVENT) : '') + (AT ? '&at=' + encodeURIComponent(AT) : '') + '">' + esc(d.slice(5).replace('-', '/')) + '</a>'; }).join('') + '</div>');
     } catch (e) { GAMES = []; }
-    $('tools').insertAdjacentHTML('beforeend', '<div class="fm-tools"><div class="go" style="flex:1;min-width:200px"><input id="q" type="search" autocomplete="off" placeholder="Your team, a field number, a game number" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn outline small" id="go">Go</button></div><button class="chip-btn" id="zin" aria-label="+">+</button><button class="chip-btn" id="zout" aria-label="-">&minus;</button></div>');
-    FM = FieldMap.render($('canvas'), LAYOUT, { you: AT, youLabel: 'You are here', onSelect: function (id) { sheet(id); }, onHQ: function (h) { $('sheet').innerHTML = '<div class="card"><b>' + esc(String(h.label || 'Referee HQ').replace(/\bREF HQ\b/i, 'Referee HQ').replace(/\bREFEREE HQ\b/, 'Referee HQ')) + '</b><div class="hint">Site coordinators are here. Lost and found, first aid, and questions about the schedule.</div></div>'; } });
+    $('tools').insertAdjacentHTML('beforeend', '<div class="fm-tools"><div class="go" style="flex:1;min-width:200px"><input id="q" type="search" autocomplete="off" placeholder="' + esc(t('search')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn outline small" id="go">' + esc(t('go')) + '</button></div><button class="chip-btn" id="zin" aria-label="+">+</button><button class="chip-btn" id="zout" aria-label="-">&minus;</button></div>');
+    FM = FieldMap.render($('canvas'), LAYOUT, { you: AT, youLabel: t('youAreHere'), onSelect: function (id) { sheet(id); }, onHQ: function (h) { $('sheet').innerHTML = '<div class="card"><b>' + esc(String(h.label || 'Referee HQ').replace(/\bREF(EREE)? HQ\b/i, t('hq'))) + '</b><div class="hint">' + esc(t('hqHint')) + '</div></div>'; } });
     FM.setStatus(status());
-    $('canvas').insertAdjacentHTML('beforeend', '<div class="fm-tools"><div class="legend"><span><i style="border-color:#fff;background:#2E7A40"></i>Playing now</span><span><i style="border-color:#9DB89F;background:#9DB89F"></i>Finished</span><span><i style="border-color:#3E8E4F;background:#3E8E4F"></i>Game coming</span></div></div>');
+    $('canvas').insertAdjacentHTML('beforeend', '<div class="fm-tools"><div class="legend"><span><i style="border-color:#fff;background:#2E7A40"></i>' + esc(t('legLive')) + '</span><span><i style="border-color:#9DB89F;background:#9DB89F"></i>' + esc(t('legDone')) + '</span><span><i style="border-color:#3E8E4F;background:#3E8E4F"></i>' + esc(t('legNext')) + '</span></div></div>');
     $('go').onclick = function () { find($('q').value.trim()); }; $('q').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); find($('q').value.trim()); } }; $('q').oninput = function () { if (!$('q').value) FM.highlight([]); };
     $('zin').onclick = function () { FM.zoom(1.3); }; $('zout').onclick = function () { FM.zoom(1 / 1.3); };
-    $('sheet').innerHTML = GAMES.length ? '<div class="pad hint">' + GAMES.length + ' games today. Tap a field, or search for your team.</div>' : '<div class="pad hint">No games posted for this day yet.</div>';
+    $('sheet').innerHTML = GAMES.length ? '<div class="pad hint">' + esc(t('tapField', GAMES.length)) + '</div>' : '<div class="pad hint">' + esc(t('noneYet')) + '</div>';
     teams();
     $('busy').style.display = 'none';
     // The chips tick along without reloading.
