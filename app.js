@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.14-b';
+  var VERSION = '2026.10.14-c';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -167,6 +167,14 @@
   }
   document.addEventListener('toggle', function (e) { var d = e.target; if (d && d.matches && d.matches('details.fold')) FOLD[d.getAttribute('data-fold')] = d.open; }, true);
 
+  // ── Venues: one table for coordinates (State map) and layouts (venue maps) ──
+  var VEN = { rows: null };
+  async function loadVenues_() {
+    if (VEN.rows) return VEN.rows;
+    var r = await sb.from('venues').select('id,name,slug,lat,lon,address,layout').order('name');
+    VEN.rows = r.data || [];
+    return VEN.rows;
+  }
   // ── Venue map: the field layout with today's games on it ──────────
   // Staff see every field's state (the same rules as Needs attention); a
   // referee sees their own field lit and their kickoff. Layouts live in
@@ -207,7 +215,7 @@
     MAPS.venue = venue; MAPS.field = field || '';
     var body = $('mapBody'), sheet = $('mapSheet');
     $('mapTitle').textContent = venue || t('map');
-    if (!MAPS.all) { try { MAPS.all = await fetch('fieldmaps.json?v=' + VERSION).then(function (r) { return r.json(); }); } catch (e) { MAPS.all = {}; } }
+    if (!MAPS.all) { MAPS.all = {}; try { (await loadVenues_()).forEach(function (v) { if (v.layout) MAPS.all[v.slug] = v.layout; }); } catch (e) {} if (!Object.keys(MAPS.all).length) { try { MAPS.all = await fetch('fieldmaps.json?v=' + VERSION).then(function (r) { return r.json(); }); } catch (e) { MAPS.all = {}; } } }
     if ((iCan('command_center') || iCan('scheduling')) && !OPS.games) { busy(true); try { await loadOps_(); } catch (e) {} busy(false); }
     var hit = mapLayoutFor(venue);
     var dirs = '<a class="btn outline small" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(venue) + '">' + esc(t('directions')) + '</a>';
@@ -261,6 +269,65 @@
     el.innerHTML = fold('wrap', t('wrapTitle').replace('{y}', y), m.games || '', mine + '<div class="disp h2 print-keep" style="padding-top:10px">' + esc(t('wrapBoard').replace('{y}', y)) + '</div>' + board, true);
     var go = async function () { WRAP.club = $('wrapClub').value.trim(); WRAP.open = true; busy(true); var r = await sb.rpc('leaderboard', { p_year: y, p_club: WRAP.club || null, p_limit: 25 }); busy(false); WRAP.board = r.data || []; renderWrap(); };
     $('wrapGo').onclick = go; $('wrapClub').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } };
+  }
+  // ── Setup: venues. Coordinates for the State map, a layout for the venue map. ──
+  // The layout editor is a table of rectangles with a live drawing: enough to add a
+  // venue from a sketch on the day, without a file or a deploy.
+  var VE = { open: null, draft: null, sel: null, msg: '' };
+  function venuesSetupHtml() {
+    var rows = VEN.rows || [];
+    return '<div class="disp h2">' + esc(t('venTitle')) + '</div><div class="pad hint" style="padding-top:0">' + esc(t('venLead')) + '</div><div class="pad" style="padding-top:12px"><button class="btn outline" id="venNew" style="width:100%">' + esc(t('venNew')) + '</button></div>' +
+      (rows.length ? '<div class="list">' + rows.map(function (v) { return '<a class="item" href="#" data-ven="' + v.id + '"><div><b>' + esc(v.name) + '</b><br><span class="hint">' + esc(v.lat != null ? Number(v.lat).toFixed(4) + ', ' + Number(v.lon).toFixed(4) : t('venNoCoords')) + (v.layout ? ', ' + (v.layout.fields || []).length + ' ' + esc(t('venFields')) : ', ' + esc(t('venNoLayout'))) + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>' : '');
+  }
+  function wireVenuesSetup(root) {
+    var nb = $('venNew'); if (nb) nb.onclick = function () { VE.open = 0; VE.draft = { name: '', slug: '', lat: '', lon: '', address: '', layout: null }; VE.sel = null; renderSetup(); };
+    root.querySelectorAll('[data-ven]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); var v = VEN.rows.filter(function (x) { return String(x.id) === a.getAttribute('data-ven'); })[0]; if (!v) return; VE.open = v.id; VE.draft = JSON.parse(JSON.stringify(v)); VE.draft.lat = v.lat == null ? '' : v.lat; VE.draft.lon = v.lon == null ? '' : v.lon; VE.sel = null; renderSetup(); }; });
+  }
+  function blankLayout(name) { return { name: name, viewBox: [0, 0, 1200, 800], fields: [], hq: [], roads: [], water: [], labels: [], zones: [] }; }
+  function venueEditorHtml() {
+    var d = VE.draft, inp = function (id, v, type, extra) { return '<input id="' + id + '" type="' + (type || 'text') + '" value="' + esc(v == null ? '' : v) + '" ' + (extra || '') + ' style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">'; };
+    var L = d.layout, fields = L ? L.fields || [] : [];
+    var sizes = ['11v11', '9v9', '7v7', '4v4', 'turf', 'lax'];
+    var row = function (f, i) { var n = function (k, w) { return '<input type="number" step="1" data-fx="' + i + '" data-k="' + k + '" value="' + esc(f[k]) + '" class="fit-t" style="width:' + (w || 64) + 'px">'; };
+      return '<tr' + (VE.sel === i ? ' class="mine"' : '') + '><td><input type="text" data-fx="' + i + '" data-k="id" value="' + esc(f.id) + '" class="fit-t" style="width:58px;text-align:left"></td><td class="n">' + n('x') + '</td><td class="n">' + n('y') + '</td><td class="n">' + n('w') + '</td><td class="n">' + n('h') + '</td><td><select data-fx="' + i + '" data-k="size" class="fit-t" style="width:84px;text-align:left">' + sizes.map(function (sz) { return '<option' + (f.size === sz ? ' selected' : '') + '>' + sz + '</option>'; }).join('') + '</select></td><td class="no-print"><div class="chips" style="flex-wrap:nowrap"><button class="chip-btn small" data-fdup="' + i + '">' + esc(t('venDup')) + '</button><button class="chip-btn small" data-fdel="' + i + '">' + esc(t('remove')) + '</button></div></td></tr>'; };
+    return '<div class="pad no-print" style="padding-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn outline small" id="venBack">' + esc(t('back')) + '</button>' + (VE.open ? '<button class="btn outline small" id="venDelete" style="margin-left:auto">' + esc(t('venDelete')) + '</button>' : '') + '</div>' +
+      '<div class="card" style="gap:8px"><b>' + esc(VE.open ? t('venEdit') : t('venNew')) + '</b>' +
+      '<label class="hint" for="venName">' + esc(t('venName')) + '</label>' + inp('venName', d.name) +
+      '<label class="hint" for="venAddr">' + esc(t('sesAddress')) + '</label><div class="go">' + inp('venAddr', d.address) + '<button class="btn outline small" id="venGeo">' + esc(t('venLookup')) + '</button></div>' +
+      '<div class="grid2"><div><label class="hint" for="venLat">' + esc(t('venLat')) + '</label>' + inp('venLat', d.lat, 'number', 'step="0.0001"') + '</div><div><label class="hint" for="venLon">' + esc(t('venLon')) + '</label>' + inp('venLon', d.lon, 'number', 'step="0.0001"') + '</div></div><div class="hint">' + esc(t('venCoordsHint')) + '</div>' +
+      '<div class="actions" style="padding:0"><button class="btn primary" id="venSave">' + esc(t('save')) + '</button></div><div class="msg" id="venMsg" ' + (VE.msg ? '' : 'hidden') + '>' + esc(VE.msg) + '</div></div>' +
+      '<div class="disp h2">' + esc(t('venLayout')) + '</div><div class="pad hint" style="padding-top:0">' + esc(t('venLayoutHint')) + '</div>' +
+      (!L ? '<div class="pad" style="padding-top:12px"><button class="btn outline" id="venStartLayout" style="width:100%">' + esc(t('venStartLayout')) + '</button></div>' :
+        '<div class="pad" style="padding-top:8px" id="venPreview"></div>' +
+        '<div class="pad" style="padding-top:6px;overflow-x:auto"><table class="dt fit"><thead><tr><th>' + esc(t('venField')) + '</th><th class="n">x</th><th class="n">y</th><th class="n">' + esc(t('venW')) + '</th><th class="n">' + esc(t('venH')) + '</th><th>' + esc(t('fitStandard')) + '</th><th></th></tr></thead><tbody>' + fields.map(row).join('') + '</tbody></table></div>' +
+        '<div class="actions no-print"><button class="btn outline small" id="venAddField">' + esc(t('venAddField')) + '</button><button class="btn outline small" id="venAddHq">' + esc(t('venAddHq')) + '</button><button class="btn outline small" id="venAddRoad">' + esc(t('venAddRoad')) + '</button></div>' +
+        ((L.hq || []).length ? '<div class="pad hint">' + esc(t('venHqs')) + ' ' + L.hq.map(function (h, i) { return esc(h.label || 'Referee HQ') + ' (' + h.x + ', ' + h.y + ')'; }).join('; ') + '</div>' : '') +
+        '<div class="pad hint">' + esc(t('venSaveHint')) + '</div>');
+  }
+  function wireVenueEditor(root) {
+    var d = VE.draft;
+    var read = function () { d.name = $('venName').value.trim(); d.address = $('venAddr').value.trim(); d.lat = $('venLat').value; d.lon = $('venLon').value; };
+    $('venBack').onclick = function () { VE.open = null; VE.draft = null; VE.msg = ''; renderSetup(); };
+    var del = $('venDelete'); if (del) del.onclick = async function () { if (!window.confirm(t('venDeleteConfirm').replace('{name}', d.name))) return; var r = await sb.from('venues').delete().eq('id', VE.open); if (r.error) { VE.msg = r.error.message; renderSetup(); return; } VE.open = null; VE.draft = null; VEN.rows = null; MAPS.all = null; await loadVenues_(); renderSetup(); };
+    $('venGeo').onclick = async function () { read(); if (!d.address) return; busy(true); try { var r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(d.address + ', Colorado')).then(function (x) { return x.json(); }); if (r && r[0]) { $('venLat').value = Number(r[0].lat).toFixed(5); $('venLon').value = Number(r[0].lon).toFixed(5); } else { VE.msg = t('venNotFound'); } } catch (e) { VE.msg = t('venNotFound'); } busy(false); if (VE.msg) { say('venMsg', VE.msg, 'bad'); VE.msg = ''; } };
+    $('venSave').onclick = async function () {
+      read(); if (!d.name) { say('venMsg', t('venNeedName'), 'bad'); return; }
+      var row = { org_id: S.me.org_id, name: d.name, slug: FieldMap.slug(d.name), address: d.address || null, lat: d.lat === '' ? null : Number(d.lat), lon: d.lon === '' ? null : Number(d.lon), layout: d.layout ? Object.assign({}, d.layout, { name: d.name }) : null, updated_at: new Date().toISOString() };
+      var r = VE.open ? await sb.from('venues').update(row).eq('id', VE.open) : await sb.from('venues').insert(row).select('id').single();
+      if (r.error) { say('venMsg', r.error.message, 'bad'); return; }
+      if (!VE.open && r.data) VE.open = r.data.id;
+      VEN.rows = null; MAPS.all = null; await loadVenues_(); say('venMsg', t('evSaved'), 'good');
+    };
+    var st = $('venStartLayout'); if (st) st.onclick = function () { read(); d.layout = blankLayout(d.name); d.layout.fields.push({ id: '1', x: 100, y: 100, w: 110, h: 160, size: '11v11' }); renderSetup(); };
+    var L = d.layout; if (!L) return;
+    var preview = function () { var pv = $('venPreview'); if (!pv) return; var fm = FieldMap.render(pv, L, { onSelect: function (id) { VE.sel = L.fields.map(function (f) { return f.id; }).indexOf(id); renderSetup(); } }); if (VE.sel != null && L.fields[VE.sel]) fm.select(L.fields[VE.sel].id); };
+    preview();
+    root.querySelectorAll('[data-fx]').forEach(function (i) { i.onchange = function () { read(); var f = L.fields[Number(i.getAttribute('data-fx'))], k = i.getAttribute('data-k'); if (!f) return; f[k] = (k === 'id' || k === 'size') ? i.value.trim() : Number(i.value); preview(); }; });
+    root.querySelectorAll('[data-fdup]').forEach(function (b) { b.onclick = function () { read(); var f = L.fields[Number(b.getAttribute('data-fdup'))]; var c = JSON.parse(JSON.stringify(f)); c.x = f.x + f.w + 12; c.id = String(f.id).replace(/(\d+)/, function (m) { return String(Number(m) + 1); }); L.fields.splice(Number(b.getAttribute('data-fdup')) + 1, 0, c); renderSetup(); }; });
+    root.querySelectorAll('[data-fdel]').forEach(function (b) { b.onclick = function () { read(); L.fields.splice(Number(b.getAttribute('data-fdel')), 1); VE.sel = null; renderSetup(); }; });
+    $('venAddField').onclick = function () { read(); var last = L.fields[L.fields.length - 1]; L.fields.push(last ? { id: String(L.fields.length + 1), x: last.x, y: last.y + last.h + 12, w: last.w, h: last.h, size: last.size } : { id: '1', x: 100, y: 100, w: 110, h: 160, size: '11v11' }); renderSetup(); };
+    $('venAddHq').onclick = function () { read(); var lbl = window.prompt(t('venHqLabel'), 'Referee HQ'); if (lbl == null) return; L.hq = L.hq || []; L.hq.push({ x: 520, y: 40, w: 120, h: 42, label: lbl }); renderSetup(); };
+    $('venAddRoad').onclick = function () { read(); var lbl = window.prompt(t('venRoadLabel'), ''); if (lbl == null) return; L.roads = L.roads || []; L.roads.push({ x: 60, y: 12, w: 1080, h: 22 }); if (lbl) { L.labels = L.labels || []; L.labels.push({ x: 600, y: 28, t: lbl, k: 'parking' }); } renderSetup(); };
   }
   // ── Sessions: fitness tests, classes, clinics ────────────────────
   var SES = { list: [], past: [], mine: [], counts: {}, open: null, roster: [], form: null, badge: null, pacerRun: 0 };
@@ -1495,6 +1562,7 @@
     await loadSessions_();
     var e = await sb.from('events').select('id,name,type,year,start_date,end_date,site_id,league,venues,tools,url,accent,blurb,active,alert_emails,game_prefix,rules_url').order('start_date', { ascending: false }).limit(200);
     SU.events = e.data || [];
+    VEN.rows = null; await loadVenues_();
     var from = shiftDate(todayStr(), -60), to = shiftDate(todayStr(), 60);
     var g = await fetchAll(function () { return sb.from('games').select('venue,site_id,competition').gte('date', from).lte('date', to).order('venue'); });
     var vs = {}, ss = {}, ls = {};
@@ -1527,10 +1595,11 @@
         return '<a class="item" href="#" data-ev="' + esc(e.id) + '"><div><b>' + esc(e.name || e.id) + '</b> <span class="pill' + (e.active ? ' ok' : '') + '">' + esc(e.active ? t('evOn') : t('evOff')) + '</span><br><span class="hint">' + esc(e.type || '') + ', ' + esc(e.start_date || '') + (e.end_date && e.end_date !== e.start_date ? ' to ' + esc(e.end_date) : '') + ', ' + esc((e.venues || []).join(', ')) + (e.game_prefix ? ', ' + esc(e.game_prefix) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
       };
       if (SES.open) { $('setupBody').innerHTML = sessionsSetupHtml(); wireSessionsSetup($('setupBody')); return; }
+      if (VE.open != null) { $('setupBody').innerHTML = venueEditorHtml(); wireVenueEditor($('setupBody')); return; }
       var tdy = todayStr(), evDone = SU.events.filter(function (e) { return (e.end_date || e.start_date || '') < tdy; }), evLive = SU.events.filter(function (e) { return evDone.indexOf(e) < 0; });
       $('setupBody').innerHTML = rulesCard + sessionsSetupHtml() + '<div class="disp h2">' + esc(t('setupEventsTitle')) + '</div><div class="pad" style="padding-top:12px"><button class="btn primary" id="evNew" style="width:100%">' + esc(t('newEvent')) + '</button></div><div class="list">' + evLive.map(evItem).join('') + '</div>' +
-        (evDone.length ? fold('evdone', t('evCompleted'), evDone.length, '<div class="list">' + evDone.map(evItem).join('') + '</div>', false) : '');
-      wireSessionsSetup($('setupBody'));
+        (evDone.length ? fold('evdone', t('evCompleted'), evDone.length, '<div class="list">' + evDone.map(evItem).join('') + '</div>', false) : '') + venuesSetupHtml();
+      wireSessionsSetup($('setupBody')); wireVenuesSetup($('setupBody'));
       $('evNew').onclick = function () { SU.ev = blankEvent(); SU.check = null; renderSetup(); };
       $('setupBody').querySelectorAll('[data-ev]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); var src = SU.events.filter(function (x) { return x.id === a.getAttribute('data-ev'); })[0]; SU.ev = JSON.parse(JSON.stringify(src)); SU.ev.venues = SU.ev.venues || []; SU.ev.tools = SU.ev.tools || []; SU.ev.alert_emails = SU.ev.alert_emails || []; SU.check = null; renderSetup(); }; });
       return;
@@ -1757,7 +1826,8 @@
     try { var fs = await sb.rpc('fitness_summary'); ST.fit = fs.data || []; } catch (e) { ST.fit = []; }
     try { var sn = await sb.from('registration_snapshots').select('season,taken_on,licensed,first_year,continuing,gap_return').order('taken_on'); ST.snaps = sn.data || []; } catch (e) { ST.snaps = []; }
     // ZIP centroids and the fields we use, static files in this folder.
-    if (!ST.zips) { try { var z = await Promise.all([fetch('zips.json?v=' + VERSION).then(function (x) { return x.json(); }), fetch('venues.json?v=' + VERSION).then(function (x) { return x.json(); })]); ST.zips = z[0]; ST.venues = z[1]; delete ST.venues._note; } catch (e) { ST.zips = {}; ST.venues = {}; } }
+    if (!ST.zips) { try { ST.zips = await fetch('zips.json?v=' + VERSION).then(function (x) { return x.json(); }); } catch (e) { ST.zips = {}; } }
+    ST.venues = {}; try { (await loadVenues_()).forEach(function (v) { if (v.lat != null && v.lon != null) ST.venues[v.name] = [Number(v.lat), Number(v.lon)]; }); } catch (e) {}
   }
   // Colorado is a rectangle: lon -109.05 to -102.04, lat 37.0 to 41.0. Plain scaling is a map.
   function stMap(Y) {
