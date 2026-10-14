@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.14-c';
+  var VERSION = '2026.10.14-d';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -269,6 +269,17 @@
     el.innerHTML = fold('wrap', t('wrapTitle').replace('{y}', y), m.games || '', mine + '<div class="disp h2 print-keep" style="padding-top:10px">' + esc(t('wrapBoard').replace('{y}', y)) + '</div>' + board, true);
     var go = async function () { WRAP.club = $('wrapClub').value.trim(); WRAP.open = true; busy(true); var r = await sb.rpc('leaderboard', { p_year: y, p_club: WRAP.club || null, p_limit: 25 }); busy(false); WRAP.board = r.data || []; renderWrap(); };
     $('wrapGo').onclick = go; $('wrapClub').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } };
+  }
+  function ago(ts) { var m = Math.round((Date.now() - Date.parse(ts)) / 60000); if (m < 2) return t('agoNow'); if (m < 60) return t('agoMin').replace('{n}', m); var h = Math.round(m / 60); if (h < 36) return t('agoHour').replace('{n}', h); return t('agoDay').replace('{n}', Math.round(h / 24)); }
+  // ── Setup: the Assignr sync, read-only. One row per group-week; red when a unit failed. ──
+  function syncSetupHtml() {
+    var rows = SU.sync || [], sites = {}; (SU.sites2 || []).forEach(function (x) { sites[String(x.site_id)] = x.name; });
+    if (!rows.length) return '';
+    var last = rows.slice().sort(function (a, b) { return String(b.synced_at || '') < String(a.synced_at || '') ? -1 : 1; })[0];
+    var bad = rows.filter(function (r) { return r.error; }).length, stale = rows.filter(function (r) { return !r.synced_at || Date.now() - Date.parse(r.synced_at) > 14 * 3600000; }).length;
+    var inner = '<div class="hint">' + esc(t('syncHint')) + '</div><table class="dt" style="margin-top:8px;width:100%"><thead><tr><th>' + esc(t('syncGroup')) + '</th><th>' + esc(t('syncWeek')) + '</th><th class="n">' + esc(t('stGames')) + '</th><th>' + esc(t('syncWhen')) + '</th></tr></thead><tbody>' +
+      rows.map(function (r) { return '<tr' + (r.error ? ' class="failed"' : '') + '><td>' + esc(sites[String(r.site_id)] || r.site_id) + '</td><td>' + esc(String(r.from_date).slice(5)) + ' to ' + esc(String(r.to_date).slice(5)) + '</td><td class="n">' + esc(r.games == null ? '' : String(r.games)) + '</td><td>' + (r.error ? '<span style="color:var(--red)">' + esc(r.error.slice(0, 80)) + '</span>' : (r.synced_at ? esc(ago(r.synced_at)) : '')) + '</td></tr>'; }).join('') + '</tbody></table>';
+    return fold('sync', t('syncTitle') + (last && last.synced_at ? ', ' + ago(last.synced_at) : ''), bad ? bad + ' ' + t('syncFailed') : (stale ? stale + ' ' + t('syncStale') : t('syncOk')), inner, !!bad);
   }
   // ── Setup: venues. Coordinates for the State map, a layout for the venue map. ──
   // The layout editor is a table of rectangles with a live drawing: enough to add a
@@ -1563,6 +1574,7 @@
     var e = await sb.from('events').select('id,name,type,year,start_date,end_date,site_id,league,venues,tools,url,accent,blurb,active,alert_emails,game_prefix,rules_url').order('start_date', { ascending: false }).limit(200);
     SU.events = e.data || [];
     VEN.rows = null; await loadVenues_();
+    try { var su = await Promise.all([sb.from('sync_units').select('key,site_id,from_date,to_date,synced_at,games,pruned,ms,error').order('from_date'), sb.from('assignr_sites').select('site_id,name,active')]); SU.sync = su[0].data || []; SU.sites2 = su[1].data || []; } catch (e) { SU.sync = []; SU.sites2 = []; }
     var from = shiftDate(todayStr(), -60), to = shiftDate(todayStr(), 60);
     var g = await fetchAll(function () { return sb.from('games').select('venue,site_id,competition').gte('date', from).lte('date', to).order('venue'); });
     var vs = {}, ss = {}, ls = {};
@@ -1598,7 +1610,7 @@
       if (VE.open != null) { $('setupBody').innerHTML = venueEditorHtml(); wireVenueEditor($('setupBody')); return; }
       var tdy = todayStr(), evDone = SU.events.filter(function (e) { return (e.end_date || e.start_date || '') < tdy; }), evLive = SU.events.filter(function (e) { return evDone.indexOf(e) < 0; });
       $('setupBody').innerHTML = rulesCard + sessionsSetupHtml() + '<div class="disp h2">' + esc(t('setupEventsTitle')) + '</div><div class="pad" style="padding-top:12px"><button class="btn primary" id="evNew" style="width:100%">' + esc(t('newEvent')) + '</button></div><div class="list">' + evLive.map(evItem).join('') + '</div>' +
-        (evDone.length ? fold('evdone', t('evCompleted'), evDone.length, '<div class="list">' + evDone.map(evItem).join('') + '</div>', false) : '') + venuesSetupHtml();
+        (evDone.length ? fold('evdone', t('evCompleted'), evDone.length, '<div class="list">' + evDone.map(evItem).join('') + '</div>', false) : '') + venuesSetupHtml() + syncSetupHtml();
       wireSessionsSetup($('setupBody')); wireVenuesSetup($('setupBody'));
       $('evNew').onclick = function () { SU.ev = blankEvent(); SU.check = null; renderSetup(); };
       $('setupBody').querySelectorAll('[data-ev]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); var src = SU.events.filter(function (x) { return x.id === a.getAttribute('data-ev'); })[0]; SU.ev = JSON.parse(JSON.stringify(src)); SU.ev.venues = SU.ev.venues || []; SU.ev.tools = SU.ev.tools || []; SU.ev.alert_emails = SU.ev.alert_emails || []; SU.check = null; renderSetup(); }; });
