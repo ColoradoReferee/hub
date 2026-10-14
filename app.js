@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.14-a';
+  var VERSION = '2026.10.14-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -167,6 +167,76 @@
   }
   document.addEventListener('toggle', function (e) { var d = e.target; if (d && d.matches && d.matches('details.fold')) FOLD[d.getAttribute('data-fold')] = d.open; }, true);
 
+  // ── Venue map: the field layout with today's games on it ──────────
+  // Staff see every field's state (the same rules as Needs attention); a
+  // referee sees their own field lit and their kickoff. Layouts live in
+  // fieldmaps.json; a venue without one gets a plain link to directions.
+  var MAPS = { all: null, fm: null, venue: '', field: '', q: '', slug: '' };
+  function mapLayoutFor(venue) {
+    if (!MAPS.all) return null;
+    var slug = FieldMap.slug(venue); if (MAPS.all[slug]) return { slug: slug, layout: MAPS.all[slug] };
+    var hit = Object.keys(MAPS.all).filter(function (k) { return slug.indexOf(k) >= 0 || k.indexOf(slug) >= 0 || FieldMap.slug(MAPS.all[k].name) === slug; })[0];
+    return hit ? { slug: hit, layout: MAPS.all[hit] } : null;
+  }
+  function mapGames(venue) {
+    var staff = iCan('command_center') || iCan('scheduling');
+    var list = staff && OPS.games ? OPS.games : S.games || [];
+    return list.filter(function (g) { return key(g.venue) === key(venue) && !isHQ(g) && !isCoachSlot(g); });
+  }
+  // One state per field from its next game, in the order the board would rank them.
+  function mapStatus(fm, games) {
+    var staff = (iCan('command_center') || iCan('scheduling')) && OPS.games, ins = staff ? inSet() : {}, now = Date.now(), by = {};
+    games.forEach(function (g) { var id = fm.match(g.field); if (!id) return; (by[id] = by[id] || []).push(g); });
+    var out = {};
+    Object.keys(by).forEach(function (id) {
+      var gs = by[id].sort(function (a, b) { return new Date(a.kickoff) - new Date(b.kickoff); });
+      var next = gs.filter(function (g) { return gameState(g) !== 'done'; })[0];
+      if (!next) { out[id] = { state: 'done' }; return; }
+      var st = gameState(next), mins = Math.round((new Date(next.kickoff).getTime() - now) / 60000), state = st === 'live' ? 'live' : 'ok';
+      var chip = st === 'live' ? t('mapLive') : (mins <= 90 ? t('mapIn').replace('{n}', mins) : clock(next.kickoff));
+      if (staff) {
+        var missing = 0, open = 0, late = 0;
+        ['cr', 'ar1', 'ar2', 'fourth'].forEach(function (x) { var n = next[x]; if (!n) return; if (/^(tbd|open|none)$/i.test(n)) open++; else if (!ins[key(n)]) { if (lateFor(n, next)) late++; else missing++; } });
+        if (open) state = 'open'; else if (late) state = 'late'; else if (missing && (st === 'live' || mins <= ATTN_ALERT)) state = 'alert'; else if (missing && mins <= ATTN_WARN) state = 'warn';
+      }
+      out[id] = { state: state, chip: chip };
+    });
+    return out;
+  }
+  async function renderMap(venue, field) {
+    MAPS.venue = venue; MAPS.field = field || '';
+    var body = $('mapBody'), sheet = $('mapSheet');
+    $('mapTitle').textContent = venue || t('map');
+    if (!MAPS.all) { try { MAPS.all = await fetch('fieldmaps.json?v=' + VERSION).then(function (r) { return r.json(); }); } catch (e) { MAPS.all = {}; } }
+    if ((iCan('command_center') || iCan('scheduling')) && !OPS.games) { busy(true); try { await loadOps_(); } catch (e) {} busy(false); }
+    var hit = mapLayoutFor(venue);
+    var dirs = '<a class="btn outline small" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(venue) + '">' + esc(t('directions')) + '</a>';
+    if (!hit) { body.innerHTML = '<div class="card"><div class="hint">' + esc(t('mapNone')) + '</div><div class="actions" style="padding:8px 0 0">' + dirs + '</div></div>'; sheet.innerHTML = ''; return; }
+    MAPS.slug = hit.slug;
+    body.innerHTML = '<div class="fm-tools"><div class="go" style="flex:1;min-width:200px"><input id="mapQ" type="search" autocomplete="off" placeholder="' + esc(t('mapFind')) + '" value="' + esc(MAPS.q) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn outline small" id="mapGo">' + esc(t('go')) + '</button></div><button class="chip-btn" id="mapZin" aria-label="+">+</button><button class="chip-btn" id="mapZout" aria-label="-">&minus;</button>' + dirs + '</div>' +
+      '<div id="mapCanvas"></div>' +
+      '<div class="fm-tools"><div class="legend"><span><i style="border-color:var(--gold)"></i>' + esc(t('mapLegWarn')) + '</span><span><i style="border-color:var(--red)"></i>' + esc(t('mapLegAlert')) + '</span><span><i style="border-color:var(--red);border-style:dashed"></i>' + esc(t('mapLegOpen')) + '</span><span><i style="border-color:#fff;background:#2E7A40"></i>' + esc(t('mapLegLive')) + '</span><span><i style="border-color:#9DB89F;background:#9DB89F"></i>' + esc(t('mapLegDone')) + '</span></div></div>';
+    var games = mapGames(venue);
+    var fm = FieldMap.render($('mapCanvas'), hit.layout, { onSelect: function (id) { MAPS.field = id; mapSheet(fm, id, games); }, onHQ: function (h) { sheet.innerHTML = '<div class="card"><b>' + esc(h.label.replace(/\bREF HQ\b/i, 'Referee HQ').replace(/\bREFEREE HQ\b/, 'Referee HQ')) + '</b><div class="hint">' + esc(t('mapHqHint')) + '</div></div>'; } });
+    MAPS.fm = fm;
+    fm.setStatus(mapStatus(fm, games));
+    var sel = MAPS.field ? fm.match(MAPS.field) : null;
+    if (sel) { fm.select(sel); mapSheet(fm, sel, games); } else sheet.innerHTML = '<div class="pad hint">' + esc(t('mapTap')) + '</div>';
+    var find = function () { MAPS.q = $('mapQ').value.trim(); var q = MAPS.q.toLowerCase(); if (!q) { fm.highlight([]); return; } var ids = fm.ids.filter(function (id) { return id.toLowerCase() === q || id.toLowerCase() === FieldMap.fieldKey(q).toLowerCase(); }); if (!ids.length) ids = fm.ids.filter(function (id) { return games.some(function (g) { return fm.match(g.field) === id && [g.home, g.away, g.cr, g.ar1, g.ar2, g.fourth, g.age_group, g.game_num].some(function (v) { return String(v || '').toLowerCase().indexOf(q) >= 0; }); }); }); fm.highlight(ids); if (ids.length === 1) { fm.select(ids[0]); mapSheet(fm, ids[0], games); } };
+    $('mapGo').onclick = find; $('mapQ').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); find(); } }; $('mapQ').oninput = function () { if (!$('mapQ').value) { MAPS.q = ''; fm.highlight([]); } };
+    $('mapZin').onclick = function () { fm.zoom(1.3); }; $('mapZout').onclick = function () { fm.zoom(1 / 1.3); };
+  }
+  function mapSheet(fm, id, games) {
+    var staff = (iCan('command_center') || iCan('scheduling')) && OPS.games, ins = staff ? inSet() : {};
+    var gs = games.filter(function (g) { return fm.match(g.field) === id; }).sort(function (a, b) { return new Date(a.kickoff) - new Date(b.kickoff); });
+    var sizeWord = { '11v11': '11v11', '9v9': '9v9', '7v7': '7v7', '4v4': '4v4', turf: t('mapTurf'), lax: 'Lacrosse' }[fm.size(id)] || '';
+    var html = '<div class="pad" style="padding-top:12px"><div class="disp" style="font-size:30px">' + esc(t('mapField').replace('{f}', id)) + '</div><div class="hint">' + esc(sizeWord) + (gs.length ? ', ' + gs.length + ' ' + esc(t('stGames')) : ', ' + esc(t('mapNoGames'))) + '</div></div>';
+    html += gs.map(function (g) {
+      var st = gameState(g), crew = ['cr', 'ar1', 'ar2', 'fourth'].map(function (x) { var n = g[x]; if (!n) return ''; var open = /^(tbd|open|none)$/i.test(n); return '<div style="display:flex;justify-content:space-between;gap:8px"><span>' + esc(t('role.' + x)) + ': ' + (open ? '<span class="pill">' + esc(t('attnOpen')) + '</span>' : (staff && canSeeRef() ? '<a class="refname" href="#ref/' + encodeURIComponent(n) + '">' + esc(n) + '</a>' : esc(n))) + '</span>' + (staff && !open ? '<span class="pill' + (ins[key(n)] ? ' ok' : '') + '">' + esc(ins[key(n)] ? t('checkedIn') : (lateFor(n, g) ? t('late') : t('notIn'))) + '</span>' : '') + '</div>'; }).join('');
+      return '<a class="item" href="#game/' + esc(g.game_id) + '" style="display:block"><div><b>' + esc(clock(g.kickoff)) + (g.game_num ? ' · ' + esc(g.game_num) : '') + '</b> <span class="pill' + (st === 'live' ? ' ok' : '') + '">' + esc(st === 'live' ? t('mapLive') : st === 'done' ? t('finished') : t('upcoming')) + '</span><br>' + esc(g.home || '') + ' v ' + esc(g.away || '') + '<br><span class="hint">' + esc(g.age_group || '') + (g.competition ? ', ' + esc(g.competition) : '') + '</span>' + (crew ? '<div style="margin-top:6px;font-size:14px">' + crew + '</div>' : '') + '</div></a>';
+    }).join('');
+    $('mapSheet').innerHTML = gs.length ? '<div class="list">' + html + '</div>' : html;
+  }
   // ── Your year: the wrap-up and the games leaderboard ─────────────
   // Shown from WRAP_FROM (month, day) through January of the next year. Everyone sees the
   // leaderboard; a club name filters it to games that club played, for club bonuses.
@@ -1164,7 +1234,7 @@
     return '<div class="pad hint" style="padding-top:10px">' + esc(t('attnLead').replace('{n}', items.length).replace('{m}', ATTN_MINS)) + '</div>' + items.map(function (it) {
       var g = it.g;
       return '<div class="card attn' + (it.severe ? ' severe' : '') + '" data-attn="' + esc(g.game_id) + '" data-attn-venue="' + esc(g.venue || '') + '"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span class="disp" style="font-size:26px">' + esc(clock(g.kickoff)) + '</span><span class="hint">' + (it.st === 'live' ? esc(t('state_live')) : it.mins <= 0 ? '' : esc(t('inMins').replace('{n}', it.mins))) + '</span></div>' +
-        '<div><b>' + esc(g.field || '') + '</b>' + (showVenue ? ' <span class="hint">' + esc(g.venue || '') + '</span>' : '') + ' <span class="hint">' + esc(g.age_group || '') + '</span></div>' +
+        '<div><b>' + esc(g.field || '') + '</b>' + (showVenue ? ' <span class="hint">' + esc(g.venue || '') + '</span>' : '') + ' <span class="hint">' + esc(g.age_group || '') + '</span> <a class="chip-btn small" style="text-decoration:none;margin-left:6px" href="#map/' + encodeURIComponent(g.venue || '') + '/' + encodeURIComponent(g.field || '') + '">' + esc(t('map')) + '</a></div>' +
         it.why.map(function (w) { return '<div class="why ' + w.kind + '">' + (w.html || esc(w.text)) + (w.kind === 'late' ? ' <button class="btn outline small" data-late-ack="' + w.late.id + '">' + esc(t('lateAck')) + '</button>' : '') + '</div>'; }).join('') + '</div>';
     }).join('');
   }
@@ -1207,7 +1277,7 @@
       } else {
         var games = OPS.games.filter(function (g) { return g.venue === OPS.venue; });
         var helps = OPS.help.filter(function (h) { return h.venue === OPS.venue; });
-        body += '<div class="pad" style="padding-top:12px"><button class="btn outline small" data-venue="">' + esc(t('allVenues')) + '</button></div><div class="disp h2">' + esc(OPS.venue) + '</div>' +
+        body += '<div class="pad" style="padding-top:12px;display:flex;gap:8px"><button class="btn outline small" data-venue="">' + esc(t('allVenues')) + '</button><a class="btn outline small" href="#map/' + encodeURIComponent(OPS.venue) + '/">' + esc(t('map')) + '</a></div><div class="disp h2">' + esc(OPS.venue) + '</div>' +
           (helps.length ? helps.map(function (h) { return '<div class="card" style="border-color:' + (h.status === 'open' ? 'var(--red)' : 'var(--line)') + '"><b>' + esc(h.reason || '') + '</b><div class="hint">' + esc(h.ref_name || '') + ', ' + esc(h.field || '') + ', ' + esc(clock(h.created_at)) + (h.status !== 'open' ? ', ' + esc(h.status) + (h.ack_by ? ' ' + esc(h.ack_by) : '') : '') + '</div>' + (h.status === 'open' && iCan('scheduling') ? '<div class="actions" style="padding:0"><button class="btn outline small" data-ack="enroute" data-key="' + esc(h.src_key) + '">' + esc(t('ackEnroute')) + '</button><button class="btn go small" data-ack="handled" data-key="' + esc(h.src_key) + '">' + esc(t('ackHandled')) + '</button></div>' : (h.status === 'open' ? '<div class="hint" style="color:var(--red)">' + esc(t('ackInOld')) + '</div>' : '')) + '</div>'; }).join('') : '') +
           hqCardHtml(games) + searchHtml() + slotsHtml(games, ins) +
           '<div class="list" style="display:' + (OPS.editForm ? '' : 'none') + '">' + games.filter(function (g) { return !OPS.editForm || String(g.game_id) === String(OPS.edit); }).map(function (g) {
@@ -2105,7 +2175,7 @@
       '<div>' + esc(g.age_group || '') + (g.gender ? ', ' + esc(g.gender) : '') + (g.competition ? ', ' + esc(g.competition) : '') + '</div>' +
       '<div class="sep"><span class="hint">' + esc(t('crew')) + ':</span> ' + (crew.length > 1 ? crew.join(', ') : esc(myNameOn(g)) + ', ' + esc(t('role.' + role)) + '. ' + esc(t('alone'))) + '</div>' +
       (ev && ev.blurb ? '<div class="sep">' + esc(ev.blurb) + '</div>' : '') + '</div>' +
-      '<div style="margin:14px 20px 0;display:grid;grid-template-columns:1fr 1fr;gap:10px">' + (r ? '<a class="btn outline" href="' + esc(r) + '">' + esc(t('rules')) + '</a>' : '<div class="hint" style="align-self:center">' + esc(t('rulesNotPosted')) + '</div>') + '<a class="btn outline" href="' + esc(C.oldHub) + 'index.html">' + esc(t('map')) + '</a></div>' +
+      '<div style="margin:14px 20px 0;display:grid;grid-template-columns:1fr 1fr;gap:10px">' + (r ? '<a class="btn outline" href="' + esc(r) + '">' + esc(t('rules')) + '</a>' : '<div class="hint" style="align-self:center">' + esc(t('rulesNotPosted')) + '</div>') + '<a class="btn outline" href="#map/' + encodeURIComponent(g.venue || '') + '/' + encodeURIComponent(g.field || '') + '">' + esc(t('map')) + '</a></div>' +
       evalRequestHtml(g) +
       '<div class="disp h2">' + esc(t('afterGame')) + '</div>' +
       (g.score_url ? '<a class="rowbtn" href="' + esc(g.score_url) + '" target="_blank" rel="noopener"><span><span class="t">' + esc(t('gsaOpen')) + '</span><br><span class="s">' + esc(t('gsaHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '') +
@@ -2333,6 +2403,7 @@
     if (h.indexOf('coach') === 0 && !iCan('coaching')) { location.hash = '#day'; return; }
     if (h.indexOf('coachcard/') === 0) { if (!iCan('review')) { location.hash = '#day'; return; } show('s-ref'); renderCoachCard(decodeURIComponent(h.slice(10))); return; }
     if (h.indexOf('ref/') === 0) { if (!canSeeRef()) { location.hash = '#day'; return; } show('s-ref'); renderRef(decodeURIComponent(h.slice(4))); return; }
+    if (h.indexOf('map/') === 0) { var mp = h.slice(4).split('/'); show('s-map'); renderMap(decodeURIComponent(mp[0] || ''), decodeURIComponent(mp[1] || '')); return; }
     if (h === 'eod') { if (!canEod()) { location.hash = '#day'; return; } $('eodBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-eod'); loadEod().then(renderEod).catch(function (e) { $('eodBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'setup') { if (!iCan('setup')) { location.hash = '#day'; return; } $('setupBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-setup'); SU.ev = null; loadSetup().then(renderSetup).catch(function (e) { $('setupBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'people') { if (!iCan('people')) { location.hash = '#day'; return; } show('s-people'); PP.person = null; $('personCard').innerHTML = ''; renderPeople(); setTimeout(function () { $('peopleQ').focus(); }, 50); return; }
@@ -2384,8 +2455,8 @@
     ['themeBtn0', 'themeBtn1', 'themeBtn2'].forEach(function (id) { $(id).onclick = toggleTheme; });
     ['langBtn0', 'langBtn1'].forEach(function (id) { $(id).onclick = function () { setLang(S.lang === 'es' ? 'en' : 'es'); }; });
     $('markSignin').src = C.marks.csa; $('markDay').src = C.marks.csa;
-    ['markGame', 'markNotes', 'markHelp', 'markCoach', 'markCoachGame', 'markMyNotes', 'markReview', 'markCenter', 'markOps', 'markPeople', 'markSetup', 'markEod', 'markRef', 'markState'].forEach(function (id) { $(id).src = C.marks.program; });
-    ['ja0', 'ja1', 'ja2', 'ja3', 'ja4', 'ja5', 'ja6', 'ja7', 'ja8', 'ja9', 'ja10', 'ja11', 'ja12', 'ja13', 'ja14', 'ja15'].forEach(function (id) { $(id).src = C.marks.ja; });
+    ['markGame', 'markNotes', 'markHelp', 'markCoach', 'markCoachGame', 'markMyNotes', 'markReview', 'markCenter', 'markOps', 'markPeople', 'markSetup', 'markEod', 'markRef', 'markState', 'markMap'].forEach(function (id) { $(id).src = C.marks.program; });
+    ['ja0', 'ja1', 'ja2', 'ja3', 'ja4', 'ja5', 'ja6', 'ja7', 'ja8', 'ja9', 'ja10', 'ja11', 'ja12', 'ja13', 'ja14', 'ja15', 'ja16'].forEach(function (id) { $(id).src = C.marks.ja; });
     $('peopleQ').oninput = function () { var q = $('peopleQ').value.trim(); clearTimeout(PP.timer); PP.timer = setTimeout(function () { searchPeople(q); }, 300); };
     $('peopleQ').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); } };
     $('staffBtn').onclick = function () { renderStaff(); };
