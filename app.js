@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.14-i';
+  var VERSION = '2026.10.14-j';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -768,6 +768,7 @@
     $('rulesLink').style.display = r ? '' : 'none'; if (r) $('rulesLink').href = r;
     $('rulesNote').style.display = (g && !r) ? '' : 'none';
     $('libraryLink').href = C.library || '#';
+    $('guideLink').href = (C.library || 'library.html') + '#hub-start';
   }
   function cardHtml(g) {
     var inAt = S.checkins[String(g.game_id)];

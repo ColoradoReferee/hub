@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- library.html v2026.10.14-i · 2026-10-14 · Colorado Referees Library -->
+<!-- library.html v2026.10.14-j · 2026-10-14 · Colorado Referees Library -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -19,7 +19,7 @@
   --gold:#F2B800;--red:#C8102E;--grn:#2E8B4E;
   --bebas:"Barlow Condensed",sans-serif;--font:"Atkinson Hyperlegible",system-ui,sans-serif;
   --c-guide:#D9A400;--c-laws:#2F7FD6;--c-gameday:#2E8B4E;
-  --c-career:#D9731A;--c-policy:#C8102E;--c-contacts:#7E57C2;
+  --c-career:#D9731A;--c-policy:#C8102E;--c-contacts:#7E57C2;--c-hub:#1E3A73;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -27,7 +27,7 @@
     --navy:#FFFFFF;--title:#FFD24A;--onnavy:#1E3A73;
     --ov:rgba(255,255,255,.06);--ov2:rgba(255,255,255,.14);--faint:rgba(255,255,255,.45);
     --red:#E24B5A;--grn:#3DBA63;
-    --c-guide:#F5C842;--c-laws:#64b4ff;--c-gameday:#2ecc71;--c-career:#e67e22;--c-policy:#e63946;--c-contacts:#b39ddb;
+    --c-guide:#F5C842;--c-laws:#64b4ff;--c-gameday:#2ecc71;--c-career:#e67e22;--c-policy:#e63946;--c-contacts:#b39ddb;--c-hub:#FFD24A;
   }
 }
 :root[data-theme="dark"]{
@@ -35,7 +35,7 @@
   --navy:#FFFFFF;--title:#FFD24A;--onnavy:#1E3A73;
   --ov:rgba(255,255,255,.06);--ov2:rgba(255,255,255,.14);--faint:rgba(255,255,255,.45);
   --red:#E24B5A;--grn:#3DBA63;
-  --c-guide:#F5C842;--c-laws:#64b4ff;--c-gameday:#2ecc71;--c-career:#e67e22;--c-policy:#e63946;--c-contacts:#b39ddb;
+  --c-guide:#F5C842;--c-laws:#64b4ff;--c-gameday:#2ecc71;--c-career:#e67e22;--c-policy:#e63946;--c-contacts:#b39ddb;--c-hub:#FFD24A;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 [style*="--bebas"],.header-title,.sec-title,.mod-title,.hero-title,.cat-title,.law-num,.page-title,h1,h2{font-family:var(--bebas);font-style:italic;font-weight:800;}
@@ -132,6 +132,7 @@ a{color:inherit;text-decoration:none;}
 .filter-pill[data-cat="career"].active{background:rgba(230,126,34,.15);border-color:rgba(230,126,34,.4);color:var(--c-career);}
 .filter-pill[data-cat="policy"].active{background:rgba(230,57,70,.15);border-color:rgba(230,57,70,.4);color:var(--c-policy);}
 .filter-pill[data-cat="contacts"].active{background:rgba(179,157,219,.15);border-color:rgba(179,157,219,.4);color:var(--c-contacts);}
+.filter-pill[data-cat="hub"].active{background:var(--ov2);border-color:var(--c-hub);color:var(--c-hub);}
 
 /* ── MAIN CONTENT ── */
 .main{max-width:900px;margin:0 auto;padding:16px 20px 80px;}
@@ -209,6 +210,7 @@ a{color:inherit;text-decoration:none;}
 .mod-card[data-cat="career"]{border-left:3px solid rgba(230,126,34,.4);}
 .mod-card[data-cat="policy"]{border-left:3px solid rgba(230,57,70,.4);}
 .mod-card[data-cat="contacts"]{border-left:3px solid rgba(179,157,219,.4);}
+.mod-card[data-cat="hub"]{border-left:3px solid var(--c-hub);}
 
 /* No results */
 .no-results{
@@ -346,6 +348,7 @@ a{color:inherit;text-decoration:none;}
   </div>
   <div class="filter-bar">
     <div class="filter-pill active" data-cat="all" onclick="setFilter('all')">All Modules</div>
+    <div class="filter-pill" data-cat="hub" onclick="setFilter('hub')">&#128241; Using the Hub</div>
     <div class="filter-pill" data-cat="guide" onclick="setFilter('guide')">&#128218; CSA Guide</div>
     <div class="filter-pill" data-cat="laws" onclick="setFilter('laws')">&#9878; Laws</div>
     <div class="filter-pill" data-cat="gameday" onclick="setFilter('gameday')">&#9917; Game Day</div>
@@ -364,6 +367,13 @@ a{color:inherit;text-decoration:none;}
   </div>
 
   <!-- CSA GUIDE -->
+  <!-- USING THE HUB -->
+  <div class="section-header" data-section="hub">
+    <div class="section-dot" style="background:var(--c-hub)"></div>
+    <div class="section-title">Using the Hub</div>
+  </div>
+  <div class="modules-grid" id="grid-hub"></div>
+
   <div class="section-header" data-section="guide">
     <div class="section-dot" style="background:var(--c-guide)"></div>
     <div class="section-title">CSA Guide to Referees 2025/26</div>
@@ -373,7 +383,7 @@ a{color:inherit;text-decoration:none;}
   <!-- LAWS -->
   <div class="section-header" data-section="laws">
     <div class="section-dot" style="background:var(--c-laws)"></div>
-    <div class="section-title">17 Laws of the Game</div>
+    <div class="section-title">17 Laws of the Game 2026/27</div>
   </div>
   <div class="modules-grid" id="grid-laws"></div>
 
@@ -415,7 +425,7 @@ a{color:inherit;text-decoration:none;}
       <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program">
     </div>
     <div class="footer-text">
-      Colorado Referees Library &middot; Colorado Soccer Association &middot; 2025/26 edition &middot; Built with JAReferee &middot; v2026.10.14-i<br>
+      Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition &middot; Built with JAReferee &middot; v2026.10.14-j<br>
       <a href="https://coloradosoccer.org" class="footer-link">ColoradoSoccer.org</a> &middot;
       Questions: <a href="mailto:refeducation@coloradoreferees.com" class="footer-link">refeducation@coloradoreferees.com</a> &middot; 303.888.6863
     </div>
@@ -463,6 +473,157 @@ function callout(color, icon, text) {
 }
 
 var MODULES = [
+
+  /* ══════════ USING THE HUB ══════════ */
+  {
+    id:"hub-start", cat:"hub", icon:"&#128241;",
+    iconBg:"rgba(30,58,115,.12)",
+    title:"Getting started",
+    sub:"Sign in, put it on your phone, language, light or dark",
+    eyebrow:"Using the Hub · 1 of 7",
+    keywords:"tutorial how to start sign in install home screen phone language spanish dark mode version",
+    build: function() {
+      return ds("Sign in once",
+        stp(1, "Open the Hub and type the email you use in Assignr. Tap <strong>Send link</strong>.") +
+        stp(2, "Open the email on the same phone and tap the link. No password, ever. The Hub keeps you signed in.") +
+        stp(3, "If the Hub does not know your email, it tells you who to contact. Your name has to match Assignr.")) +
+      ds("Put it on your phone",
+        bul("<strong>iPhone:</strong> in Safari tap Share, then <strong>Add to Home Screen</strong>.") +
+        bul("<strong>Android:</strong> in Chrome tap the three dots, then <strong>Install app</strong> or <strong>Add to Home screen</strong>.") +
+        dt("It opens full screen like an app and loads faster. The Library also works with no signal once it has opened once.")) +
+      ds("Make it yours",
+        bul("<strong>Language:</strong> the Español / English button at the top of the Hub switches every word. The Library is in English for now.") +
+        bul("<strong>Light or dark:</strong> the sun and moon button. The Hub remembers your choice.") +
+        bul("<strong>Spinning ball</strong> means it is loading. If it spins for more than a few seconds you probably have no signal.") +
+        bul("<strong>Version number</strong> sits at the bottom of every screen. Mention it when you report a problem; new versions appear after you refresh the page."));
+    }
+  },
+  {
+    id:"hub-day", cat:"hub", icon:"&#9917;",
+    iconBg:"rgba(30,58,115,.12)",
+    title:"Your day",
+    sub:"Your games, the field map, check-in, and the board",
+    eyebrow:"Using the Hub · 2 of 7",
+    keywords:"tutorial your day games game card check in checkin map field board gold red crew rules",
+    build: function() {
+      return ds("What you see",
+        dt("Your day lists every game Assignr has published for you, in time order, with the venue, field and crew. The Hub refreshes from Assignr every few minutes, so a late change shows up without you doing anything.") +
+        bul("<strong>Tap a game</strong> for the full card: crew with phone numbers, the competition rules link, and the Map link to the exact field.") +
+        bul("<strong>Map</strong> opens the venue layout with your field lit up and a you-are-here marker from the parking lot or HQ.") +
+        bul("<strong>Rules</strong> opens the competition's rules of play (ball size, halves, substitutions).")) +
+      ds("Check in when you arrive",
+        stp(1, "Open the game card and tap <strong>Check in</strong>. Do it when you are at the field, not from the car.") +
+        stp(2, "Referee HQ sees a board of every game. A crew that has not checked in turns <strong>gold at 30 minutes</strong> before kickoff and <strong>red at 15</strong>. Checking in keeps you off that list.") +
+        stp(3, "If you work two venues in a day, check in at each one.")) +
+      ds("Running late",
+        dt("On the game card tap <strong>Running late? Tell the Site Coordinator</strong> and say how many minutes. The Site Coordinator acknowledges it and you see that on the card. Go straight to your field when you arrive and check in there.")) +
+      callout("46,204,113","&#10003;","Checked in and your partner is missing? Tell the Site Coordinator at Referee HQ or text the Referee Hotline from the <strong>Help</strong> screen. Do not leave the field to look for them.");
+    }
+  },
+  {
+    id:"hub-help", cat:"hub", icon:"&#128680;",
+    iconBg:"rgba(30,58,115,.12)",
+    title:"When something goes wrong",
+    sub:"The Help button and the Referee Hotline",
+    eyebrow:"Using the Hub · 3 of 7",
+    keywords:"tutorial help late missing injured incident emergency referee hq command center",
+    build: function() {
+      return ds("The red Help button",
+        dt("It is at the bottom of Your day. Tap it, pick what is going on, and confirm. Nothing sends until you confirm. It goes to Referee HQ with your name and field.") +
+        bul("<strong>Roster or game card problem:</strong> missing passes, wrong roster, no game card.") +
+        bul("<strong>Coach or spectator problem:</strong> behavior you need help with before it becomes an incident.") +
+        bul("<strong>Red card or send-off:</strong> HQ knows before the team gets to the tent.") +
+        bul("<strong>Fight or threat:</strong> HQ comes to you. If anyone is in danger, call 911 first.") +
+        bul("<strong>Injury, I need the trainer:</strong> HQ sends the athletic trainer to your field.") +
+        bul("<strong>Text the Referee Hotline</strong> for anything that does not fit the list.")) +
+      ds("What happens next",
+        dt("Your call lands in the Command Center with your name, field and game. The Site Coordinator taps <strong>On my way</strong> or <strong>Handled</strong> and you see that on your screen. If it is urgent and you hear nothing in a few minutes, text the Hotline.")) +
+      callout("230,57,70","&#9888;","The Help button is for today's games. For anything that can wait until tomorrow, email Referee Operations from the Contacts module.");
+    }
+  },
+  {
+    id:"hub-notes", cat:"hub", icon:"&#128221;",
+    iconBg:"rgba(30,58,115,.12)",
+    title:"Feedback and your card",
+    sub:"Notes from referee coaches, your season, your evaluations",
+    eyebrow:"Using the Hub · 4 of 7",
+    keywords:"tutorial notes feedback coach observation acknowledge referee card season evaluation progress upgrade maintenance request",
+    build: function() {
+      return ds("Feedback from a referee coach",
+        dt("When a referee coach watches you, their note comes to you in the Hub, cleaned up and in plain language, usually the same evening. Your latest note sits on Your day; <strong>All your notes</strong> opens the rest.") +
+        bul("Each note has one or two things that went well and one or two to work on. Opening it tells the coach you read it.") +
+        bul("No feedback yet does not mean you were not watched. First-year referees get a visit early in the season.")) +
+      ds("Formal evaluations",
+        bul("An upgrade to Regional or National needs <strong>three</strong> completed evaluations in the calendar year; keeping a Regional or National grade needs <strong>one</strong>. Your progress shows on Your day.") +
+        bul("<strong>Request an evaluation</strong> from the card of an upcoming game: tap Request evaluation and say whether it is for an upgrade or maintenance. The Director of Referee Development assigns a coach; you see the assignment on Your day and, once it is approved, the written evaluation.") +
+        bul("Your fitness result and badge show on the Fitness test card. At the end of the season a <strong>Your season</strong> card sums up your year and the club leaderboard."));
+    }
+  },
+  {
+    id:"hub-fitness", cat:"hub", icon:"&#127939;",
+    iconBg:"rgba(30,58,115,.12)",
+    title:"Fitness test",
+    sub:"Sign up, waiver, standards, what the badge means",
+    eyebrow:"Using the Hub · 5 of 7",
+    keywords:"tutorial fitness test sign up waiver sprint interval coda badge premium pay standard",
+    build: function() {
+      return ds("Before the test",
+        stp(1, "Open the <strong>Fitness test</strong> card on Your day or the Fitness module in this Library.") +
+        stp(2, "Read the standards for your category: 6 x 40 m sprints, the 40 x 75 m / 25 m interval run, and the CODA.") +
+        stp(3, "Tick the <strong>waiver</strong>, then tap <strong>Sign up</strong> for a session. You can cancel from the same card.")) +
+      ds("On the day",
+        bul("The instructor runs everything from their phone, including the beeps for the interval run. You can download the audio to train with.") +
+        bul("Only the instructor enters times. You see your result on your card as soon as it is saved.") +
+        bul("Pass both parts and the <strong>fitness badge</strong> appears on your card and in Command Center for the assignors. Premium pay rates follow the published standard."));
+    }
+  },
+  {
+    id:"hub-coach", cat:"hub", icon:"&#127891;",
+    iconBg:"rgba(30,58,115,.12)",
+    title:"For referee coaches",
+    sub:"Notes, the Evaluator, the debrief, writing the evaluation",
+    eyebrow:"Using the Hub · 6 of 7",
+    keywords:"tutorial coach coaching notes observation evaluator live log post-match ratings debrief pdf formal evaluation write submit review refeval",
+    build: function() {
+      return ds("Observation notes",
+        stp(1, "Open <strong>Coaching</strong> from Your day, pick the game, tap the referee.") +
+        stp(2, "Talk or type your notes during and after the game. Short and specific beats long.") +
+        stp(3, "Tap <strong>Send</strong>. The Hub tidies the wording, you approve it, and the referee gets it the same evening.")) +
+      ds("A formal evaluation, start to finish",
+        stp(1, "The Director of Referee Development assigns you to a referee's game. It shows under <strong>My evaluations</strong> on Coaching.") +
+        stp(2, "<strong>Open in the Evaluator</strong> at the field. Log events live, with the coin toss and attacking direction so the app knows which goal is which.") +
+        stp(3, "After the game: <strong>Post-Match</strong> tab, rate each official, record the CMIs and CREs, pick your feeling score.") +
+        stp(4, "<strong>Debrief</strong> tab: tap the two or three items you will talk through with the referee. Keep the debrief to those.") +
+        stp(5, "<strong>Export</strong>: generate the PDF. The evaluation is now complete in the Hub.") +
+        stp(6, "At home, open the evaluation in the Hub and <strong>write the formal evaluation</strong> yourself from the PDF and your notes, in US Soccer's style. Save as you go.") +
+        stp(7, "Tap <strong>Submit for review</strong>. A reviewer approves it or returns it with a note. Once approved, <strong>Copy for RefEval</strong> and paste it there.")) +
+      callout("245,200,66","&#128161;","The Writer, which drafts from your log, is for reviewers. A coach writes their first evaluations themselves; that is how the program learns you can.");
+    }
+  },
+  {
+    id:"hub-ops", cat:"hub", icon:"&#127963;",
+    iconBg:"rgba(30,58,115,.12)",
+    title:"Command Center, State view, Setup",
+    sub:"For site coordinators, referee operations and admins",
+    eyebrow:"Using the Hub · 7 of 7",
+    keywords:"tutorial command center site coordinator sc board switches announcements weather state view setup events venues sessions assignr sync not registered people",
+    build: function() {
+      return ds("Command Center (site coordinators and HQ)",
+        bul("<strong>Venues:</strong> every venue with games on the day. Green is checked in, red is a Help call still open. Tap a game for the crew and their phones; gold and red rows need a call.") +
+        bul("<strong>Help calls</strong> sit at the top of the venue. Tap <strong>On my way</strong> or <strong>Handled</strong> so the referee sees it.") +
+        bul("<strong>Running late</strong> notices show in the attention list; tap Got it to acknowledge.") +
+        bul("<strong>Bulletins:</strong> what every referee sees on Your day, in a date window. <strong>Staff:</strong> messages between site coordinators and the Director, never to referees.") +
+        bul("<strong>Retain:</strong> referees who are working but nobody has seen, and referees who have gone quiet.") +
+        bul("<strong>Evaluations:</strong> open requests, assignments, evaluations awaiting review, and who is on track for an upgrade this year.")) +
+      ds("State view (read on a desktop)",
+        dt("The program at a glance: registrations against last year, who comes back, the age bands, the fitness summary, and the not-registered list with one-tap email batches.")) +
+      ds("Setup (admins)",
+        bul("<strong>Events:</strong> what is live, what is off, what is done. An event needs venues and tools only when it is active.") +
+        bul("<strong>Venues:</strong> the field layouts behind the maps and the QR signs, with a live preview while you edit.") +
+        bul("<strong>Sessions:</strong> fitness tests and classroom sessions; the instructor runs them from the same card.") +
+        bul("<strong>Assignr sync:</strong> when each assigning group was last pulled and whether anything failed. It runs every five minutes on its own."));
+    }
+  },
 
   /* ══════════ CSA GUIDE ══════════ */
   {
@@ -741,6 +902,33 @@ var MODULES = [
 
   /* ══════════ LAWS ══════════ */
   {
+    id:"laws-new", cat:"laws", icon:"&#10024;",
+    iconBg:"rgba(100,180,255,.12)",
+    title:"What changed for 2026/27",
+    sub:"The IFAB changes in force since 1 July 2026, in one place",
+    eyebrow:"IFAB Laws of the Game 2026/27",
+    keywords:"new changes 2026 2027 countdown five seconds throw-in goal kick injury minute substitution ten seconds accessories jewelry dropped ball dogso advantage double touch forfeit seven players",
+    build: function() {
+      return ds("The ones you will use every game",
+        stp(1, "<strong>5-second countdown on throw-ins and goal kicks.</strong> Unfair delay: whistle, raise your hand, count five seconds visibly. Throw-in not taken = throw-in to the opponents. Goal kick not taken = corner kick. Caution only for excessive delay after that. (Laws 15, 16, 17)") +
+        stp(2, "<strong>Injured player sits one minute.</strong> Treated on the field, or the injury stopped play: the player leaves and comes back one minute after the restart, from the touchline. Not for the goalkeeper, and not for a player injured by a foul that earned a card. (Law 5)") +
+        stp(3, "<strong>Substituted player has 10 seconds to leave.</strong> If they dawdle, the substitute waits until the first stoppage after one minute of play. (Law 3)") +
+        stp(4, "<strong>Accessories instead of jewellery.</strong> Allowed if not dangerous and safely, securely covered. Dangerous items come off; tape does not make them legal. (Law 4)") +
+        stp(5, "<strong>Dropped ball goes to the team that would have had the ball</strong>, including the team that would have taken the restart. Ball hits you or an outside agent: drop it where the contact happened. (Law 8)") +
+        stp(6, "<strong>DOGSO and advantage.</strong> Play advantage, they score: no card. Same for a failed handball attempt to stop a goal. The number and position of attackers now count toward DOGSO. (Law 12)") +
+        stp(7, "<strong>Delaying the restart is narrower.</strong> The countdown handles slow throw-ins and goal kicks. Caution for excessive delay, kicking or carrying the ball away, faking a throw-in, slow leaving when substituted, or a free kick deliberately taken from the wrong place. (Law 12)") +
+        stp(8, "<strong>Penalty double touch.</strong> Accidental (both feet, or the ball hits the standing leg): goal = retake, no goal = IFK. In kicks from the mark: goal = retake, no goal = missed. The automatic caution when kicker and goalkeeper offend together is gone. (Laws 10, 14)") +
+        stp(9, "<strong>Fewer than 7 players.</strong> A team that causes the match to stop or be abandoned with fewer than 7 is, in principle, forfeited. Temporary dismissals and one-minute off-field periods do not count. (Laws 3, 7)") +
+        stp(10, "<strong>Advantage on a bad restart.</strong> If a restart is taken incorrectly and the opponents win the ball, you may play on. (Law 5)")) +
+      ds("Competition options and things coming",
+        bul("Covering the mouth while provoking an opponent, and walking off in protest, can be sending-off offenses where the competition adopts them.") +
+        bul("Only the captain approaches the referee: compulsory everywhere from 1 July 2027. Start now.") +
+        bul("Still in force from 2025/26: goalkeeper holding the ball more than 8 seconds is a corner kick, with the same visible 5-second count.") +
+        bul("Body cameras, VAR and semi-automated offside are competition matters; not for our fields.")) +
+      callout("100,180,255","&#128161;","US Soccer applies the IFAB Laws from 1 July. Youth and amateur competitions in Colorado may modify substitutions, match length and ball size; read your competition rules from the game card. Full text: theifab.com/laws.");
+    }
+  },
+  {
     id:"laws-1-2", cat:"laws", icon:"&#9917;",
     iconBg:"rgba(100,180,255,.12)",
     title:"Laws 1 & 2: Field & Ball",
@@ -775,12 +963,14 @@ var MODULES = [
     build: function() {
       return ds("Law 3: The Players",
         bul("A match is played by two teams, each with <strong>a maximum of 11 players</strong>, including a goalkeeper.") +
-        bul("A match may not start if either team has fewer than 7 players.") +
-        bul("<strong>Substitutions:</strong> Maximum 5 per team in competitive matches. 3 opportunities to substitute.") +
+        bul("A match may not start or continue if either team has fewer than 7 players. <strong>New 2026/27:</strong> a team that causes a match to stop or be abandoned by having fewer than 7 is, in principle, forfeited (subject to competition rules). Temporary dismissals and the one-minute off-field periods do not count against the 7.") +
+        bul("<strong>Substitutions:</strong> Maximum 5 per team in competitive matches. 3 opportunities to substitute. Check the competition rules; youth leagues often allow more.") +
+        bul("<strong>New 2026/27, leaving the field:</strong> the player being substituted must leave within <strong>10 seconds</strong> of the board or the referee's signal. If they do not, the substitute waits until the first stoppage after one minute of play. Caution only for excessively delaying the restart.") +
+        bul("<strong>Captain only:</strong> the guidelines where only the captain may approach the referee become compulsory in all competitions from 1 July 2027.") +
         dt("A player who has been sent off must leave the field. Substitutions cannot replace a player who has been sent off.")) +
       ds("Law 4: Players' Equipment",
         dt("<strong>Compulsory equipment:</strong> jersey with number, shorts, socks covering shin guards, shin guards, and footwear.") +
-        callout("230,57,70","&#9888;","<strong>Jewelry must be removed.</strong> Tape over earrings is NOT permitted. Players must remove all jewelry before the game.") +
+        callout("100,180,255","&#128161;","<strong>New 2026/27, accessories.</strong> The blanket jewellery ban is gone. Accessories are permitted as long as they are not dangerous and are <strong>safely and securely covered</strong>. Anything dangerous must be removed; taping a dangerous item is not enough. The referee decides what is dangerous.") +
         bul("Shin guards: must be covered by socks and provide reasonable protection") +
         bul("Goalkeeper must wear colors distinguishable from both teams and the referee") +
         bul("Players must not use any equipment that is dangerous to themselves or other players"));
@@ -796,7 +986,8 @@ var MODULES = [
     build: function() {
       return ds("Law 5: The Referee",
         dt("The referee has full authority to enforce the Laws of the Game. The referee's decisions on facts are final.") +
-        bul("May allow play to continue when an offense has occurred if the non-offending team will benefit (advantage)") +
+        bul("May allow play to continue when an offense has occurred if the non-offending team will benefit (advantage). <strong>New 2026/27:</strong> advantage may also be played when a restart is taken incorrectly and the opponents gain the ball.") +
+        bul("<strong>New 2026/27, injuries:</strong> a player treated on the field, or whose injury stops or delays play, must leave and may re-enter <strong>one minute after play restarts</strong> (from the touchline while the ball is in play). Exceptions include an injured goalkeeper and a player injured by a physical offense for which the opponent is cautioned or sent off.") +
         bul("May caution or send off players at any time, including during stoppages") +
         bul("May not change a decision after play has restarted, unless advised by an AR or 4th official") +
         bul("Retains jurisdiction from entering the field until leaving it after the final whistle")) +
@@ -823,9 +1014,9 @@ var MODULES = [
         dt("<strong>Kick-off procedure:</strong>") +
         bul("Ball placed on center mark") +
         bul("All players in own half, defending team outside center circle") +
-        bul("Ball is in play when it is kicked and moves forward") +
+        bul("Ball is in play when it is kicked and clearly moves (any direction)") +
         bul("A goal can be scored directly from kick-off") +
-        dt("<strong>Dropped ball:</strong> used to restart play after a temporary stoppage not covered by another Law. The ball is dropped to one player from the team that last touched it.")) +
+        dt("<strong>Dropped ball:</strong> used to restart play after a temporary stoppage not covered by another Law. Inside the penalty area it is dropped for the defending goalkeeper. <strong>New 2026/27:</strong> elsewhere it is dropped for one player of the team that has, or would have, retained or gained possession, including the team that would have taken the restart. If the ball hit a match official or an outside agent, it is dropped where that contact happened.")) +
       ds("Law 9: Ball In and Out of Play",
         dt("The ball is <strong>OUT of play</strong> when it has wholly crossed the goal line or touch line (on the ground or in the air), or when the referee has stopped play.") +
         dt("The ball is <strong>IN play</strong> at all other times, including when it rebounds off a goalpost, crossbar, or corner flag, or when it rebounds off the referee.") +
@@ -842,7 +1033,8 @@ var MODULES = [
     build: function() {
       return ds("Law 10: Determining the Outcome",
         dt("A goal is scored when the ball <strong>wholly crosses the goal line</strong> between the goalposts and under the crossbar, provided no offense has been committed by the team scoring.") +
-        dt("If the score is level at full time, competition rules determine the outcome: extra time, penalty shootout, etc.")) +
+        dt("If the score is level at full time, competition rules determine the outcome: extra time, penalty shootout, etc.") +
+        dt("<strong>New 2026/27, kicks from the mark:</strong> an accidental double touch (both feet, or the ball hits the standing leg) is a retake if the ball goes in and recorded as missed if it does not. The automatic caution for a kicker who offends at the same time as the goalkeeper is removed.")) +
       ds("Law 11: Offside",
         dt("A player is in an <strong>offside position</strong> if any part of the head, body, or feet is <em>nearer to the opponents' goal line than both the ball and the second-to-last opponent</em>.") +
         callout("100,180,255","&#128161;","<strong>Being in an offside position is NOT an offense.</strong> A player is only penalized if they become involved in active play.") +
@@ -867,20 +1059,22 @@ var MODULES = [
       ds("Indirect Free Kick Offenses",
         bul("GK handling after deliberate back-pass from teammate's foot") +
         bul("GK handling after receiving directly from a throw-in") +
-        bul("GK not releasing the ball within 6 seconds") +
+        bul("Goalkeeper holding the ball more than <strong>8 seconds</strong> is a <strong>corner kick</strong> (not an IFK). The referee shows a visible 5-second countdown with a raised hand.") +
         bul("Dangerous play") +
         bul("Impeding an opponent without going for the ball")) +
       ds("DOGSO & SPA",
         dt("<strong>DOGSO</strong>: Denying an Obvious Goal-Scoring Opportunity = <strong>red card send-off</strong>") +
-        dt("The 4 Ds: <strong>Distance</strong> to goal, <strong>Direction</strong> of play, number of <strong>Defenders</strong>, <strong>Destiny</strong> of the ball.") +
+        dt("The 4 Ds: <strong>Distance</strong> to goal, <strong>Direction</strong> of play, number of <strong>Defenders</strong>, <strong>Destiny</strong> of the ball. <strong>New 2026/27:</strong> the location and number of <strong>attackers</strong> count too.") +
+        dt("<strong>New 2026/27, advantage:</strong> if you play advantage on a DOGSO offense and the attacking team scores from it, there is <strong>no card</strong>. Same for a failed attempt to stop a goal with the hand. If no goal results, caution as before.") +
         dt("<strong>SPA</strong>: Stopping a Promising Attack = <strong>yellow card caution</strong>")) +
       ds("Cautions (Yellow Card)",
         bul("Unsporting behaviour") + bul("Dissent") + bul("Persistent infringement") +
-        bul("Delaying restart") + bul("Encroachment") + bul("Entering/leaving without permission") + bul("Simulation")) +
+        bul("Delaying the restart. <strong>New 2026/27:</strong> slow throw-ins and goal kicks are now punished by the 5-second countdown (opponents get the restart); caution only for <em>excessive</em> delay, kicking or carrying the ball away, faking a throw-in and leaving it to a teammate, slow leaving when substituted, or taking a free kick from the wrong place to force a retake") + bul("Encroachment") + bul("Entering/leaving without permission") + bul("Simulation")) +
       ds("Send-Offs (Red Card)",
         bul("Serious foul play") + bul("Violent conduct") + bul("Spitting at a person") +
         bul("DOGSO") + bul("Two cautions in same match") +
-        bul("Offensive, insulting, or abusive language/gestures"));
+        bul("Offensive, insulting, or abusive language/gestures") +
+        dt("<strong>Competition options 2026/27:</strong> covering the mouth while communicating provocatively with an opponent, and leaving the field in protest (or encouraging others to), may be sending-off offenses where the competition adopts them."));
     }
   },
   {
@@ -901,19 +1095,23 @@ var MODULES = [
         bul("GK on goal line between posts, facing kicker") +
         bul("All other players: outside penalty area, outside arc, behind penalty mark") +
         bul("Ball is in play when kicked and moves forward") +
-        callout("230,57,70","&#9888;","GK moves off line before kick AND kick fails = retake + caution GK. If goal scored despite GK encroachment = allow the goal.")) +
+        bul("<strong>New 2026/27, double touch:</strong> if the kicker accidentally kicks with both feet, or the ball hits their other leg right after the kick: goal = retake, no goal = IFK. A deliberate second touch before another player plays it is an IFK.") +
+        callout("230,57,70","&#9888;","Goalkeeper off the line early: goal = allow it. No goal = retake only if the goalkeeper's offense clearly affected the kicker; warn the goalkeeper first, caution on a repeat. Kicker and goalkeeper both offend = IFK to the defense.")) +
       ds("Law 15: Throw-In",
         bul("Both feet on or behind the touch line at point of throw") +
         bul("Ball released from behind and over the head with both hands") +
-        bul("Goal cannot be scored directly from a throw-in")) +
+        bul("Goal cannot be scored directly from a throw-in") +
+        callout("100,180,255","&#9203;","<strong>New 2026/27, 5-second countdown.</strong> When a team unfairly delays a throw-in, whistle, raise your hand and count down five seconds visibly. Not taken in time = <strong>throw-in to the opponents</strong>. Caution only if they then excessively delay the restart.")) +
       ds("Law 16: Goal Kick",
         bul("Taken from anywhere in the goal area") +
         bul("Ball is in play when it is kicked and clearly moves") +
-        bul("Opposing players must be outside the penalty area until ball is in play")) +
+        bul("Opposing players must be outside the penalty area until ball is in play") +
+        callout("100,180,255","&#9203;","<strong>New 2026/27, 5-second countdown.</strong> Same signal as the throw-in. A goal kick not taken by the end of the count = <strong>corner kick to the opponents</strong>. Caution only for excessive delay after that.")) +
       ds("Law 17: Corner Kick",
         bul("Ball placed fully within the corner arc nearest to where it crossed the goal line") +
         bul("Defending team must be 9.15m from the corner arc") +
-        bul("Goal can be scored directly from a corner kick"));
+        bul("Goal can be scored directly from a corner kick") +
+        bul("<strong>Also a corner kick:</strong> the goalkeeper controls the ball with the hands for more than 8 seconds, or a team delays its own goal kick past the 5-second count"));
     }
   },
 
@@ -1336,7 +1534,8 @@ function buildCards() {
     gameday:  document.getElementById("grid-gameday"),
     career:   document.getElementById("grid-career"),
     policy:   document.getElementById("grid-policy"),
-    contacts: document.getElementById("grid-contacts")
+    contacts: document.getElementById("grid-contacts"),
+    hub:      document.getElementById("grid-hub")
   };
 
   MODULES.forEach(function(mod, idx) {
@@ -1364,6 +1563,7 @@ function buildCards() {
    DETAIL PANEL
    ──────────────────────────────────────────── */
 function openModule(mod) {
+  if (location.hash !== "#" + mod.id) history.replaceState(null, "", "#" + mod.id);
   document.getElementById("detailEyebrow").textContent = mod.eyebrow;
   document.getElementById("detailTitle").textContent = mod.title;
   document.getElementById("detailSubtitle").textContent = mod.sub;
@@ -1373,6 +1573,7 @@ function openModule(mod) {
 }
 
 function closeDetail() {
+  if (location.hash) history.replaceState(null, "", location.pathname);
   document.getElementById("detailPanel").classList.remove("open");
   document.body.style.overflow = "";
 }
@@ -1418,7 +1619,7 @@ function applySearchAndFilter() {
   });
 
   // Show/hide section headers
-  var sections = ["guide","laws","gameday","career","policy","contacts"];
+  var sections = ["hub","guide","laws","gameday","career","policy","contacts"];
   sections.forEach(function(s) {
     var header = document.querySelector(".section-header[data-section=\"" + s + "\"]");
     var grid = document.getElementById("grid-" + s);
@@ -1435,6 +1636,8 @@ function applySearchAndFilter() {
    INIT
    ──────────────────────────────────────────── */
 buildCards();
+// A link like library.html#hub-start opens that module.
+(function () { var id = location.hash.replace("#", ""); if (!id) return; var m = MODULES.filter(function (x) { return x.id === id; })[0]; if (m) openModule(m); })();
 </script>
 </body>
 </html>
