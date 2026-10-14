@@ -8,7 +8,7 @@
 <link rel="icon" href="assets/jareferee-mark.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@1,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="app.css?v=2026.10.14-d">
+<link rel="stylesheet" href="app.css?v=2026.10.14-e">
 <style>
   .pub .top { padding: 10px 20px 0; display: flex; justify-content: space-between; align-items: center; }
   .pub .top img { width: 36px; height: 40px; object-fit: contain; }
@@ -32,7 +32,7 @@
 </div>
 <div id="busy" style="display:none" aria-live="polite"><span class="ball">&#9917;</span></div>
 <script src="config.js"></script>
-<script src="fieldmap.js?v=2026.10.14-d"></script>
+<script src="fieldmap.js?v=2026.10.14-e"></script>
 <script>
 (function () {
   var C = window.HUB, q = new URLSearchParams(location.search);
@@ -42,7 +42,7 @@
   function key(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
   try { var th = localStorage.getItem('hub-theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}
   if (C && C.marks) $('mark').src = C.marks.program || C.marks.ja;
-  document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v2026.10.14-d'; });
+  document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v2026.10.14-e'; });
 
   var ALL = null, LAYOUT = null, GAMES = [], FM = null, TEAM = '';
   function timeOf(g) { var m = /(\d{1,2}):(\d{2})\s*(AM|PM)?/i.exec(g.time || ''); if (!m) return null; var h = Number(m[1]) % 12 + (/pm/i.test(m[3] || '') ? 12 : 0); var d = new Date(DATE + 'T00:00:00'); d.setHours(h, Number(m[2]), 0, 0); return d.getTime(); }
@@ -95,7 +95,7 @@
     // Layouts from the venues table (no sign-in needed), the file as a fallback.
     ALL = {};
     try { var vr = await fetch(C.supabaseUrl + '/rest/v1/rpc/venue_layouts', { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: C.publishableKey, Authorization: 'Bearer ' + C.publishableKey }, body: JSON.stringify({ p_org: C.org }) }).then(function (r) { return r.json(); }); (Array.isArray(vr) ? vr : []).forEach(function (v) { if (v.layout) ALL[v.slug] = v.layout; }); } catch (e) {}
-    if (!Object.keys(ALL).length) { try { ALL = await fetch('fieldmaps.json?v=2026.10.14-d').then(function (r) { return r.json(); }); } catch (e) { ALL = {}; } }
+    if (!Object.keys(ALL).length) { try { ALL = await fetch('fieldmaps.json?v=2026.10.14-e').then(function (r) { return r.json(); }); } catch (e) { ALL = {}; } }
     var slug = VENUE ? slugMatch(ALL, VENUE) : null;
     if (!slug) {
       $('venueName').textContent = 'Field maps';
