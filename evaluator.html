@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Evaluator v2026.10.20-g · 2026-10-20 · the coach's live log, post-match ratings and PDF. The formal evaluation is written by the coach in the Hub. -->
+<!-- Evaluator v2026.10.20-h · 2026-10-20 · the coach's live log, post-match ratings and PDF. The formal evaluation is written by the coach in the Hub. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1702,7 +1702,7 @@ function setLang(l) { LANG = l; try { localStorage.setItem('hub-lang', l); } cat
 // ═══════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════
-var EVAL_VERSION = '2026.10.20-g';
+var EVAL_VERSION = '2026.10.20-h';
 document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v' + EVAL_VERSION; });
 var MD = {};
 var OT = { active:false, half:0, len:10, otStarted:false };
@@ -4177,7 +4177,7 @@ checkResumeOnLoad();
     var who = await sb.rpc('whoami');
     ME = who.data;
     if (!ME || (ME.unlocks || []).indexOf('evaluations') < 0) { gate('<p>'+T("gate_coaches")+'</p><p><a href="index.html#coach">'+T("back_coaching")+'</a></p>'); return; }
-    var gid = P.get('gameId');
+    var gid = P.get('gameId') || P.get('game');
     // The Evaluator opens only for the coach the Director of Referee
     // Development assigned to this game, and only for that referee.
     if (gid && !ME.real_admin) {
