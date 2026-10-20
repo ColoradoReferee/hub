@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.20-e';
+  var VERSION = '2026.10.20-f';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1187,14 +1187,14 @@
     var byRef = {}; notes.forEach(function (n) { if (!n.refName) return; var r = byRef[n.refName] = byRef[n.refName] || { from: n.date, to: n.date }; if (n.date && n.date < r.from) r.from = n.date; if (n.date && n.date > r.to) r.to = n.date; });
     var names = Object.keys(byRef);
     if (!names.length || !window.confirm(t('emailApprovedConfirm').replace('{n}', names.length))) return;
-    REV.busy = true; btn.disabled = true; var sent = 0, already = 0, failed = [], prog = $('emailProg');
+    REV.busy = true; btn.disabled = true; var sent = 0, held = 0, already = 0, failed = [], prog = $('emailProg');
     for (var i = 0; i < names.length; i++) {
       var nm = names[i]; if (prog) prog.textContent = t('emailProgress').replace('{i}', i + 1).replace('{n}', names.length).replace('{name}', nm);
-      try { await post({ action: 'sendReport', refName: nm, dateFrom: byRef[nm].from || '', dateTo: byRef[nm].to || '', approver: S.me.first_name + ' ' + S.me.last_name }); sent++; }
+      try { var jr = await post({ action: 'sendReport', refName: nm, dateFrom: byRef[nm].from || '', dateTo: byRef[nm].to || '', approver: S.me.first_name + ' ' + S.me.last_name }); if (jr && jr.held) held++; else sent++; }
       catch (e) { if (/already/i.test(e.message || '')) already++; else failed.push(nm + ': ' + (e.message || '')); }
     }
     REV.busy = false; btn.disabled = false;
-    if (prog) prog.innerHTML = esc(t('emailDone').replace('{sent}', sent).replace('{already}', already)) + (failed.length ? '<br><span style="color:var(--red)">' + esc(failed.join('; ')) + '</span>' : '');
+    if (prog) prog.innerHTML = esc(t('emailDone').replace('{sent}', sent).replace('{already}', already)) + (held ? ' ' + esc(t('emailHeld').replace('{n}', held)) : '') + (failed.length ? '<br><span style="color:var(--red)">' + esc(failed.join('; ')) + '</span>' : '');
   }
   async function runOn(notes, what, btn) {
     notes = notes.filter(Boolean);
@@ -2318,7 +2318,8 @@
     var contact = !ct ? '' : '<div class="card" style="gap:6px;border-color:var(--gold)"><b>' + esc(t('contactTitle')) + (ct.minor ? ' <span class="pill">' + esc(t('contactMinor')) + '</span>' : '') + '</b>' +
       (ct.phone ? '<div class="actions" style="padding:0"><a class="btn primary" href="sms:' + esc(String(ct.phone).replace(/[^\d+]/g, '')) + '?&body=' + encodeURIComponent(t('smsBody').replace('{venue}', REF.venue || '').replace('{who}', S.me.first_name)) + '">' + esc(t('contactText')) + '</a><a class="btn outline" href="tel:' + esc(String(ct.phone).replace(/[^\d+]/g, '')) + '">' + esc(t('contactCall')) + '</a></div><div class="hint">' + esc(ct.phone) + '</div>' : '<div class="hint">' + esc(t('contactNoPhone')) + '</div>') +
       (ct.email ? '<div class="hint"><a href="mailto:' + esc(ct.email) + '">' + esc(ct.email) + '</a></div>' : '') +
-      (ct.guardian_email ? '<div class="hint">' + esc(t('contactGuardian')) + ' <a href="mailto:' + esc(ct.guardian_email) + '">' + esc(ct.guardian_email) + '</a></div>' : '') + '</div>';
+      (ct.guardian_email ? '<div class="hint">' + esc(t('contactGuardian')) + ' <a href="mailto:' + esc(ct.guardian_email) + '">' + esc(ct.guardian_email) + '</a></div>' : '') +
+      (ct.minor ? '<div class="hint" style="color:var(--red);font-weight:700">' + esc(t('contactMinorRule')) + '</div>' : '') + '</div>';
     if (!c) { $('refBody').innerHTML = '<div class="pad" style="padding-top:16px"><div class="disp" style="font-size:40px">' + esc(name) + '</div></div><div class="card"><div class="hint">' + esc(t('refNoRecord')) + '</div></div>'; return; }
     var titles = (c.titles || []).map(function (x) { return '<span class="pill' + (x.source === 'manual' ? ' ok' : '') + '" style="margin:4px 4px 0 0">' + esc(x.label) + '</span>'; }).join('');
     var stat = function (n, l, cls) { return '<div class="stat' + (cls ? ' ' + cls : '') + '"><b>' + (n == null ? '0' : esc(n)) + '</b><i>' + esc(l) + '</i></div>'; };
