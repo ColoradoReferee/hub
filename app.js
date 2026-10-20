@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.14-l';
+  var VERSION = '2026.10.20-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -49,6 +49,7 @@
   function key(n) { return String(n || '').trim().toLowerCase().replace(/\s+/g, ' '); }
   function todayStr() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
   function clock(iso) { var d = new Date(iso); if (isNaN(d)) return ''; return d.toLocaleTimeString(S.lang === 'es' ? 'es-US' : 'en-US', { hour: 'numeric', minute: '2-digit' }); }
+  function dayShort(iso) { var d = new Date(iso + 'T12:00:00'); return d.toLocaleDateString(S.lang === 'es' ? 'es-US' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short' }); }
   function dayLong(iso) { var d = iso ? new Date(iso + 'T12:00:00') : new Date(); return d.toLocaleDateString(S.lang === 'es' ? 'es-US' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' }); }
   function myRole(g) {
     var keys = S.me.nameKeys || [];
@@ -226,7 +227,7 @@
     if (!p) return '';
     var up = Number(p.upgrade_done || 0), mt = Number(p.maintenance_done || 0);
     if (!up && !mt && !(p.items || []).length) return '';
-    var line = up ? t('evalProgressUp').replace('{n}', up).replace('{need}', p.upgrade_need).replace('{y}', p.year) : t('evalProgressMaint').replace('{n}', mt).replace('{y}', p.year);
+    var line = up ? t('evalProgressUp').replace('{n}', up).replace('{need}', p.upgrade_need).replace('{y}', p.year) : t('evalProgressMaint').replace('{n}', mt).replace('{need}', p.maintenance_need).replace('{y}', p.year);
     var done = up ? up >= Number(p.upgrade_need) : mt >= Number(p.maintenance_need);
     return '<div class="card" style="gap:6px;border-color:' + (done ? 'var(--green)' : 'var(--gold)') + '"><b>' + esc(line) + '</b><div class="bar"><i style="width:' + Math.min(100, Math.round(100 * (up || mt) / (up ? Number(p.upgrade_need) : Number(p.maintenance_need)))) + '%"></i></div>' + (p.items || []).map(function (it) { return '<div class="hint">' + esc(dayLong(it.date)) + ', ' + esc(it.coach || '') + (it.competition ? ', ' + esc(it.competition) : '') + '</div>'; }).join('') + '</div>';
   }
@@ -409,9 +410,10 @@
   // FIFA standards Colorado runs to. National = men's international, Regional = women's international,
   // Regional category 3 = women's category 3 for referees the Referee Department sets there.
   // CODA is the assistant referee change-of-direction test. Premium pay: sprints within PREMIUM_PLUS
-  // of the standard and at least PREMIUM_LAPS laps of the interval. Numbers pending confirmation.
-  var FIT = { national: { rsa: 6.0, run: 15, walk: 18, coda: 10.0 }, regional: { rsa: 6.4, run: 17, walk: 20, coda: 11.0 }, regional3: { rsa: 6.6, run: 18, walk: 26, coda: 11.0 } };
-  var PREMIUM_PLUS = 0.4, PREMIUM_LAPS = 6, INTERVAL_RUNS = 40;
+  // of the standard and more than half the interval (PREMIUM_RUNS of 40). The Regional
+  // rows are Colorado's results sheets of 20 October 2026: men 6.4 / 17 / 20, women 6.6 / 17 / 24.
+  var FIT = { national: { rsa: 6.0, run: 15, walk: 18, coda: 10.0 }, regional: { rsa: 6.4, run: 17, walk: 20, coda: 11.0 }, regional3: { rsa: 6.6, run: 17, walk: 24, coda: 11.0 } };
+  var PREMIUM_PLUS = 0.4, PREMIUM_RUNS = 21, INTERVAL_RUNS = 40;
   var FIT_WAIVER_URL = 'https://www.emailmeform.com/builder/form/93yTc7L8112iaafnM6';
   function stdKey(x) { return FIT[x && x.standard] ? x.standard : 'national'; }
   function fitStd(x) { return FIT[stdKey(x)]; }
@@ -463,7 +465,7 @@
     var six = (r.rsa || []).slice(0, 6); if (six.length < 6 || six.some(function (v) { return v == null || v === ''; })) return false;
     if (six.some(function (v) { return Number(v) > std.rsa + PREMIUM_PLUS; })) return false;
     var runs = r.interval_fail_run ? r.interval_fail_run - 1 : (r.interval_runs || 0);
-    return runs >= PREMIUM_LAPS * 4;
+    return runs >= PREMIUM_RUNS;
   }
   // Overall: passed | failed | premium | signed (incomplete) | no_show | waitlist | withdrawn
   function fitOverall(r, std) {
@@ -831,12 +833,15 @@
   // ── Coaching ─────────────────────────────────────────────────────
   function iCan(section) { return !!(S.me && (S.me.unlocks || []).indexOf(section) >= 0); }
   var AREAS = ['laws', 'reading', 'fitness', 'presence'];
+  // The day the Coaching screen shows. Today unless the coach picked another
+  // game day (a tournament on Saturday, looked at on Monday).
+  function coachDay() { return S.coach.date || todayStr(); }
   async function loadCoach_() {
-    var today = todayStr(), keys = S.me.nameKeys || [], until = shiftDate(today, 10);
+    var today = todayStr(), day = coachDay(), keys = S.me.nameKeys || [], until = shiftDate(today, 10);
     var r = await Promise.all([
       fetchAll(function () { return sb.from('games').select('game_id,date,game_num,kickoff,field,age_group,gender,competition,home,away,cr,ar1,ar2,fourth,venue,status')
-        .eq('date', today).not('status', 'in', '(C,X,canceled_no_pay)').order('venue').order('kickoff'); }),
-      sb.from('coach_assignments').select('venue,block,fields,note').eq('date', today),
+        .eq('date', day).not('status', 'in', '(C,X,canceled_no_pay)').order('venue').order('kickoff'); }),
+      sb.from('coach_assignments').select('venue,block,fields,note').eq('date', day),
       sb.from('eval_requests').select('id,game_id,game_date,venue,purpose,status,ref_name').eq('coach_person_id', S.me.person_id).eq('status', 'assigned').gte('game_date', today).order('game_date'),
       // Coaching slots Assignr gave me, today and the next ten days: my rows only.
       fetchAll(function () { return sb.from('games').select('game_id,date,kickoff,venue,field,age_group,hq_role,cr,ar1,ar2,fourth').gte('date', today).lte('date', until).not('status', 'in', '(C,X,canceled_no_pay)').or(mineOr()).order('date').order('kickoff'); }),
@@ -850,7 +855,7 @@
     S.coach.evals = r[2].data || [];
     try { var mv = await sb.from('evaluations').select('id,game_date,venue,competition,ref_name,purpose,status,report,report_status,updated_at').eq('coach_person_id', S.me.person_id).order('game_date', { ascending: false }).limit(30); S.coach.myEvals = mv.data || []; } catch (e) { S.coach.myEvals = []; }
     S.coach.assignr = (r[3].data || []).filter(function (g) { return isCoachSlot(g) && ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(g[k])) >= 0; }); });
-    S.coach.assignr.filter(function (g) { return g.date === today; }).forEach(function (g) {
+    S.coach.assignr.filter(function (g) { return g.date === day; }).forEach(function (g) {
       if (!S.coach.mine.some(function (m) { return m.venue === g.venue; })) S.coach.mine.push({ venue: g.venue, block: 'all', fields: g.field ? [g.field] : [], note: t('fromAssignr') + (g.kickoff ? ', ' + clock(g.kickoff) : '') });
     });
     if (S.coach.mine.length && !S.coach.venue) S.coach.venue = S.coach.mine[0].venue;
@@ -888,11 +893,11 @@
     var expected = (S.coach.mine || []).length ? '<div class="card" style="border-color:var(--gold);gap:6px"><b>' + esc(t('yourBlock')) + '</b>' + S.coach.mine.map(function (m) {
         var done = 0, total = 0, refs = {};
         S.coach.games.filter(function (g) { return g.venue === m.venue && inBlock(g, m.block) && (!(m.fields || []).length || m.fields.indexOf(g.field) >= 0); }).forEach(function (g) { ['cr', 'ar1', 'ar2', 'fourth'].forEach(function (k) { if (g[k]) refs[key(g[k])] = 1; }); });
-        Object.keys(refs).forEach(function (k) { total++; if (S.coach.notes.some(function (n) { return key(n.ref_name) === k && n.date === todayStr(); })) done++; });
+        Object.keys(refs).forEach(function (k) { total++; if (S.coach.notes.some(function (n) { return key(n.ref_name) === k && n.date === coachDay(); })) done++; });
         return '<div>' + esc(t(m.block === 'am' ? 'blockAm' : m.block === 'pm' ? 'blockPm' : 'blockAll')) + ', ' + esc(m.venue) + ((m.fields || []).length ? ', ' + esc(m.fields.map(fieldShort).join(', ')) : '') + (m.note ? '. ' + esc(m.note) : '') + '<br><span class="hint">' + esc(t('blockJob')) + ' ' + esc(t('debriefed').replace('{d}', done).replace('{n}', total)) + '</span></div>';
       }).join('') + '</div>' : '';
     var evalsCard = (S.coach.evals || []).length ? '<div class="card" style="border-color:var(--red);gap:6px"><b>' + esc(t('evalAssignedTitle')) + '</b>' + S.coach.evals.map(function (r) { return '<div>' + refLink(r.ref_name) + ', ' + esc(dayLong(r.game_date)) + ', ' + esc(r.venue || '') + '. ' + esc(t('evalPurpose.' + r.purpose)) + ' <a class="refname" href="#coach/game/' + esc(r.game_id) + '">' + esc(t('details')) + '</a></div>'; }).join('') + '<div class="hint">' + esc(t('evalAssignedHint')) + '</div></div>' : '';
-    var upcoming = (S.coach.assignr || []).filter(function (g) { return g.date > todayStr(); });
+    var upcoming = (S.coach.assignr || []).filter(function (g) { return g.date > coachDay(); });
     var upcomingCard = upcoming.length ? '<div class="card" style="gap:4px"><b>' + esc(t('comingUp')) + '</b>' + upcoming.map(function (g) { return '<div>' + esc(dayLong(g.date)) + ', ' + esc(clock(g.kickoff)) + ', ' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + ' <span class="hint">' + esc(t('fromAssignr')) + '</span></div>'; }).join('') + '</div>' : '';
     var myEvalsFold = (S.coach.myEvals || []).length ? fold('myevals', t('myEvalsTitle'), S.coach.myEvals.length, '<div class="list">' + S.coach.myEvals.map(function (e) { return '<a class="item" href="#eval/' + e.id + '"><div><b>' + esc(e.ref_name || '') + '</b> <span class="pill' + (e.status === 'complete' && (!e.report || e.report_status === 'approved') ? ' ok' : e.report_status === 'returned' ? ' bad' : '') + '">' + esc(e.status === 'complete' ? (e.report ? t('evalRs.' + (e.report_status || 'draft')) : t('evalComplete')) : t('evalInProgress')) + '</span><br><span class="hint">' + esc(e.game_date ? dayLong(e.game_date) : '') + (e.venue ? ', ' + esc(e.venue) : '') + (e.competition ? ', ' + esc(e.competition) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>', false) : '';
     expected = evalsCard + expected + upcomingCard + myEvalsFold;
@@ -903,8 +908,12 @@
     var venuePicker = venues.length > 8
       ? '<select id="venueSel" style="font:inherit;width:100%;padding:12px;border:2px solid var(--navy);border-radius:8px;background:var(--surface);color:var(--ink)">' + venues.map(function (v) { return '<option value="' + esc(v) + '"' + (v === S.coach.venue ? ' selected' : '') + '>' + esc(v) + '</option>'; }).join('') + '</select>'
       : '<div class="chips">' + venues.map(function (v) { return '<button class="chip-btn' + (v === S.coach.venue ? ' on' : '') + '" data-venue="' + esc(v) + '">' + esc(v) + '</button>'; }).join('') + '</div>';
-    $('venuePick').innerHTML = expected + (venues.length ? '<div class="pad" style="padding-top:14px"><div class="hint" style="font-weight:700;padding-bottom:8px">' + esc(t('venue')) + '</div>' + venuePicker + '</div>' : '<div class="card"><div class="hint">' + esc(t('noVenuesToday')) + '</div></div>');
+    var dayList = [todayStr()].concat((S.coach.days || []).filter(function (d) { return d > todayStr(); }).slice(0, 6));
+    if (dayList.indexOf(coachDay()) < 0) dayList.push(coachDay());
+    var dayPicker = dayList.length > 1 ? '<div class="pad" style="padding-top:14px"><div class="hint" style="font-weight:700;padding-bottom:8px">' + esc(t('coachDay')) + '</div><div class="chips">' + dayList.map(function (d) { return '<button class="chip-btn' + (d === coachDay() ? ' on' : '') + '" data-cday="' + d + '">' + esc(d === todayStr() ? t('todayWord') : dayShort(d)) + '</button>'; }).join('') + '</div></div>' : '';
+    $('venuePick').innerHTML = expected + dayPicker + (venues.length ? '<div class="pad" style="padding-top:14px"><div class="hint" style="font-weight:700;padding-bottom:8px">' + esc(t('venue')) + '</div>' + venuePicker + '</div>' : '<div class="card"><div class="hint">' + esc(t('noVenuesToday')) + '</div></div>');
     var vsel = $('venueSel'); if (vsel) vsel.onchange = function () { S.coach.venue = vsel.value; renderCoach(); };
+    $('venuePick').querySelectorAll('[data-cday]').forEach(function (b) { b.onclick = function () { S.coach.date = b.getAttribute('data-cday'); S.coach.venue = null; loadCoach().then(renderCoach); }; });
     $('venuePick').querySelectorAll('[data-venue]').forEach(function (b) { b.onclick = function () { S.coach.venue = b.getAttribute('data-venue'); renderCoach(); }; });
     $('venuePick').querySelectorAll('[data-av]').forEach(function (b) {
       b.onclick = async function () {
@@ -935,10 +944,17 @@
       '<div class="list">' + ahead.map(rowOfGame).join('') + '</div>' +
       (played.length ? fold('coach-played', t('playedGames'), played.length, '<div class="list" style="padding-top:0">' + played.map(rowOfGame).join('') + '</div>', !ahead.length) : '');
   }
-  function renderCoachGame(id) {
+  async function renderCoachGame(id, crewKey) {
     var g = S.coach.games.filter(function (x) { return String(x.game_id) === String(id); })[0];
+    if (!g) {
+      // Opened from a referee card or a link: fetch the one game and show its day.
+      var one = await sb.from('games').select('game_id,date,game_num,kickoff,field,age_group,gender,competition,home,away,cr,ar1,ar2,fourth,venue,status').eq('game_id', id).limit(1);
+      g = (one.data || [])[0];
+      if (g) { S.coach.date = g.date; S.coach.venue = g.venue; await loadCoach(); if (!S.coach.games.some(function (x) { return String(x.game_id) === String(id); })) S.coach.games.push(g); }
+    }
     S.coach.game = g || null;
     if (!g) { location.hash = '#coach'; return; }
+    if (crewKey && g[crewKey]) S.coach.ref = crewKey;
     var crew = ['cr', 'ar1', 'ar2', 'fourth'].filter(function (k) { return g[k]; });
     if (!S.coach.ref || crew.indexOf(S.coach.ref) < 0) S.coach.ref = null;
     var signed = S.me.coaching_title || (S.me.titles || [])[0] || '';
@@ -1031,12 +1047,14 @@
     }).join('') + '</div>' +
       (REV.filter === 'pending' && counts.pending ? '<div class="pad" style="padding-top:10px"><button class="btn outline small" id="cleanAll">' + esc(t('cleanAll')) + '</button></div>' : '') +
       (REV.filter === 'cleaned' && counts.cleaned ? '<div class="pad" style="padding-top:10px"><button class="btn go small" id="approveAll">' + esc(t('approveAll')) + '</button></div>' : '') +
+      (REV.filter === 'approved' && counts.approved ? '<div class="pad" style="padding-top:10px"><button class="btn outline small" id="emailAll">' + esc(t('emailApproved')) + '</button><div class="hint" style="padding-top:6px">' + esc(t('emailApprovedHint')) + '</div><div class="hint" id="emailProg"></div></div>' : '') +
       (coachList.length > 1 ? '<div class="pad" style="padding-top:10px"><select id="revCoach" style="font:inherit;width:100%;padding:10px;border:2px solid var(--navy);border-radius:8px;background:var(--surface);color:var(--ink)"><option value="">' + esc(t('allCoaches')) + '</option>' + coachList.map(function (c) { return '<option value="' + esc(c) + '"' + (REV.coach === c ? ' selected' : '') + '>' + esc(c) + ' (' + coaches[c] + ')</option>'; }).join('') + '</select></div>' : '') +
       '<div class="msg bad" id="revMsg" hidden style="margin:10px 20px 0"></div>';
     $('reviewTools').querySelectorAll('[data-filter]').forEach(function (b) { b.onclick = function () { REV.filter = b.getAttribute('data-filter'); REV.page = 20; renderReview(); }; });
     var rc = $('revCoach'); if (rc) rc.onchange = function () { REV.coach = rc.value; REV.page = 20; renderReview(); };
     var ca = $('cleanAll'); if (ca) ca.onclick = function () { runOn(listAll.filter(function (n) { return !n.flagged; }), 'clean'); };
     var aa = $('approveAll'); if (aa) aa.onclick = function () { runOn(listAll.filter(function (n) { return !n.flagged; }), 'approve'); };
+    var ea = $('emailAll'); if (ea) ea.onclick = function () { emailApproved(listAll, ea); };
     $('reviewList').innerHTML = list.length ? list.map(function (n) {
       var st = revStatus(n);
       return '<div class="card' + (n.flagged ? ' flagged' : '') + '" style="gap:8px" id="rev-' + n.rowNum + '">' +
@@ -1067,6 +1085,22 @@
     $('reviewList').querySelectorAll('[data-reject]').forEach(function (b) { b.onclick = function () { runOn([byRow(b.getAttribute('data-reject'))], 'reject', b); }; });
   }
   function byRow(r) { return REV.notes.filter(function (n) { return String(n.rowNum) === String(r); })[0]; }
+  // Email each referee their approved notes (one email per referee per day; the
+  // backend refuses a second send). For sites where referees are not on the Hub yet.
+  async function emailApproved(notes, btn) {
+    if (REV.busy) return;
+    var byRef = {}; notes.forEach(function (n) { if (!n.refName) return; var r = byRef[n.refName] = byRef[n.refName] || { from: n.date, to: n.date }; if (n.date && n.date < r.from) r.from = n.date; if (n.date && n.date > r.to) r.to = n.date; });
+    var names = Object.keys(byRef);
+    if (!names.length || !window.confirm(t('emailApprovedConfirm').replace('{n}', names.length))) return;
+    REV.busy = true; btn.disabled = true; var sent = 0, already = 0, failed = [], prog = $('emailProg');
+    for (var i = 0; i < names.length; i++) {
+      var nm = names[i]; if (prog) prog.textContent = t('emailProgress').replace('{i}', i + 1).replace('{n}', names.length).replace('{name}', nm);
+      try { await post({ action: 'sendReport', refName: nm, dateFrom: byRef[nm].from || '', dateTo: byRef[nm].to || '', approver: S.me.first_name + ' ' + S.me.last_name }); sent++; }
+      catch (e) { if (/already/i.test(e.message || '')) already++; else failed.push(nm + ': ' + (e.message || '')); }
+    }
+    REV.busy = false; btn.disabled = false;
+    if (prog) prog.innerHTML = esc(t('emailDone').replace('{sent}', sent).replace('{already}', already)) + (failed.length ? '<br><span style="color:var(--red)">' + esc(failed.join('; ')) + '</span>' : '');
+  }
   async function runOn(notes, what, btn) {
     notes = notes.filter(Boolean);
     if (!notes.length || REV.busy) return;
@@ -2150,7 +2184,9 @@
     return order.map(function (d) {
       return '<div class="pad" style="padding-top:12px"><div class="hint" style="font-weight:700">' + esc(dayLong(d)) + '</div></div><div class="list" style="padding-top:8px">' + days[d].map(function (g) {
         var role = key(g.cr) === k ? 'CR' : key(g.ar1) === k ? 'AR1' : key(g.ar2) === k ? 'AR2' : '4th';
-        return '<a class="item" href="#game/' + esc(g.game_id) + '"><div><div class="when"><div class="disp">' + esc(clock(g.kickoff)) + '</div><div class="sub">' + esc(role) + ', ' + esc(g.age_group || '') + '</div></div><div class="hint">' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + (g.competition ? '. ' + esc(g.competition) : '') + '</div></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
+        var ck = { CR: 'cr', AR1: 'ar1', AR2: 'ar2', '4th': 'fourth' }[role];
+        var noteBtn = iCan('coaching') && g.date <= todayStr() ? '<a class="btn outline small" style="margin:6px 0 0" href="#coach/game/' + esc(g.game_id) + '/' + ck + '">' + esc(t('leaveNote')) + '</a>' : '';
+        return '<a class="item" href="#game/' + esc(g.game_id) + '"><div><div class="when"><div class="disp">' + esc(clock(g.kickoff)) + '</div><div class="sub">' + esc(role) + ', ' + esc(g.age_group || '') + '</div></div><div class="hint">' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + (g.competition ? '. ' + esc(g.competition) : '') + '</div>' + noteBtn + '</div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
       }).join('') + '</div>';
     }).join('');
   }
@@ -2570,7 +2606,7 @@
     if (h === 'center') { if (!iCan('review')) { location.hash = '#day'; return; } $('centerBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-center'); loadCenter().then(renderCenter).catch(function (e) { $('centerBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'review') { if (!iCan('review')) { location.hash = '#day'; return; } $('reviewList').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-review'); loadReview().then(renderReview).catch(function (e) { $('reviewList').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'coach') { loadCoach().then(function () { renderCoach(); }); show('s-coach'); }
-    else if (h.indexOf('coach/game/') === 0) { (S.coach.games.length ? Promise.resolve() : loadCoach()).then(function () { renderCoachGame(h.slice(11)); }); show('s-coachgame'); }
+    else if (h.indexOf('coach/game/') === 0) { var cg = h.slice(11).split('/'); (S.coach.games.length ? Promise.resolve() : loadCoach()).then(function () { renderCoachGame(cg[0], cg[1]); }); show('s-coachgame'); }
     else if (h === 'coach/notes') { loadCoach().then(function () { renderMyNotes(); }); show('s-mynotes'); }
     else if (h.indexOf('game/') === 0) { renderGame(h.slice(5)); show('s-game'); }
     else if (h === 'notes') { renderNotes(); show('s-notes'); }
