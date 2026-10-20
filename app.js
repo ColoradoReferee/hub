@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.20-d';
+  var VERSION = '2026.10.20-e';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -203,7 +203,7 @@
   var EV = { row: null, busy: false };
   async function renderEval(id) {
     var body = $('evalBody'); body.innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>';
-    var r = await sb.from('evaluations').select('id,coach_person_id,coach_name,ref_name,ref_person_id,game_id,game_date,venue,competition,purpose,license,status,session,final_scores,report,report_at,report_status,review_note,reviewed_at').eq('id', id).limit(1);
+    var r = await sb.from('evaluations').select('id,coach_person_id,coach_name,ref_name,ref_person_id,game_id,game_date,venue,competition,purpose,license,status,session,final_scores,report,report_at,report_status,review_note,reviewed_at,score,level').eq('id', id).limit(1);
     var e = (r.data || [])[0]; EV.row = e;
     if (!e) { body.innerHTML = '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>'; return; }
     var S_ = e.session || {}, md = S_.MD || {}, ratings = S_.ratings || e.final_scores || {}, sessions = S_.sessions || [];
@@ -231,6 +231,7 @@
       (rs === 'returned' && e.review_note ? '<div class="pad"><div class="card" style="border-color:var(--bad,#c0392b)"><b>' + esc(t('evalReviewNote')) + '</b><div style="white-space:pre-wrap">' + esc(e.review_note) + '</div></div></div>' : '') +
       '<div class="pad no-print" style="padding-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' + (e.status !== 'complete' ? '<span class="hint">' + esc(t('evalFinishFirst')) + '</span>' : '') + (canDraft ? '<button class="btn outline small" id="evDraft">' + esc(e.report ? t('evalRedraft') : t('evalDraft')) + '</button><span class="hint">' + esc(t('evalReviewerDraft')) + '</span>' : '') + (e.report ? '<button class="btn outline small" id="evCopy">' + esc(t('evalCopy')) + '</button><button class="btn outline small" id="evPrint">' + esc(t('print')) + '</button>' : '') + '</div>' +
       '<div class="pad" style="padding-top:8px"><textarea id="evText" style="min-height:360px;font:inherit;width:100%;padding:12px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)" placeholder="' + esc(t('evalEmpty')) + '"' + (canEdit ? '' : ' readonly') + '>' + esc(e.report || '') + '</textarea></div>' +
+      (canEdit ? '<div class="pad no-print" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-top:0"><div><label class="hint" for="evScore">' + esc(t('evalScore')) + '</label><input id="evScore" type="number" step="0.1" min="1" max="10" inputmode="decimal" value="' + esc(e.score == null ? '' : e.score) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div><div><label class="hint" for="evLevel">' + esc(t('evalLevel')) + '</label><select id="evLevel" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' + ['adult', 'youth', 'other'].map(function (l) { return '<option value="' + l + '"' + ((e.level || 'other') === l ? ' selected' : '') + '>' + esc(t('upLevel.' + l)) + '</option>'; }).join('') + '</select></div></div>' : (e.score != null ? '<div class="pad hint">' + esc(t('evalScore')) + ': ' + esc(e.score) + ', ' + esc(t('upLevel.' + (e.level || 'other'))) + '</div>' : '')) +
       '<div class="pad no-print" style="display:flex;flex-wrap:wrap;gap:8px;padding-top:0">' + (canEdit ? '<button class="btn primary small" id="evSave">' + esc(t('save')) + '</button>' : '') +
       (canSubmit ? '<button class="btn outline small" id="evSubmit">' + esc(t('evalSubmit')) + '</button>' : '') +
       (isRev && rs === 'submitted' ? '<button class="btn primary small" id="evApprove">' + esc(t('evalApprove')) + '</button><button class="btn outline small" id="evReturn">' + esc(t('evalReturn')) + '</button>' : '') +
@@ -243,7 +244,8 @@
       catch (err) { busy(false); dr.disabled = false; dr.textContent = t('evalDraft'); say('evMsg', err.message || String(err), 'bad'); }
     };
     async function evUpdate(patch, okMsg) { var u = await sb.from('evaluations').update(patch).eq('id', e.id); if (u.error) { say('evMsg', u.error.message, 'bad'); return false; } Object.keys(patch).forEach(function (k) { e[k] = patch[k]; }); if (okMsg) say('evMsg', okMsg, 'good'); return true; }
-    var sv = $('evSave'); if (sv) sv.onclick = function () { evUpdate({ report: $('evText').value, report_at: new Date().toISOString() }, t('evalSaved')); };
+    function evExtra() { var sc = $('evScore'), lv = $('evLevel'); var o = {}; if (sc) o.score = sc.value === '' ? null : Number(sc.value); if (lv) o.level = lv.value; return o; }
+    var sv = $('evSave'); if (sv) sv.onclick = function () { var patch = evExtra(); patch.report = $('evText').value; patch.report_at = new Date().toISOString(); evUpdate(patch, t('evalSaved')); };
     var sub = $('evSubmit'); if (sub) sub.onclick = async function () { var txt = $('evText').value; if (!txt.trim()) { say('evMsg', t('evalEmpty'), 'bad'); return; } if (!window.confirm(t('evalSubmitConfirm'))) return; if (await evUpdate({ report: txt, report_at: new Date().toISOString(), report_status: 'submitted', review_note: null })) renderEval(id); };
     var ap = $('evApprove'); if (ap) ap.onclick = async function () { if (await evUpdate({ report: $('evText').value, report_status: 'approved', reviewed_by: S.me.person_id, reviewed_at: new Date().toISOString(), review_note: null })) renderEval(id); };
     var rt = $('evReturn'); if (rt) rt.onclick = async function () { var note = window.prompt(t('evalReturnPrompt'), ''); if (note === null) return; if (await evUpdate({ report_status: 'returned', reviewed_by: S.me.person_id, reviewed_at: new Date().toISOString(), review_note: note.trim() || null })) renderEval(id); };
@@ -251,13 +253,69 @@
     var pr = $('evPrint'); if (pr) pr.onclick = function () { window.print(); };
   }
   // Progress toward an upgrade or maintenance: one line, with the count that matters.
-  function progressHtml(p) {
+  function progressHtml(p, pid) {
     if (!p) return '';
     var up = Number(p.upgrade_done || 0), mt = Number(p.maintenance_done || 0);
     if (!up && !mt && !(p.items || []).length) return '';
     var line = up ? t('evalProgressUp').replace('{n}', up).replace('{need}', p.upgrade_need).replace('{y}', p.year) : t('evalProgressMaint').replace('{n}', mt).replace('{need}', p.maintenance_need).replace('{y}', p.year);
     var done = up ? up >= Number(p.upgrade_need) : mt >= Number(p.maintenance_need);
-    return '<div class="card" style="gap:6px;border-color:' + (done ? 'var(--green)' : 'var(--gold)') + '"><b>' + esc(line) + '</b><div class="bar"><i style="width:' + Math.min(100, Math.round(100 * (up || mt) / (up ? Number(p.upgrade_need) : Number(p.maintenance_need)))) + '%"></i></div>' + (p.items || []).map(function (it) { return '<div class="hint">' + esc(dayLong(it.date)) + ', ' + esc(it.coach || '') + (it.competition ? ', ' + esc(it.competition) : '') + '</div>'; }).join('') + '</div>';
+    return '<a class="card" href="#upgrade' + (pid ? '/' + pid : '') + '" style="gap:6px;text-decoration:none;color:inherit;border-color:' + (done ? 'var(--green)' : 'var(--gold)') + '"><b>' + esc(line) + '</b><div class="bar"><i style="width:' + Math.min(100, Math.round(100 * (up || mt) / (up ? Number(p.upgrade_need) : Number(p.maintenance_need)))) + '%"></i></div>' + (p.items || []).map(function (it) { return '<div class="hint">' + esc(dayLong(it.date)) + ', ' + esc(it.coach || '') + (it.competition ? ', ' + esc(it.competition) : '') + '</div>'; }).join('') + '<div class="hint" style="font-weight:700">' + esc(t('upOpen')) + ' &rsaquo;</div></a>';
+  }
+
+  // ── The upgrade tracker: every Regional requirement, with the game log the sync cannot see ──
+  var UP = { pid: null, data: null, add: false };
+  async function renderUpgrade(pid) {
+    UP.pid = pid || null;
+    var body = $('upgradeBody'); body.innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>';
+    $('upBack').href = pid ? (REF.from || '#center') : '#day';
+    busy(true); var r = await sb.rpc('upgrade_tracker', { p_person: pid, p_season: null }); busy(false);
+    var d = r.data; UP.data = d;
+    if (!d) { body.innerHTML = '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>'; return; }
+    var mine = !pid || pid === S.me.person_id, canEdit = mine || iCan('review');
+    var ok = function (b) { return '<span class="pill' + (b ? ' ok' : '') + '" style="white-space:nowrap;flex-shrink:0">' + esc(b ? t('upDone') : t('upNot')) + '</span>'; };
+    var row = function (label, state, detail) { return '<div class="rowline"><div><b>' + esc(label) + '</b>' + (detail ? '<div class="hint">' + detail + '</div>' : '') + '</div>' + ok(state) + '</div>'; };
+    var centers = Number(d.centers_synced) + Number(d.centers_logged), ars = Number(d.ars_synced) + Number(d.ars_logged);
+    var evs = d.evals || [], upEvs = evs.filter(function (e) { return (e.purpose || '').indexOf('upgrade') === 0; });
+    var coachesOk = Number(d.eval_coaches) >= 3, avgOk = d.eval_avg != null && Number(d.eval_avg) >= 8, mixOk = Number(d.eval_adult) >= 2 && Number(d.eval_youth) >= 1;
+    var nextOk = d.last_fail ? shiftDate(d.last_fail, 30) : null, waitOn = nextOk && nextOk > todayStr();
+    var evalDetail = esc(t('upEvalDetail').replace('{c}', d.eval_coaches).replace('{a}', d.eval_adult).replace('{y}', d.eval_youth).replace('{avg}', d.eval_avg == null ? '–' : d.eval_avg)) + (waitOn ? '<br><span style="color:var(--red);font-weight:700">' + esc(t('upWait').replace('{d}', dayLong(nextOk))) + '</span>' : '');
+    var evList = evs.length ? '<div class="list">' + evs.map(function (e) { return '<a class="item" href="' + (iCan('evaluations') || iCan('review') ? '#eval/' + e.id : '#upgrade') + '"><div><b>' + esc(dayLong(e.date)) + '</b> ' + (e.score != null ? '<span class="pill' + (Number(e.score) >= 8 ? ' ok' : ' bad') + '">' + esc(e.score) + '</span>' : '<span class="pill">' + esc(t('upNoScore')) + '</span>') + '<br><span class="hint">' + esc(e.coach || '') + ', ' + esc(t('upLevel.' + (e.level || 'other'))) + (e.competition ? ', ' + esc(e.competition) : '') + ', ' + esc(t('evalPurpose.' + e.purpose) || e.purpose) + '</span></div></a>'; }).join('') + '</div>' : '<div class="pad hint">' + esc(t('upNoEvals')) + '</div>';
+    var logRows = (d.log || []).map(function (g) { return '<div class="rowline"><div><b>' + esc(dayLong(g.date)) + '</b>, ' + esc(g.role === 'ar' ? t('upRoleAr') : t('upRoleCr')) + ', ' + esc(t('upLevel.' + g.level)) + (g.verified ? ' <span class="pill ok">' + esc(t('upVerified')) + '</span>' : '') + '<div class="hint">' + esc([g.league, g.home && g.away ? g.home + ' v ' + g.away : '', g.venue, g.crew].filter(Boolean).join('. ')) + '</div></div>' + (canEdit ? '<button class="linkbtn" style="color:var(--red)" data-up-del="' + g.id + '">' + esc(t('remove')) + '</button>' : '') + '</div>'; }).join('');
+    var LEAGUES = ['Colorado Premier League', 'Mountain Premier League', 'Boulder Soccer League', 'Arsenal Colorado adult', 'Colorado Adult Soccer League', 'USL-2', 'USL W', 'WPSL', 'League of Clubs', 'USCCS'];
+    var inp = 'style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"';
+    var addForm = !canEdit ? '' : (UP.add ? '<div class="card" style="gap:8px">' +
+        '<label class="hint" for="upDate">' + esc(t('upDate')) + '</label><input id="upDate" type="date" ' + inp + ' value="' + todayStr() + '">' +
+        '<label class="hint" for="upLeague">' + esc(t('upLeague')) + '</label><input id="upLeague" list="upLeagues" autocomplete="off" ' + inp + '><datalist id="upLeagues">' + LEAGUES.map(function (l) { return '<option value="' + esc(l) + '">'; }).join('') + '</datalist>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label class="hint" for="upRole">' + esc(t('upRole')) + '</label><select id="upRole" ' + inp + '><option value="cr">' + esc(t('upRoleCr')) + '</option><option value="ar">' + esc(t('upRoleAr')) + '</option></select></div>' +
+        '<div><label class="hint" for="upLevelSel">' + esc(t('upLevelLabel')) + '</label><select id="upLevelSel" ' + inp + '><option value="adult">' + esc(t('upLevel.adult')) + '</option><option value="youth">' + esc(t('upLevel.youth')) + '</option><option value="other">' + esc(t('upLevel.other')) + '</option></select></div></div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input id="upHome" placeholder="' + esc(t('upHome')) + '" ' + inp + '><input id="upAway" placeholder="' + esc(t('upAway')) + '" ' + inp + '></div>' +
+        '<input id="upVenue" placeholder="' + esc(t('upVenue')) + '" ' + inp + '><input id="upCrew" placeholder="' + esc(t('upCrew')) + '" ' + inp + '>' +
+        '<div class="actions" style="padding:0"><button class="btn primary" id="upSave">' + esc(t('upAddSave')) + '</button><button class="btn outline" id="upCancel">' + esc(t('neverMind')) + '</button></div><div class="msg bad" id="upMsg" hidden></div></div>'
+      : '<div class="pad"><button class="btn outline" id="upAddBtn" style="width:100%">' + esc(t('upAdd')) + '</button></div>');
+    body.innerHTML =
+      '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(t('upTitle')) + '</div><div class="disp" style="font-size:36px">' + esc(d.name || '') + '</div><div class="hint">' + esc(t('upSeason').replace('{y}', d.season)) + '</div></div>' +
+      '<div class="pad hint" style="padding-top:8px">' + esc(t('upLead')) + '</div>' +
+      '<div class="disp h2">' + esc(t('upChecklist')) + '</div><div class="pad">' +
+        row(t('upAge'), d.age_ok) +
+        row(t('upLicensed'), Number(d.licensed_prior_years) >= 2, esc(t('upLicensedDetail').replace('{n}', d.licensed_prior_years))) +
+        row(t('upClearances'), d.clearances_ok, esc(t('upClearancesDetail'))) +
+        row(t('upCenters'), centers >= Number(d.centers_need), esc(t('upGamesDetail').replace('{n}', centers).replace('{need}', d.centers_need).replace('{s}', d.centers_synced).replace('{l}', d.centers_logged))) +
+        row(t('upArs'), ars >= Number(d.ars_need), esc(t('upGamesDetail').replace('{n}', ars).replace('{need}', d.ars_need).replace('{s}', d.ars_synced).replace('{l}', d.ars_logged))) +
+        row(t('upFitness'), !!d.fitness, d.fitness ? esc(dayLong(d.fitness.date) + (d.fitness.standard ? ', ' + d.fitness.standard : '')) : esc(t('upFitnessDetail'))) +
+        row(t('upEvals'), coachesOk && avgOk && mixOk && !waitOn, evalDetail) +
+      '</div>' +
+      (Number(d.maint_coaches) ? '<div class="pad hint">' + esc(t('upMaint').replace('{c}', d.maint_coaches).replace('{avg}', d.maint_avg == null ? '–' : d.maint_avg)) + '</div>' : '') +
+      '<div class="disp h2">' + esc(t('upEvalsTitle')) + '</div>' + evList +
+      '<div class="disp h2">' + esc(t('upLogTitle')) + '</div><div class="pad hint" style="padding-top:0">' + esc(t('upLogHint')) + '</div>' + addForm + (logRows ? '<div class="pad">' + logRows + '</div>' : '');
+    var ab = $('upAddBtn'); if (ab) ab.onclick = function () { UP.add = true; renderUpgrade(pid); };
+    var cb = $('upCancel'); if (cb) cb.onclick = function () { UP.add = false; renderUpgrade(pid); };
+    var sv = $('upSave'); if (sv) sv.onclick = async function () {
+      var rowIn = { org_id: S.me.org_id, person_id: pid || S.me.person_id, date: $('upDate').value, league: $('upLeague').value.trim() || null, role: $('upRole').value, level: $('upLevelSel').value, home: $('upHome').value.trim() || null, away: $('upAway').value.trim() || null, venue: $('upVenue').value.trim() || null, crew: $('upCrew').value.trim() || null };
+      if (!rowIn.date) { say('upMsg', t('upNeedDate'), 'bad'); return; }
+      sv.disabled = true; var ins = await sb.from('upgrade_log').insert(rowIn); if (ins.error) { sv.disabled = false; say('upMsg', ins.error.message, 'bad'); return; }
+      UP.add = false; renderUpgrade(pid);
+    };
+    body.querySelectorAll('[data-up-del]').forEach(function (b) { b.onclick = async function () { if (!window.confirm(t('upRemoveConfirm'))) return; await sb.from('upgrade_log').delete().eq('id', b.getAttribute('data-up-del')); renderUpgrade(pid); }; });
   }
   // ── Venues: one table for coordinates (State map) and layouts (venue maps) ──
   var VEN = { rows: null };
@@ -2266,7 +2324,7 @@
     var stat = function (n, l, cls) { return '<div class="stat' + (cls ? ' ' + cls : '') + '"><b>' + (n == null ? '0' : esc(n)) + '</b><i>' + esc(l) + '</i></div>'; };
     $('refBody').innerHTML =
       '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(t('refCardTitle')) + (c.city ? ', ' + esc(c.city) : '') + (c.green_badge ? ', ' + esc(t('greenBadge')) : '') + '</div><div class="disp" style="font-size:40px">' + esc(name) + '</div><div>' + fitBadgeHtml(c.fitness) + (titles || '<span class="hint">' + esc(t('noneYet')) + '</span>') + '</div></div>' +
-      contact + progressHtml(prog) +
+      contact + progressHtml(prog, c.person_id) +
       '<div class="disp h2">' + esc(t('refSeason')) + '</div>' +
       '<div class="stats">' + stat(c.games, t('refGames')) + stat(c.as_center, t('refCenter')) + stat(c.evaluations, t('refEvals')) + '</div>' +
       '<div class="stats">' + stat(c.notes, t('refSeen'), c.notes ? 'green' : 'red') + stat(c.released, t('refReleased')) + stat(c.coaches, t('refCoaches')) + '</div>' +
@@ -2650,6 +2708,7 @@
     if (h.indexOf('coachcard/') === 0) { if (!iCan('review')) { location.hash = '#day'; return; } show('s-ref'); renderCoachCard(decodeURIComponent(h.slice(10))); return; }
     if (h.indexOf('ref/') === 0) { if (!canSeeRef()) { location.hash = '#day'; return; } show('s-ref'); renderRef(decodeURIComponent(h.slice(4))); return; }
     if (h.indexOf('eval/') === 0) { if (!(iCan('evaluations') || iCan('review'))) { location.hash = '#day'; return; } show('s-eval'); renderEval(parseInt(h.slice(5), 10)); return; }
+    if (h === 'upgrade' || h.indexOf('upgrade/') === 0) { show('s-upgrade'); renderUpgrade(h === 'upgrade' ? null : parseInt(h.slice(8), 10)); return; }
     if (h.indexOf('map/') === 0) { var mp = h.slice(4).split('/'); show('s-map'); renderMap(decodeURIComponent(mp[0] || ''), decodeURIComponent(mp[1] || '')); return; }
     if (h === 'eod') { if (!canEod()) { location.hash = '#day'; return; } $('eodBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-eod'); loadEod().then(renderEod).catch(function (e) { $('eodBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'setup') { if (!iCan('setup')) { location.hash = '#day'; return; } $('setupBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-setup'); SU.ev = null; loadSetup().then(renderSetup).catch(function (e) { $('setupBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
@@ -2702,8 +2761,8 @@
     ['themeBtn0', 'themeBtn1', 'themeBtn2'].forEach(function (id) { $(id).onclick = toggleTheme; });
     ['langBtn0', 'langBtn1'].forEach(function (id) { $(id).onclick = function () { setLang(S.lang === 'es' ? 'en' : 'es'); }; });
     $('markSignin').src = C.marks.csa; $('markDay').src = C.marks.csa;
-    ['markGame', 'markNotes', 'markHelp', 'markCoach', 'markCoachGame', 'markMyNotes', 'markReview', 'markCenter', 'markOps', 'markPeople', 'markSetup', 'markEod', 'markRef', 'markState', 'markMap', 'markEval'].forEach(function (id) { $(id).src = C.marks.program; });
-    ['ja0', 'ja1', 'ja2', 'ja3', 'ja4', 'ja5', 'ja6', 'ja7', 'ja8', 'ja9', 'ja10', 'ja11', 'ja12', 'ja13', 'ja14', 'ja15', 'ja16', 'ja17'].forEach(function (id) { $(id).src = C.marks.ja; });
+    ['markGame', 'markNotes', 'markHelp', 'markCoach', 'markCoachGame', 'markMyNotes', 'markReview', 'markCenter', 'markOps', 'markPeople', 'markSetup', 'markEod', 'markRef', 'markState', 'markMap', 'markEval', 'markUpgrade'].forEach(function (id) { $(id).src = C.marks.program; });
+    ['ja0', 'ja1', 'ja2', 'ja3', 'ja4', 'ja5', 'ja6', 'ja7', 'ja8', 'ja9', 'ja10', 'ja11', 'ja12', 'ja13', 'ja14', 'ja15', 'ja16', 'ja17', 'ja18'].forEach(function (id) { $(id).src = C.marks.ja; });
     $('peopleQ').oninput = function () { var q = $('peopleQ').value.trim(); clearTimeout(PP.timer); PP.timer = setTimeout(function () { searchPeople(q); }, 300); };
     $('peopleQ').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); } };
     $('staffBtn').onclick = function () { renderStaff(); };
