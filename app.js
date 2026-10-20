@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.20-i';
+  var VERSION = '2026.10.20-j';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -295,7 +295,7 @@
         '<div class="actions" style="padding:0"><button class="btn primary" id="upSave">' + esc(t('upAddSave')) + '</button><button class="btn outline" id="upCancel">' + esc(t('neverMind')) + '</button></div><div class="msg bad" id="upMsg" hidden></div></div>'
       : '<div class="pad"><button class="btn outline" id="upAddBtn" style="width:100%">' + esc(t('upAdd')) + '</button></div>');
     body.innerHTML =
-      '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(t('upTitle')) + '</div><div class="disp" style="font-size:36px">' + esc(d.name || '') + '</div><div class="hint">' + esc(t('upSeason').replace('{y}', d.season)) + '</div></div>' +
+      '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(t('upTrackerTitle')) + '</div><div class="disp" style="font-size:36px">' + esc(d.name || '') + '</div><div class="hint">' + esc(t('upSeason').replace('{y}', d.season)) + '</div></div>' +
       '<div class="pad hint" style="padding-top:8px">' + esc(t('upLead')) + '</div>' +
       '<div class="disp h2">' + esc(t('upChecklist')) + '</div><div class="pad">' +
         row(t('upAge'), d.age_ok) +
@@ -816,10 +816,12 @@
     $('staffLine').innerHTML = lateLine + evalLine + ((S.staffMsgs || []).length ? '<a class="rowbtn" href="#ops" data-tab="staff" style="margin-top:10px;border-color:var(--gold)"><span><span class="t">' + esc(t('smTodayTitle').replace('{n}', S.staffMsgs.length)) + '</span><br><span class="s">' + esc((S.staffMsgs[0].from_name || '') + ': ' + S.staffMsgs[0].body.slice(0, 90)) + '</span></span></a>' : '');
     var coachedHere = S.games.some(function (x) { return (S.coachedVenues || []).indexOf(x.venue) >= 0; });
     var myEval = (ER.mine || []).filter(function (r) { return r.ref_person_id === S.me.person_id && (r.status === 'assigned' || r.status === 'requested') && r.game_date >= todayStr(); })[0];
+    var coachEvals = iCan('evaluations') ? (ER.mine || []).filter(function (r) { return r.coach_person_id === S.me.person_id && r.status === 'assigned' && r.game_date >= todayStr(); }) : [];
+    var coachEvalHtml = coachEvals.map(function (r) { return '<div class="card" style="border-color:var(--red);gap:6px"><b>' + esc(t('evalYouAssigned')) + '</b><div>' + refLink(r.ref_name) + ', ' + esc(dayLong(r.game_date)) + ', ' + esc(r.venue || '') + '. ' + esc(t('evalPurpose.' + r.purpose)) + '</div><div class="actions" style="padding:0"><a class="btn primary" href="evaluator.html?gameId=' + esc(r.game_id) + '">' + esc(t('evalOpenEvaluator')) + '</a><a class="btn outline" href="#coach/game/' + esc(r.game_id) + '">' + esc(t('details')) + '</a></div></div>'; }).join('');
     $('sessionsLine').innerHTML = signupCardHtml(); wireSignup($('sessionsLine'));
     renderWrap();
     if (ER.prog === undefined) { ER.prog = null; sb.rpc('eval_progress').then(function (pr) { ER.prog = pr.data || null; var el = $('evalProg'); if (el) el.innerHTML = progressHtml(ER.prog); }); }
-    $('evalLine').innerHTML = '<div id="evalProg">' + progressHtml(ER.prog) + '</div>' + (myEval ? '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('evalReqTitle')) + '</b><div>' + esc(dayLong(myEval.game_date)) + ', ' + esc(myEval.venue || '') + '. ' + esc(t('evalPurpose.' + myEval.purpose)) + '. ' + esc(t('evalStatus.' + myEval.status)) + '</div></div>' : '');
+    $('evalLine').innerHTML = coachEvalHtml + '<div id="evalProg">' + progressHtml(ER.prog) + '</div>' + (myEval ? '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('evalReqTitle')) + '</b><div>' + esc(dayLong(myEval.game_date)) + ', ' + esc(myEval.venue || '') + '. ' + esc(t('evalPurpose.' + myEval.purpose)) + '. ' + esc(t('evalStatus.' + myEval.status)) + '</div></div>' : '');
     $('bulletins').innerHTML = (coachedHere ? '<div class="bulletin"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="9" stroke="currentColor" stroke-width="2"></circle><path d="M7 11.5l3 3 5-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><div class="text">' + esc(t('coachHereToday')) + ' <a href="#" id="badgeLink">' + esc(t('lanyard')) + '</a><div id="badgeBox" hidden style="margin-top:8px"><img src="assets/badge.png" alt="" style="width:130px;border-radius:8px"><div class="hint">' + esc(t('badgeCaption')) + '</div></div></div></div>' : '') + S.bulletins.slice(0, 2).map(function (b) {
       return '<div class="bulletin"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="9" stroke="currentColor" stroke-width="2"></circle><path d="M11 6v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><circle cx="11" cy="15.5" r="1.2" fill="currentColor"></circle></svg><div class="text">' + (b.title ? '<b>' + esc(b.title) + '</b> ' : '') + esc(b.body || '') + ' <span>' + esc(t('fromState')) + '.</span></div></div>';
     }).join('');
@@ -939,11 +941,14 @@
     for (var w = 0; w < 5; w++) { var row = []; for (var i = 0; i < 7; i++) { row.push(iso(d)); d.setDate(d.getDate() + 1); } weeks.push(row); if (row[6] >= end) break; }
     var dows = S.lang === 'es' ? ['L', 'M', 'X', 'J', 'V', 'S', 'D'] : ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
     var monthOf = function (ds) { return new Date(ds + 'T12:00:00').toLocaleDateString(S.lang === 'es' ? 'es-US' : 'en-US', { month: 'short' }); };
+    weeks = weeks.filter(function (row, i) { return i === 0 || row.some(function (ds) { return gameDays[ds]; }); });
     var cells = weeks.map(function (row) {
       return '<div class="avweek">' + row.map(function (ds) {
         var past = ds < today, dt = new Date(ds + 'T12:00:00');
         if (past) return '<div class="avday past"><span class="n">' + dt.getDate() + '</span></div>';
-        var half = function (b) { return '<button class="avh' + (S.coach.avail[ds + b] ? ' on' : '') + '" data-av="' + ds + '|' + b + '" aria-label="' + esc(dayLong(ds) + ' ' + t(b === 'am' ? 'blockAm' : 'blockPm')) + '">' + (b === 'am' ? 'AM' : 'PM') + '</button>'; };
+        var hv = (S.coach.halves || {})[ds];
+        if (!hv) return '<div class="avday none"><span class="n">' + dt.getDate() + '</span></div>';
+        var half = function (b) { if (!hv[b]) return '<span class="avh off" aria-hidden="true"></span>'; return '<button class="avh' + (S.coach.avail[ds + b] ? ' on' : '') + '" data-av="' + ds + '|' + b + '" aria-label="' + esc(dayLong(ds) + ' ' + t(b === 'am' ? 'blockAm' : 'blockPm')) + '">' + (b === 'am' ? 'AM' : 'PM') + '</button>'; };
         return '<div class="avday' + (gameDays[ds] ? ' games' : '') + (ds === today ? ' today' : '') + '"><span class="n">' + (dt.getDate() === 1 || ds === today ? monthOf(ds) + ' ' : '') + dt.getDate() + '</span>' + half('am') + half('pm') + '</div>';
       }).join('') + '</div>';
     }).join('');
@@ -960,7 +965,7 @@
       // Coaching slots Assignr gave me, today and the next ten days: my rows only.
       fetchAll(function () { return sb.from('games').select('game_id,date,kickoff,venue,field,age_group,hq_role,cr,ar1,ar2,fourth').gte('date', today).lte('date', until).not('status', 'in', '(C,X,canceled_no_pay)').or(mineOr()).order('date').order('kickoff'); }),
       // Days ahead with games, for saying when I am free. One row per day is enough.
-      fetchAll(function () { return sb.from('games').select('date').gte('date', today).lte('date', until4).not('status', 'in', '(C,X,canceled_no_pay)').order('date'); }),
+      sb.rpc('game_halves', { p_from: today, p_to: until4 }),
       sb.from('coach_availability').select('date,block').gte('date', today),
       sb.from('observations').select('id,date,ref_name,observer,rater_role,public_notes,cleaned_note,final_note,cleanup_status,area,field,game_id,created_at').order('created_at', { ascending: false }).limit(100)
     ]);
@@ -973,7 +978,7 @@
       if (!S.coach.mine.some(function (m) { return m.venue === g.venue; })) S.coach.mine.push({ venue: g.venue, block: 'all', fields: g.field ? [g.field] : [], note: t('fromAssignr') + (g.kickoff ? ', ' + clock(g.kickoff) : '') });
     });
     if (S.coach.mine.length && !S.coach.venue) S.coach.venue = S.coach.mine[0].venue;
-    var days = {}; (r[4].data || []).forEach(function (x) { days[x.date] = 1; }); S.coach.days = Object.keys(days).sort();
+    var days = {}; (r[4].data || []).forEach(function (x) { days[x.date] = { am: x.am == null ? 1 : x.am, pm: x.pm == null ? 1 : x.pm }; }); S.coach.halves = days; S.coach.days = Object.keys(days).sort();
     S.coach.avail = {}; (r[5].data || []).forEach(function (x) { S.coach.avail[x.date + x.block] = 1; });
     S.coach.notes = (r[6].data || []).filter(function (x) { return keys.indexOf(key(x.observer)) >= 0; });
     var mine = S.coach.notes.map(function (x) { return x.id; }).filter(Boolean);
@@ -2314,6 +2319,9 @@
     var r = await fetchAll(function () { return sb.from('games').select('game_id,date,kickoff,field,age_group,venue,competition,cr,ar1,ar2,fourth,status,site_id').gte('date', today).lte('date', until).not('status', 'in', '(C,X,canceled_no_pay)').or('cr.ilike.' + q + ',ar1.ilike.' + q + ',ar2.ilike.' + q + ',fourth.ilike.' + q).order('date').order('kickoff'); });
     return r.data || [];
   }
+  var COACH_NAMES = null;
+  function coachNameOf(pid) { if (!pid) return ''; var c = (COACH_NAMES || []).filter(function (x) { return String(x.person_id) === String(pid); })[0]; return c ? c.first_name + ' ' + c.last_name : t('evalCoachWord'); }
+  async function loadCoachNames() { if (COACH_NAMES) return; try { var c = await sb.from('coaches').select('person_id,first_name,last_name'); COACH_NAMES = c.data || []; } catch (e) { COACH_NAMES = []; } }
   function upcomingHtml(list, name) {
     var k = key(name);
     if (!list.length) return '<div class="card"><div class="hint">' + esc(t('upNone')) + '</div></div>';
@@ -2324,7 +2332,9 @@
         var role = key(g.cr) === k ? 'CR' : key(g.ar1) === k ? 'AR1' : key(g.ar2) === k ? 'AR2' : '4th';
         var ck = { CR: 'cr', AR1: 'ar1', AR2: 'ar2', '4th': 'fourth' }[role];
         var noteBtn = iCan('coaching') && g.date <= todayStr() ? '<a class="btn outline small" style="margin:6px 0 0" href="#coach/game/' + esc(g.game_id) + '/' + ck + '">' + esc(t('leaveNote')) + '</a>' : '';
-        return '<a class="item" href="#game/' + esc(g.game_id) + '"><div><div class="when"><div class="disp">' + esc(clock(g.kickoff)) + '</div><div class="sub">' + esc(role) + ', ' + esc(g.age_group || '') + '</div></div><div class="hint">' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + (g.competition ? '. ' + esc(g.competition) : '') + '</div>' + noteBtn + '</div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
+        var rq = (ER.mine || []).filter(function (q) { return String(q.game_id) === String(g.game_id) && (q.status === 'requested' || q.status === 'assigned'); })[0];
+        var rqLine = rq ? '<div class="pill' + (rq.status === 'assigned' ? ' ok' : '') + '" style="margin-top:6px">' + esc(t('evalPurpose.' + rq.purpose)) + ': ' + esc(rq.status === 'assigned' ? t('evalCoachAssigned').replace('{c}', coachNameOf(rq.coach_person_id)) : t('evalWaitingShort')) + '</div>' : '';
+        return '<a class="item" href="#game/' + esc(g.game_id) + '"><div><div class="when"><div class="disp">' + esc(clock(g.kickoff)) + '</div><div class="sub">' + esc(role) + ', ' + esc(g.age_group || '') + '</div></div><div class="hint">' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + (g.competition ? '. ' + esc(g.competition) : '') + '</div>' + rqLine + noteBtn + '</div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
       }).join('') + '</div>';
     }).join('');
   }
@@ -2362,7 +2372,7 @@
       '<div class="disp h2">' + esc(t('refNotes')) + '</div>' + ((notes.data || []).length ? (notes.data || []).map(function (n) {
         return '<div class="note"><div class="who">' + esc(n.observer || '') + (n.rater_role ? ', ' + esc(n.rater_role) : '') + ', ' + esc(dayLong(n.date)) + (n.field ? ', ' + esc(n.field) : '') + (n.area ? ', ' + esc(t('areas.' + n.area)) : '') + '</div><div class="text">' + esc(n.final_note || n.cleaned_note || '') + '</div></div>';
       }).join('') : '<div class="card"><div class="hint">' + esc(t('refNoNotes')) + '</div></div>');
-    upcomingFor(name, 90).then(function (list) { var el = $('refUpcoming'); if (el) el.innerHTML = upcomingHtml(list, name); }).catch(function (e) { var el = $('refUpcoming'); if (el) el.innerHTML = '<div class="msg bad">' + esc(e.message || '') + '</div>'; });
+    Promise.all([upcomingFor(name, 90), loadCoachNames()]).then(function (x) { var list = x[0]; var el = $('refUpcoming'); if (el) el.innerHTML = upcomingHtml(list, name); }).catch(function (e) { var el = $('refUpcoming'); if (el) el.innerHTML = '<div class="msg bad">' + esc(e.message || '') + '</div>'; });
   }
   var REF = { from: '' };
 
@@ -2524,6 +2534,8 @@
   // needs that to pick the coach), and that tap sends the request.
   function evalRequestHtml(g) {
     if (new Date(g.kickoff).getTime() < Date.now()) return '';
+    var keys = S.me.nameKeys || [];
+    if (!['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(g[k])) >= 0; })) return '';
     var req = (ER.mine || []).filter(function (r) { return String(r.game_id) === String(g.game_id); })[0];
     if (req) return '<div class="pad" style="padding-top:10px"><span class="pill ok">' + esc(t('evalReqShort')) + ': ' + esc(t('evalPurpose.' + req.purpose)) + ', ' + esc(t('evalStatus.' + req.status)) + '</span></div>';
     if (!ER.open) return '<div class="pad" style="padding-top:10px"><button class="chip-btn small" id="evalReqOpen">' + esc(t('evalReqShort')) + '</button></div>';

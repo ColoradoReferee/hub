@@ -402,3 +402,6 @@ details.fold > .fold-body > .list { padding-top: 8px; }
 .avh.on { background: var(--green); border-color: var(--green); color: #fff; }
 .avh:active { transform: translateY(1px); }
 
+.avday.none { border-color: transparent; background: transparent; min-height: 62px; }
+.avday.none .n { color: var(--muted); opacity: .6; }
+.avh.off { visibility: hidden; min-height: 30px; }
