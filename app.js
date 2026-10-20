@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.20-c';
+  var VERSION = '2026.10.20-d';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -155,6 +155,8 @@
     S.staffMsgs = r[7].data || [];
     S.coachedVenues = (r[8].data || []).map(function (x) { return typeof x === 'string' ? x : x.coached_venues; });
     S.late = (r[9].data || []).filter(function (l) { return keys.indexOf(key(l.ref_name)) >= 0; });
+    // For whoever answers Help: late notices nobody has acknowledged yet, so Your day says so.
+    S.lateOpen = iCan('command_center') ? (r[9].data || []).filter(function (l) { return !l.ack_at; }) : [];
   }
   function myLate(g) { return (S.late || []).filter(function (l) { return String(l.game_id) === String(g.game_id) || (l.venue === g.venue && !l.game_id); })[0]; }
 
@@ -167,6 +169,32 @@
     return '<details class="fold" data-fold="' + esc(k) + '"' + (open ? ' open' : '') + '><summary><span class="t">' + esc(title) + '</span><span class="n">' + count + '</span></summary><div class="fold-body">' + inner + '</div></details>';
   }
   document.addEventListener('toggle', function (e) { var d = e.target; if (d && d.matches && d.matches('details.fold')) FOLD[d.getAttribute('data-fold')] = d.open; }, true);
+
+  // ── Talk instead of type. The browser's own speech recognition (Chrome on
+  // Android, Safari on iPhone), continuous, in the Hub's language, appended to
+  // the box as it hears it. Noise on a field is the enemy: hold the phone close.
+  var Mic = (function () {
+    var R = window.SpeechRecognition || window.webkitSpeechRecognition, rec = null, live = false, base = '';
+    function ok() { return !!R; }
+    function stop() { if (rec) { try { rec.stop(); } catch (e) {} } }
+    function toggle(ta, btn, hint) {
+      if (live) { stop(); return; }
+      rec = new R(); rec.lang = S.lang === 'es' ? 'es-US' : 'en-US'; rec.continuous = true; rec.interimResults = true; rec.maxAlternatives = 1;
+      base = ta.value ? ta.value.replace(/\s+$/, '') + ' ' : '';
+      var finalText = '';
+      rec.onstart = function () { live = true; btn.textContent = t('micStop'); btn.setAttribute('aria-pressed', 'true'); btn.style.background = 'var(--red)'; btn.style.color = '#fff'; hint.textContent = t('micListening'); };
+      rec.onresult = function (e) {
+        var interim = '';
+        for (var i = e.resultIndex; i < e.results.length; i++) { var tr = e.results[i][0].transcript; if (e.results[i].isFinal) finalText += tr + ' '; else interim += tr; }
+        ta.value = base + finalText + interim; ta.scrollTop = ta.scrollHeight;
+      };
+      rec.onerror = function (e) { hint.textContent = e.error === 'not-allowed' ? t('micDenied') : e.error === 'no-speech' ? t('micNoSpeech') : t('micError'); };
+      rec.onend = function () { live = false; btn.textContent = t('micTalk'); btn.setAttribute('aria-pressed', 'false'); btn.style.background = ''; btn.style.color = ''; if (hint.textContent === t('micListening')) hint.textContent = t('micHint'); ta.value = (base + finalText).replace(/\s+$/, ''); };
+      try { rec.start(); } catch (e) { hint.textContent = t('micError'); }
+    }
+    window.addEventListener('hashchange', stop);
+    return { ok: ok, toggle: toggle, stop: stop };
+  })();
 
   // ── An evaluation: the session summary, the debrief list, and the report ──
   // The coach writes the formal evaluation from the PDF and their notes and
@@ -723,7 +751,8 @@
     if (note) markRead([note]);
     $('noteBox').innerHTML = note ? '<div class="note"><div class="who">' + esc(note.observer || '') + (note.rater_role ? ', ' + esc(note.rater_role) : '') + (note.date ? ', ' + esc(t('noteFrom')) + ' ' + esc(dayLong(note.date)) : '') + '</div><div class="text">' + esc(note.final_note || note.cleaned_note || '') + '</div><a href="#notes">' + esc(t('allNotes')) + '</a></div>'
       : '<div class="note"><div class="text hint">' + esc(t('noNotes')) + '</div></div>';
-    $('staffLine').innerHTML = (S.staffMsgs || []).length ? '<a class="rowbtn" href="#ops" data-tab="staff" style="margin-top:10px;border-color:var(--gold)"><span><span class="t">' + esc(t('smTodayTitle').replace('{n}', S.staffMsgs.length)) + '</span><br><span class="s">' + esc((S.staffMsgs[0].from_name || '') + ': ' + S.staffMsgs[0].body.slice(0, 90)) + '</span></span></a>' : '';
+    var lateLine = (S.lateOpen || []).length ? '<a class="rowbtn" href="#ops" style="margin-top:10px;border-color:var(--red)"><span><span class="t">' + esc(t('lateOpenTitle').replace('{n}', S.lateOpen.length)) + '</span><br><span class="s">' + esc(S.lateOpen.map(function (l) { return l.ref_name + ', ' + (l.venue || '') + (l.field ? ' ' + fieldShort(l.field) : '') + ', ' + (l.eta_min || '') + ' min'; }).slice(0, 3).join('. ')) + '</span></span></a>' : '';
+    $('staffLine').innerHTML = lateLine + ((S.staffMsgs || []).length ? '<a class="rowbtn" href="#ops" data-tab="staff" style="margin-top:10px;border-color:var(--gold)"><span><span class="t">' + esc(t('smTodayTitle').replace('{n}', S.staffMsgs.length)) + '</span><br><span class="s">' + esc((S.staffMsgs[0].from_name || '') + ': ' + S.staffMsgs[0].body.slice(0, 90)) + '</span></span></a>' : '');
     var coachedHere = S.games.some(function (x) { return (S.coachedVenues || []).indexOf(x.venue) >= 0; });
     var myEval = (ER.mine || []).filter(function (r) { return r.ref_person_id === S.me.person_id && r.status === 'assigned' && r.game_date >= todayStr(); })[0];
     $('sessionsLine').innerHTML = signupCardHtml(); wireSignup($('sessionsLine'));
@@ -783,8 +812,12 @@
     }
     return '<div class="card"><div class="row"><div class="disp big">' + esc(clock(g.kickoff)) + '</div><div class="disp big">' + esc(String(g.field || '').toUpperCase()) + '</div></div>' +
       '<div>' + (isCoachSlot(g) ? esc(t('coachSlot')) + (g.field ? ', ' + esc(g.field) : '') : esc(g.age_group || '') + (g.competition ? ', ' + esc(g.competition) : '') + '. ' + esc(t('youAre')) + ' ' + esc(t('role.' + myRole(g)))) + '.</div>' +
-      '<div class="actions">' + checkinBtn(g, inAt) + '<a class="btn outline" href="#game/' + esc(g.game_id) + '">' + esc(t('details')) + '</a></div>' +
-      '<div class="hint">' + esc(t('checkinWhere')) + '</div>' + lateHtml(g, inAt) + '<div class="msg bad" id="ci-msg-' + esc(g.game_id) + '" hidden></div></div>';
+      (inAt
+        ? '<div class="actions">' + checkinBtn(g, inAt) + '</div>' +
+          '<div class="actions" style="padding-top:0">' + (mapLayoutFor(g.venue) ? '<a class="btn primary" style="flex-grow:1" href="#map/' + encodeURIComponent(g.venue || '') + '/' + encodeURIComponent(g.field || '') + '">' + esc(t('mapToField').replace('{f}', fieldShort(g.field || ''))) + '</a>' : '') + '<a class="btn outline" href="#game/' + esc(g.game_id) + '">' + esc(t('details')) + '</a></div>'
+        : '<div class="actions">' + checkinBtn(g, inAt) + '<a class="btn outline" href="#game/' + esc(g.game_id) + '">' + esc(t('details')) + '</a></div>' +
+          '<div class="hint">' + esc(t('checkinWhere')) + '</div>' + lateHtml(g, inAt)) +
+      '<div class="msg bad" id="ci-msg-' + esc(g.game_id) + '" hidden></div></div>';
   }
   // Running late: one tap tells the Site Coordinator; the card then shows
   // whether the SC has seen it. Only before check-in, only before kickoff.
@@ -793,7 +826,7 @@
     var l = myLate(g);
     if (l) return '<div class="late' + (l.ack_at ? ' ok' : '') + '">' + esc(l.ack_at ? t('lateAcked').replace('{t}', clock(l.ack_at)) : t('lateSent').replace('{n}', l.eta_min || '')) + '</div>';
     if (LATE.open === String(g.game_id)) return '<div class="chips" style="margin-top:8px">' + [10, 20, 30, 45].map(function (m) { return '<button class="chip-btn small" data-late="' + m + '" data-late-game="' + esc(g.game_id) + '">' + m + ' min</button>'; }).join('') + '<button class="chip-btn small" data-late-cancel="1">' + esc(t('neverMind')) + '</button></div>';
-    return '<div style="margin-top:8px"><button class="linkbtn" data-late-open="' + esc(g.game_id) + '">' + esc(t('runningLate')) + '</button></div>';
+    return '<div class="actions" style="padding-top:8px"><button class="btn outline" style="flex-grow:1;border-color:var(--gold)" data-late-open="' + esc(g.game_id) + '">' + esc(t('runningLate')) + '</button></div>';
   }
   var LATE = { open: null };
   function wireLate(root) {
@@ -808,7 +841,7 @@
     }; });
   }
   function checkinBtn(g, inAt) {
-    if (inAt) return '<div class="btn done" style="flex-grow:1"><span class="disp">' + esc(t('checkedIn')) + '</span><small>' + esc(clock(inAt)) + '. ' + esc(t('checkedInAt')) + '</small></div>';
+    if (inAt) return '<div class="btn done" style="flex-grow:1"><span class="disp">' + esc(t('youreIn')) + '</span><small>' + esc(clock(inAt)) + '. ' + esc(t('checkedInAt')) + '</small></div>';
     return '<button class="btn primary" id="ci-' + esc(g.game_id) + '">' + esc(t('checkIn')) + '</button>';
   }
   function wireCheckin(g, root) {
@@ -967,10 +1000,12 @@
       ((S.coach.evals || []).some(function (r) { return String(r.game_id) === String(g.game_id); }) ? '<div class="pad" style="padding-top:12px"><a class="rowbtn" style="margin:0;width:100%;border-color:var(--red)" href="evaluator.html?gameId=' + esc(g.game_id) + '"><span><span class="t">' + esc(t('evaluatorOpen')) + '</span><br><span class="s">' + esc(t('evaluatorHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a></div>' : '') +
       '<div class="disp h2">' + esc(t('crewPick')) + '</div><div class="pad hint" style="padding-bottom:6px">' + esc(t('crewPickHint')) + '</div>' +
       crew.map(function (k) { return '<div class="crewbtn' + (S.coach.ref === k ? ' on' : '') + '" role="button" tabindex="0" data-crew="' + k + '"><span><span class="t">' + esc(g[k]) + '</span><br><span class="s">' + esc(t('role.' + k)) + '. ' + seenLine(g[k]) + '</span></span><span style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span class="pill" style="background:var(--navy);color:var(--surface)">' + esc(S.coach.ref === k ? t('writingFor') : t('tapToNote')) + '</span><a class="btn outline small" href="#ref/' + encodeURIComponent(g[k]) + '" style="min-height:36px;padding:0 10px;font-size:13px" onclick="event.stopPropagation()">' + esc(t('refCardTitle')) + '</a></span></div>'; }).join('') +
-      (S.coach.ref ? priorNotesHtml(g[S.coach.ref]) + '<div class="card" id="noteCard" style="gap:12px"><label for="noteText" style="font-weight:700">' + esc(t('noteLabel')) + '</label><textarea id="noteText" placeholder="' + esc(t('notePlaceholder')) + '"></textarea>' +
+      (S.coach.ref ? priorNotesHtml(g[S.coach.ref]) + '<div class="card" id="noteCard" style="gap:12px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><label for="noteText" style="font-weight:700">' + esc(t('noteLabel')) + '</label>' + (Mic.ok() ? '<button class="btn outline small" id="micBtn" type="button" aria-pressed="false">' + esc(t('micTalk')) + '</button>' : '') + '</div>' +
+        '<textarea id="noteText" placeholder="' + esc(t('notePlaceholder')) + '"></textarea><div class="hint" id="micHint">' + esc(Mic.ok() ? t('micHint') : t('micKeyboard')) + '</div>' +
+        '<button class="btn primary" id="saveNote">' + esc(t('saveNote')) + '</button><div class="msg" id="noteMsg" hidden></div>' +
         '<div class="hint" style="font-weight:700">' + esc(t('areaLabel')) + '</div><div class="chips">' + AREAS.map(function (a) { return '<button class="chip-btn' + (S.coach.area === a ? ' on' : '') + '" data-area="' + a + '">' + esc(t('areas.' + a)) + '</button>'; }).join('') + '</div>' +
-        '<div class="hint">' + esc(t('signedAs')) + ' ' + esc(S.me.first_name + ' ' + S.me.last_name) + ', ' + esc(signed) + '</div>' +
-        '<button class="btn primary" id="saveNote">' + esc(t('saveNote')) + '</button><div class="msg" id="noteMsg" hidden></div></div>' : '');
+        '<div class="hint">' + esc(t('signedAs')) + ' ' + esc(S.me.first_name + ' ' + S.me.last_name) + ', ' + esc(signed) + '</div></div>' : '');
+    var mb = $('micBtn'); if (mb) mb.onclick = function () { Mic.toggle($('noteText'), mb, $('micHint')); };
     $('coachGameBody').querySelectorAll('[data-crew]').forEach(function (b) { var pick = function () { S.coach.ref = b.getAttribute('data-crew'); S.coach.area = null; renderCoachGame(id); var ta = $('noteText'); if (ta) ta.focus(); }; b.onclick = pick; b.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } }; });
     $('coachGameBody').querySelectorAll('[data-area]').forEach(function (b) { b.onclick = function () { var a = b.getAttribute('data-area'); S.coach.area = S.coach.area === a ? null : a; $('coachGameBody').querySelectorAll('[data-area]').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-area') === S.coach.area); }); }; });
     var save = $('saveNote');
