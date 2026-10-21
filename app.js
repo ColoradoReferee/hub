@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.21-a';
+  var VERSION = '2026.10.21-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -68,6 +68,14 @@
     S.events.forEach(function (e) {
       if (hit) return;
       if (e.game_prefix && num.indexOf(String(e.game_prefix).toUpperCase()) === 0) hit = e;
+    });
+    // League games: match the competition against the event's league or name.
+    var comp = key(g.competition || '');
+    if (!hit && comp) S.events.forEach(function (e) {
+      if (hit) return;
+      var lg = key(e.league || ''), nm = key(e.name || '');
+      if ((lg && lg.length > 3 && (comp === lg || comp.indexOf(lg) >= 0 || lg.indexOf(comp) >= 0)) ||
+          (nm && nm.length > 3 && comp === nm)) hit = e;
     });
     if (!hit) S.events.forEach(function (e) {
       if (hit) return;
