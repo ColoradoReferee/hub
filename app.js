@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.21-d';
+  var VERSION = '2026.10.21-e';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -294,7 +294,7 @@
     var nextOk = d.last_fail ? shiftDate(d.last_fail, 30) : null, waitOn = nextOk && nextOk > todayStr();
     var evalDetail = esc(t('upEvalDetail').replace('{c}', d.eval_coaches).replace('{a}', d.eval_adult).replace('{y}', d.eval_youth).replace('{avg}', d.eval_avg == null ? '–' : d.eval_avg)) + (waitOn ? '<br><span style="color:var(--red);font-weight:700">' + esc(t('upWait').replace('{d}', dayLong(nextOk))) + '</span>' : '');
     var evList = evs.length ? '<div class="list">' + evs.map(function (e) { return '<a class="item" href="' + (iCan('evaluations') || iCan('review') ? '#eval/' + e.id : '#upgrade') + '"><div><b>' + esc(dayLong(e.date)) + '</b> ' + (e.score != null ? '<span class="pill' + (Number(e.score) >= 8 ? ' ok' : ' bad') + '">' + esc(e.score) + '</span>' : '<span class="pill">' + esc(t('upNoScore')) + '</span>') + '<br><span class="hint">' + esc(e.coach || '') + ', ' + esc(t('upLevel.' + (e.level || 'other'))) + (e.competition ? ', ' + esc(e.competition) : '') + ', ' + esc(t('evalPurpose.' + e.purpose) || e.purpose) + '</span></div></a>'; }).join('') + '</div>' : '<div class="pad hint">' + esc(t('upNoEvals')) + '</div>';
-    var logRows = (d.log || []).map(function (g) { return '<div class="rowline"><div><b>' + esc(dayLong(g.date)) + '</b>, ' + esc(g.role === 'ar' ? t('upRoleAr') : t('upRoleCr')) + ', ' + esc(t('upLevel.' + g.level)) + (g.verified ? ' <span class="pill ok">' + esc(t('upVerified')) + '</span>' : '') + '<div class="hint">' + esc([g.league, g.home && g.away ? g.home + ' v ' + g.away : '', g.venue, g.crew].filter(Boolean).join('. ')) + '</div></div>' + (canEdit ? '<button class="linkbtn" style="color:var(--red)" data-up-del="' + g.id + '">' + esc(t('remove')) + '</button>' : '') + '</div>'; }).join('');
+    var logRows = (d.log || []).map(function (g) { return '<div class="rowline"><div><b>' + esc(dayLong(g.date)) + '</b>, ' + esc(g.role === 'ar' ? t('upRoleAr') : t('upRoleCr')) + ', ' + esc(t('upLevel.' + g.level)) + (g.verified ? ' <span class="pill ok">' + esc(t('upVerified')) + '</span>' : '') + '<div class="hint">' + esc([g.league, g.home && g.away ? g.home + ' v ' + g.away : '', g.venue, g.crew].filter(Boolean).join('. ')) + '</div></div>' + (iCan('review') && !g.verified ? '<button class="linkbtn" data-up-verify="' + g.id + '">' + esc(t('upVerify')) + '</button>' : '') + (canEdit && !g.verified ? '<button class="linkbtn" style="color:var(--red)" data-up-del="' + g.id + '">' + esc(t('remove')) + '</button>' : '') + '</div>'; }).join('');
     var LEAGUES = ['Colorado Premier League', 'Mountain Premier League', 'Boulder Soccer League', 'Arsenal Colorado adult', 'Colorado Adult Soccer League', 'USL-2', 'USL W', 'WPSL', 'League of Clubs', 'USCCS'];
     var inp = 'style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"';
     var addForm = !canEdit ? '' : (UP.add ? '<div class="card" style="gap:8px">' +
@@ -329,6 +329,7 @@
       sv.disabled = true; var ins = await sb.from('upgrade_log').insert(rowIn); if (ins.error) { sv.disabled = false; say('upMsg', ins.error.message, 'bad'); return; }
       UP.add = false; renderUpgrade(pid);
     };
+    body.querySelectorAll('[data-up-verify]').forEach(function (b) { b.onclick = async function () { b.disabled = true; await sb.from('upgrade_log').update({ verified_by: S.me.first_name + ' ' + S.me.last_name, verified_at: new Date().toISOString() }).eq('id', parseInt(b.getAttribute('data-up-verify'), 10)); renderUpgrade(pid); }; });
     body.querySelectorAll('[data-up-del]').forEach(function (b) { b.onclick = async function () { if (!window.confirm(t('upRemoveConfirm'))) return; await sb.from('upgrade_log').delete().eq('id', b.getAttribute('data-up-del')); renderUpgrade(pid); }; });
   }
   // ── Venues: one table for coordinates (State map) and layouts (venue maps) ──
@@ -1526,8 +1527,10 @@
       sb.from('announcements').select('id,src_key,created_at,start_date,end_date,venue,event_id,title,body,severity,active,posted_by').order('created_at', { ascending: false }).limit(40),
       sb.from('staff_messages').select('id,from_name,to_venue,date,body,created_at').eq('date', OPS.date).order('created_at', { ascending: false }).limit(100),
       sb.from('alerts').select('id,kind,game_id,ref_name,position,game_date,venue,field,kickoff,age_group,detail,status,seen_by').gte('game_date', todayStr()).order('game_date').order('kickoff').limit(300),
-      sb.from('late_notices').select('id,game_id,ref_name,venue,field,eta_min,created_at,ack_by,ack_at').eq('date', OPS.date)
+      sb.from('late_notices').select('id,game_id,ref_name,venue,field,eta_min,created_at,ack_by,ack_at').eq('date', OPS.date),
+      iCan('command_center') ? sb.rpc('unreported_games', { p_days: 7 }) : Promise.resolve({ data: null })
     ]);
+    OPS.unreported = r[7] && r[7].data || null;
     if (r[0].error) { OPS.error = r[0].error.message || String(r[0].error); return; }   // keep what we have, say why
     OPS.late = r[6].data || [];
     OPS.error = '';
@@ -1658,6 +1661,8 @@
       var vlist = Object.keys(venues).sort().map(function (k) { return venues[k]; });
       var totIn = 0, totSlots = 0; vlist.forEach(function (v) { totIn += v.in; totSlots += v.slots; });
       var open = OPS.help.filter(function (h) { return h.status === 'open'; }).length;
+      var un = OPS.unreported;
+      var unCard = (un && un.total) ? fold('unrep', t('unrepTitle'), un.total, '<div class="hint">' + esc(t('unrepHint')) + '</div>' + (un.rows || []).map(function (u) { return '<div class="rowline"><div><b>' + esc(dayShort(u.date)) + ', ' + esc(u.venue || '') + '</b><br><span class="hint">' + esc(u.competition || '') + '</span></div><span class="pill bad">' + u.missing + '</span></div>'; }).join('')) : '';
       body = (OPS.error ? '<div class="msg bad" style="margin:10px 20px 0">' + esc(t('loadFailed')) + ' ' + esc(OPS.error) + '</div>' : '') + '<div class="datebar"><button class="iconbtn" data-day="-1" aria-label="Previous day">&#8249;</button><div class="d">' + esc(dayLong(OPS.date)) + '</div><button class="iconbtn" data-day="1" aria-label="Next day">&#8250;</button></div>' +
         '<div class="stats" style="grid-template-columns:repeat(4,1fr)"><div class="stat"><b>' + vlist.length + '</b><i>' + esc(t('stVenues')) + '</i></div><div class="stat"><b>' + realGames + '</b><i>' + esc(t('stGames')) + '</i></div><div class="stat green"><b>' + totIn + '</b><i>' + esc(t('stCheckedIn')) + ' / ' + totSlots + '</i></div><div class="stat' + (open ? ' red' : '') + '"><b>' + open + '</b><i>' + esc(t('stHelpOpen')) + '</i></div></div>';
       var attnCount = vlist.length ? attentionItems(OPS.games, ins).length : 0;
@@ -1692,6 +1697,7 @@
             return '<div class="item" style="flex-direction:column;align-items:stretch;gap:2px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div class="when"><div class="disp">' + esc(clock(g.kickoff)) + '</div><div class="sub">' + esc(g.field || '') + ', ' + esc(g.age_group || '') + (g.game_num ? ', ' + esc(g.game_num) : '') + '</div></div>' + (iCan('scheduling') && !edit ? '<button class="linkbtn" data-switch="' + esc(g.game_id) + '">' + esc(t('change')) + '</button>' : '') + '</div><div class="crewline">' + crew + '</div>' + (warn.length ? '<div class="hint" style="color:#8A6A00;font-weight:700">' + esc(t('alertOnGame').replace('{n}', warn.length)) + '</div>' : '') + form + '</div>';
           }).join('') + '</div>';
       }
+          body += unCard;
     } else if (OPS.tab === 'staff') {
       var venuesToday = {}; OPS.games.forEach(function (g) { if (g.venue) venuesToday[g.venue] = 1; });
       body = '<div class="pad lead" style="padding-top:12px">' + esc(t('staffLead2')) + '</div>' +
