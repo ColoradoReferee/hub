@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- library.html v2026.10.20-k · 2026-10-20 · Colorado Referees Library -->
+<!-- library.html v2026.10.21-a · 2026-10-21 · Colorado Referees Library -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -427,7 +427,7 @@ a{color:inherit;text-decoration:none;}
       <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program">
     </div>
     <div class="footer-text">
-      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.10.20-k<br>
+      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.10.21-a<br>
       <a href="https://coloradosoccer.org" class="footer-link">ColoradoSoccer.org</a> &middot;
       <span data-l="questions">Questions:</span> <a href="mailto:refeducation@coloradoreferees.com" class="footer-link">refeducation@coloradoreferees.com</a> &middot; 303.888.6863
     </div>
@@ -1533,6 +1533,39 @@ var MODULES = [
   },
 
   {
+    id:"career-18tips", cat:"career", icon:"&#128161;",
+    iconBg:"rgba(167,139,250,.12)",
+    title:"18 Tips for Beginning Officials",
+    sub:"The habits that carry a referee for a career, in soccer terms",
+    eyebrow:"Career Resources",
+    keywords:"18 tips beginning officials referee magazine NASO mistakes role impartial avocation body language whistle safety pregame eye contact angle excuses look the part",
+    build: function() {
+      return dt("The eighteen headings come from the editors of Referee magazine (referee.com), who publish them for new officials in every sport. The soccer notes under each are ours. The C.R.E.S.T. Academy uses the list as its capstone on the last open-lab day.") +
+      ds("Who you are out there",
+        stp(1, "<strong>You will make mistakes.</strong> Every referee does, in every game. Fix what the Laws let you fix, learn it, and let it go before the next restart.") +
+        stp(2, "<strong>Know your role.</strong> The game belongs to the players. Use the standard signals, sell the big call, and never do anything that pulls the crowd's eyes onto you.") +
+        stp(3, "<strong>You do not care who wins.</strong> Not the home team, not the team that has been nicer to you, not the team that is losing by six. Every call is the same call for both sides.") +
+        stp(4, "<strong>Refereeing is an avocation.</strong> School, family and work come first. Give refereeing what is left, and give it fully.") +
+        stp(5, "<strong>Refereeing builds skills for a lifetime.</strong> Deciding under pressure, working in a crew, owning a decision, staying fair when people are shouting. Every one of those shows up later in a job and in a family.") +
+        stp(6, "<strong>You referee who you are.</strong> Your personality walks onto the field with you. Know your own extremes and tone them down between the lines.")) +
+      ds("Before the whistle",
+        stp(7, "<strong>Preparation is key.</strong> Read the Laws again every season, know the competition rules on the game card, be fit enough to keep up, and check your kit the night before.") +
+        stp(8, "<strong>Strive for athleticism.</strong> Move like you belong on a soccer field. Players and coaches read your fitness before they read your decisions.") +
+        stp(9, "<strong>Have good body language.</strong> Stand tall at every stoppage. A correct call with slumped shoulders still looks like a guess.") +
+        stp(10, "<strong>Anticipate the play, not the call.</strong> Read where the next phase will happen, get your angle early, then judge what you see. Never decide before it happens.") +
+        stp(11, "<strong>Be professional.</strong> Handshakes, clear words, straight to work. Friendly with everyone, familiar with no one.") +
+        stp(12, "<strong>Be confident with your whistle.</strong> If play is stopping, blow it so the far touchline hears it. A soft whistle sounds like a question.")) +
+      ds("On the field",
+        stp(13, "<strong>Player safety is paramount.</strong> Rough play, bad weather, a dangerous field, a player who should not continue: you are obligated to act, whether or not a Law names the exact situation.") +
+        stp(14, "<strong>Always have a pregame.</strong> Two minutes with your crew before every game, even a crew you work with every weekend. Our AR Mechanics module has the script.") +
+        stp(15, "<strong>Eye contact is a must.</strong> At every restart, before every flag. Most crew mistakes are two officials who never looked at each other.") +
+        stp(16, "<strong>Get the angle.</strong> Being close is not the same as seeing it. Work for the angle that shows the contact, the line, or the hand.") +
+        stp(17, "<strong>Do not make excuses.</strong> First correct what the Laws allow, then learn from it. An excuse fixes nothing and costs you the crew's trust.") +
+        stp(18, "<strong>Look the part.</strong> Uniform clean and worn properly, socks up, badge on. People accept decisions from a referee who looks like a referee.")) +
+      callout("167,139,250","&#127891;","Pick three of the eighteen that describe you on a good day, and one you need to work on. Tell your Referee Coach which one. That is the whole exercise.");
+    }
+  },
+  {
     id:"career-fitness", cat:"career", icon:"&#127939;",
     iconBg:"rgba(39,174,96,.12)",
     title:"Fitness Test",
@@ -2598,6 +2631,38 @@ var ES = {
     }
   },
 
+
+  "career-18tips": {
+    title: "18 consejos para oficiales que empiezan",
+    sub: "Los hábitos que sostienen a un árbitro toda una carrera, en términos de fútbol",
+    eyebrow: "Recursos de carrera",
+    keywords: "18 consejos oficiales principiantes referee magazine NASO errores papel imparcial afición lenguaje corporal silbato seguridad charla previa contacto visual ángulo excusas apariencia",
+    build: function() {
+      return dt("Los dieciocho títulos vienen de los editores de la revista Referee (referee.com), que los publican para oficiales nuevos de todos los deportes. Las notas de fútbol bajo cada uno son nuestras. La Academia C.R.E.S.T. usa la lista como cierre en su último día de laboratorio abierto.") +
+      ds("Quién eres ahí afuera",
+        stp(1, "<strong>Vas a cometer errores.</strong> Todos los árbitros, en todos los partidos. Corrige lo que las Reglas te permitan corregir, aprende y suéltalo antes de la siguiente reanudación.") +
+        stp(2, "<strong>Conoce tu papel.</strong> El partido es de los jugadores. Usa las señales estándar, vende la decisión grande y nunca hagas nada que atraiga las miradas hacia ti.") +
+        stp(3, "<strong>No te importa quién gana.</strong> Ni el equipo local, ni el que ha sido más amable contigo, ni el que va perdiendo por seis. Cada decisión es la misma para los dos lados.") +
+        stp(4, "<strong>Arbitrar es una afición.</strong> La escuela, la familia y el trabajo van primero. Dale al arbitraje lo que queda, y dáselo completo.") +
+        stp(5, "<strong>Arbitrar forma habilidades para toda la vida.</strong> Decidir bajo presión, trabajar en equipo, hacerte responsable de una decisión, mantenerte justo cuando la gente grita. Todo eso aparece después en un trabajo y en una familia.") +
+        stp(6, "<strong>Arbitras como eres.</strong> Tu personalidad entra al campo contigo. Conoce tus extremos y bájales el tono entre las líneas.")) +
+      ds("Antes del silbato",
+        stp(7, "<strong>La preparación es clave.</strong> Relee las Reglas cada temporada, conoce las reglas de la competencia en la hoja del partido, ten la condición para seguir el juego y revisa tu equipo la noche anterior.") +
+        stp(8, "<strong>Busca verte atlético.</strong> Muévete como alguien que pertenece a un campo de fútbol. Jugadores y entrenadores leen tu condición antes que tus decisiones.") +
+        stp(9, "<strong>Cuida el lenguaje corporal.</strong> Párate erguido en cada interrupción. Una decisión correcta con los hombros caídos sigue pareciendo una adivinanza.") +
+        stp(10, "<strong>Anticipa la jugada, no la decisión.</strong> Lee dónde va a ocurrir la siguiente fase, consigue tu ángulo temprano y luego juzga lo que ves. Nunca decidas antes de que pase.") +
+        stp(11, "<strong>Sé profesional.</strong> Saludo de mano, palabras claras, directo al trabajo. Amable con todos, confianzudo con nadie.") +
+        stp(12, "<strong>Ten confianza con el silbato.</strong> Si el juego se detiene, pítalo para que lo oiga la banda de enfrente. Un silbato suave suena a pregunta.")) +
+      ds("En el campo",
+        stp(13, "<strong>La seguridad del jugador es lo primero.</strong> Juego brusco, mal clima, un campo peligroso, un jugador que no debería seguir: estás obligado a actuar, exista o no una Regla que nombre esa situación exacta.") +
+        stp(14, "<strong>Siempre haz la charla previa.</strong> Dos minutos con tu terna antes de cada partido, incluso con la terna con la que trabajas cada fin de semana. El módulo de mecánica del asistente tiene el guion.") +
+        stp(15, "<strong>El contacto visual es obligatorio.</strong> En cada reanudación, antes de cada bandera. La mayoría de los errores de terna son dos oficiales que nunca se miraron.") +
+        stp(16, "<strong>Consigue el ángulo.</strong> Estar cerca no es lo mismo que verlo. Trabaja por el ángulo que muestra el contacto, la línea o la mano.") +
+        stp(17, "<strong>No pongas excusas.</strong> Primero corrige lo que las Reglas permiten, luego aprende. Una excusa no arregla nada y te cuesta la confianza de la terna.") +
+        stp(18, "<strong>Luce como árbitro.</strong> Uniforme limpio y bien puesto, medias arriba, escudo en su lugar. La gente acepta decisiones de un árbitro que se ve como árbitro.")) +
+      callout("167,139,250","&#127891;","Elige tres de los dieciocho que te describan en un buen día, y uno que necesites trabajar. Dile a tu Referee Coach cuál. Ese es todo el ejercicio.");
+    }
+  },
 
   "career-fitness": {
     title: "Prueba física",
