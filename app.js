@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.21-b';
+  var VERSION = '2026.10.21-c';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -151,8 +151,10 @@
       wide ? sb.from('staff_messages').select('id,from_name,to_venue,body,created_at').eq('date', today).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [] }),
       sb.rpc('coached_venues', { p_date: today }),
       sb.from('late_notices').select('id,game_id,ref_name,venue,field,eta_min,created_at,ack_by,ack_at').eq('date', today),
-      loadSessions_()
+      loadSessions_(),
+      sb.rpc('co90_card')
     ]);
+    S.co90 = r[11] && r[11].data || null;
     S.games = (r[0].data || []).filter(function (x) { return ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(x[k])) >= 0; }); });
     S.events = r[1].data || [];
     S.checkins = {};
@@ -826,6 +828,7 @@
     var myEval = (ER.mine || []).filter(function (r) { return r.ref_person_id === S.me.person_id && (r.status === 'assigned' || r.status === 'requested') && r.game_date >= todayStr(); })[0];
     var coachEvals = iCan('evaluations') ? (ER.mine || []).filter(function (r) { return r.coach_person_id === S.me.person_id && r.status === 'assigned' && r.game_date >= todayStr(); }) : [];
     var coachEvalHtml = coachEvals.map(function (r) { return '<div class="card" style="border-color:var(--red);gap:6px"><b>' + esc(t('evalYouAssigned')) + '</b><div>' + refLink(r.ref_name) + ', ' + esc(dayLong(r.game_date)) + ', ' + esc(r.venue || '') + '. ' + esc(t('evalPurpose.' + r.purpose)) + '</div><div class="actions" style="padding:0"><a class="btn primary" href="evaluator.html?gameId=' + esc(r.game_id) + '">' + esc(t('evalOpenEvaluator')) + '</a><a class="btn outline" href="#coach/game/' + esc(r.game_id) + '">' + esc(t('details')) + '</a></div></div>'; }).join('');
+    $('co90Line').innerHTML = co90DayHtml();
     $('sessionsLine').innerHTML = signupCardHtml(); wireSignup($('sessionsLine'));
     renderWrap();
     if (ER.prog === undefined) { ER.prog = null; sb.rpc('eval_progress').then(function (pr) { ER.prog = pr.data || null; var el = $('evalProg'); if (el) el.innerHTML = progressHtml(ER.prog); }); }
@@ -940,6 +943,18 @@
   var AREAS = ['laws', 'reading', 'fitness', 'presence'];
   // The day the Coaching screen shows. Today unless the coach picked another
   // game day (a tournament on Saturday, looked at on Monday).
+  function regSeason() { var d = new Date(); return d.getFullYear() + (d.getMonth() >= 6 ? 1 : 0); }
+  function areaWord(a) { return t('co90Area.' + a) || a; }
+  function co90DayHtml() {
+    var c = S.co90;
+    if (!c || !c.group_name) return '';
+    var pts = (c.points || []).map(function (p) { return '<div><span class="pill" style="margin-right:6px">' + esc(areaWord(p.area)) + '</span>' + esc(p.point) + '</div>'; }).join('');
+    var note = (c.notes || [])[0];
+    return '<div class="card" style="border-color:var(--gold);gap:6px"><b>' + esc(t('co90YourGroup').replace('{g}', c.group_name)) + '</b>' +
+      '<div class="hint">' + esc(t('co90Mentor')) + ': ' + esc(c.mentor || t('co90None')) + '. ' + esc(t('co90National')) + ': ' + esc(c.national || t('co90None')) + '.</div>' +
+      (pts ? '<div style="display:flex;flex-direction:column;gap:4px">' + pts + '</div>' : '<div class="hint">' + esc(t('scEmpty')) + '</div>') +
+      (note ? '<div class="hint" style="border-top:1px solid var(--line);padding-top:6px">\u201c' + esc(note.body) + '\u201d \u00b7 ' + esc(note.author || '') + '</div>' : '') + '</div>';
+  }
   function coachDay() { return S.coach.date || todayStr(); }
   // Four weeks of days, Monday first. Each day has an AM and a PM half to tap. Days with games are marked.
   function availCalHtml() {
@@ -1319,8 +1334,45 @@
     try { var tr = await sb.from('evaluations').select('id,ref_name,coach_name,game_date,report_at').eq('report_status', 'submitted').order('report_at'); CC.toReview = tr.data || []; } catch (e) { CC.toReview = []; }
   }
   async function loadEvals() { return load(loadEvals_()); }
+  async function loadCo90_() { var r = await sb.rpc('co90_overview'); CC.co90 = r.data || []; }
+  async function loadCo90() { return load(loadCo90_()); }
+  function co90GroupCard(g) {
+    var days21 = 21 * 86400000, now = Date.now();
+    var lastAct = g.last_note_at ? new Date(g.last_note_at).getTime() : 0;
+    (g.members || []).forEach(function (m) { if (m.last_seen) lastAct = Math.max(lastAct, new Date(m.last_seen + 'T12:00:00').getTime()); });
+    var amber = g.status === 'active' && (!lastAct || now - lastAct > days21);
+    var pickRow = function (kind, label, val) {
+      var picking = CC.coPick && CC.coPick.g === g.id && CC.coPick.kind === kind;
+      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span><b>' + esc(label) + ':</b> ' + (val ? esc(val) : '<span class="hint">' + esc(t('co90None')) + '</span>') + '</span>' +
+        '<button class="linkbtn" data-copick="' + g.id + '|' + kind + '">' + esc(t('co90Set')) + '</button></div>' +
+        (picking ? coSearchHtml() : '');
+    };
+    var members = (g.members || []).map(function (m) {
+      return '<div class="rowline"><div>' + refLink(m.name || '') + '<br><span class="hint' + (m.notes ? '' : '" style="color:var(--red)') + '">' + m.notes + ' ' + esc(t('co90Notes')) + (m.last_seen ? ', ' + esc(dayShort(m.last_seen)) : '') + '</span></div>' +
+        '<button class="linkbtn" data-codel="' + g.id + '|' + m.person_id + '">' + esc(t('remove')) + '</button></div>';
+    }).join('');
+    var addPicking = CC.coPick && CC.coPick.g === g.id && CC.coPick.kind === 'member';
+    var note = g.last_note;
+    return '<div class="card" style="gap:8px;border-color:' + (amber ? 'var(--gold)' : 'var(--line)') + '">' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:17px">' + esc(g.name) + '</b><span class="hint">' + esc(String(g.season)) + (g.region ? ' \u00b7 ' + esc(g.region) : '') + (g.status !== 'active' ? ' \u00b7 ' + esc(t('co90Retired')) : '') + '</span></div>' +
+      (amber ? '<div class="hint" style="color:var(--gold);font-weight:700">' + esc(t('co90Amber')) + '</div>' : '') +
+      pickRow('mentor', t('co90Mentor'), g.mentor) +
+      pickRow('national', t('co90National'), g.national) +
+      '<div class="hint" style="font-weight:700;padding-top:4px">' + esc(t('co90MembersTitle').replace('{n}', (g.members || []).length)) + '</div>' + members +
+      ((g.members || []).length < 8 ? '<button class="chip-btn small" data-copick="' + g.id + '|member">' + esc(t('co90AddRef')) + '</button>' + (addPicking ? coSearchHtml() : '') : '') +
+      (note ? '<div class="hint" style="border-top:1px solid var(--line);padding-top:6px">\u201c' + esc(note.body) + '\u201d \u00b7 ' + esc(note.author || '') + ', ' + esc(dayShort(String(note.at).slice(0, 10))) + '</div>' : '') +
+      '<textarea id="conote-' + g.id + '" placeholder="' + esc(t('co90NoteHint')) + '" style="font:inherit;width:100%;min-height:56px;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></textarea>' +
+      '<div class="actions" style="padding:0"><button class="btn outline small" data-conote="' + g.id + '">' + esc(t('co90Post')) + '</button>' +
+      (g.status === 'active' ? '<button class="linkbtn" data-coretire="' + g.id + '">' + esc(t('co90Retire')) + '</button>' : '') + '</div></div>';
+  }
+  function coSearchHtml() {
+    var hits = (CC.coHits || []).map(function (h) {
+      return '<button class="chip-btn" data-cohit="' + h.person_id + '">' + esc(h.name) + (h.first_season ? ' <small>' + esc(t('co90FirstSeason').replace('{y}', h.first_season)) + '</small>' : '') + '</button>';
+    }).join('');
+    return '<input id="coQ" placeholder="' + esc(t('coachSearch')) + '" value="' + esc(CC.coQ || '') + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><div class="chips">' + hits + '</div>';
+  }
   function renderCenter() {
-    var tabs = ['coverage', 'evals', 'schedule', 'coaches', 'ai', 'queue'];
+    var tabs = ['coverage', 'evals', 'schedule', 'coaches', 'co90', 'ai', 'queue'];
     var openN = (CC.evalReqs || []).filter(function (q) { return q.status === 'requested'; }).length || (S.evalWaiting || []).length;
     var head = '<div class="tabs">' + tabs.map(function (k) { return '<button class="chip-btn' + (CC.tab === k ? ' on' : '') + (k === 'evals' && openN && CC.tab !== k ? ' warn' : '') + '" data-tab="' + k + '">' + esc(t('tab' + k.charAt(0).toUpperCase() + k.slice(1))) + (k === 'evals' && openN ? ' (' + openN + ')' : '') + '</button>'; }).join('') + '</div>';
     var body = '';
@@ -1354,6 +1406,10 @@
         '<div class="disp h2">' + esc(t('evalsAssigned')) + ' ' + assigned.length + '</div>' + (assigned.length ? assigned.map(card).join('') : '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>') +
         ((CC.toReview || []).length ? '<div class="disp h2">' + esc(t('evalsToReview')) + ' ' + CC.toReview.length + '</div><div class="list">' + CC.toReview.map(function (e) { return '<a class="item" href="#eval/' + e.id + '"><div><b>' + esc(e.ref_name || '') + '</b><br><span class="hint">' + esc(t('evalCoach')) + ' ' + esc(e.coach_name || '') + (e.game_date ? ', ' + esc(dayLong(e.game_date)) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>' : '') +
         ((CC.cands || []).length ? '<div class="disp h2">' + esc(t('evalCandidates').replace('{y}', new Date().getFullYear())) + '</div><div class="pad hint" style="padding-top:0">' + esc(t('evalCandidatesHint')) + '</div><div class="pad" style="padding-top:6px"><table class="dt" style="width:100%"><thead><tr><th>' + esc(t('fitName')) + '</th><th>' + esc(t('evalPurposeCol')) + '</th><th class="n">' + esc(t('evalDoneCol')) + '</th><th class="n">' + esc(t('evalOpenCol')) + '</th></tr></thead><tbody>' + CC.cands.map(function (c) { var full = Number(c.done) >= Number(c.need); return '<tr class="' + (full ? 'passed' : '') + '"><td>' + refLink(c.name || '') + '</td><td>' + (c.person_id ? '<a class="refname" href="#upgrade/' + esc(c.person_id) + '">' + esc(t('evalPurpose.' + c.purpose) || c.purpose) + '</a>' : esc(t('evalPurpose.' + c.purpose) || c.purpose)) + '</td><td class="n"><b>' + esc(String(c.done)) + ' / ' + esc(String(c.need)) + '</b></td><td class="n">' + esc(String(c.requested)) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '');
+    } else if (CC.tab === 'co90') {
+      body = '<div class="pad lead" style="padding-top:12px">' + esc(t('co90Lead')) + '</div>' +
+        '<div class="card" style="gap:8px"><div class="hint" style="font-weight:700">' + esc(t('co90New')) + '</div><input id="cgName" placeholder="' + esc(t('co90Name')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><div class="actions" style="padding:0"><button class="btn outline small" id="cgCreate">' + esc(t('co90Create')) + '</button></div></div>' +
+        ((CC.co90 || []).length ? (CC.co90 || []).map(co90GroupCard).join('') : '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>');
     } else if (CC.tab === 'schedule') {
       var todayAss = CC.assigns.filter(function (a) { return a.date === CC.sdate; });
       var avCount = Object.keys(CC.avail || {}).filter(function (k) { return CC.avail[k][CC.block]; }).length;
@@ -1385,7 +1441,7 @@
       body = '<div class="stats" style="grid-template-columns:1fr 1fr"><div class="stat' + (w ? ' red' : '') + '"><b>' + w + '</b><i>' + esc(t('queueWaiting')) + '</i></div><div class="stat' + (cl ? ' green' : '') + '"><b>' + cl + '</b><i>' + esc(t('queueCleaned')) + '</i></div></div><div class="pad" style="padding-top:12px"><a class="btn go" href="#review">' + esc(t('openReview')) + '</a></div>';
     }
     $('centerBody').innerHTML = head + body;
-    $('centerBody').querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { CC.tab = b.getAttribute('data-tab'); if (CC.tab === 'queue' && !REV.notes.length) loadReview().then(renderCenter); else if (CC.tab === 'schedule') loadSchedule().then(renderCenter); else if (CC.tab === 'evals') loadEvals().then(renderCenter); else renderCenter(); }; });
+    $('centerBody').querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { CC.tab = b.getAttribute('data-tab'); if (CC.tab === 'queue' && !REV.notes.length) loadReview().then(renderCenter); else if (CC.tab === 'schedule') loadSchedule().then(renderCenter); else if (CC.tab === 'co90') loadCo90().then(renderCenter); else if (CC.tab === 'evals') loadEvals().then(renderCenter); else renderCenter(); }; });
     $('centerBody').querySelectorAll('[data-evalpick]').forEach(function (b) { b.onclick = function () { CC.evalPick = parseInt(b.getAttribute('data-evalpick'), 10); CC.evalQ = ''; renderCenter(); }; });
     var cv = $('covVenue'); if (cv) cv.onchange = function () { CC.covVenue = cv.value; renderCenter(); };
     var sv = $('schedVenue'); if (sv) sv.onchange = function () { CC.pick = sv.value || null; CC.pickFields = []; renderCenter(); };
@@ -1393,6 +1449,18 @@
     $('centerBody').querySelectorAll('[data-evalassign]').forEach(function (b) { b.onclick = async function () { b.disabled = true; var coach = parseInt(b.getAttribute('data-evalassign'), 10), id = parseInt(b.getAttribute('data-req'), 10); var r = CC.evalReqs.filter(function (x) { return x.id === id; })[0]; var ok = await sb.rpc('may_evaluate', { p_coach: coach, p_purpose: r.purpose }); if (!ok.data) { b.disabled = false; return; } await sb.from('eval_requests').update({ status: 'assigned', coach_person_id: coach, assigned_by: S.me.person_id, assigned_at: new Date().toISOString() }).eq('id', id); CC.evalPick = null; await loadEvals(); renderCenter(); }; });
     $('centerBody').querySelectorAll('[data-evaldecline]').forEach(function (b) { b.onclick = async function () { b.disabled = true; await sb.from('eval_requests').update({ status: 'declined' }).eq('id', parseInt(b.getAttribute('data-evaldecline'), 10)); await loadEvals(); renderCenter(); }; });
     $('centerBody').querySelectorAll('[data-evaldone]').forEach(function (b) { b.onclick = async function () { b.disabled = true; await sb.from('eval_requests').update({ status: 'done' }).eq('id', parseInt(b.getAttribute('data-evaldone'), 10)); await loadEvals(); renderCenter(); }; });
+    var cg = $('cgCreate');
+    if (cg) cg.onclick = async function () { var nm = ($('cgName').value || '').trim(); if (!nm) return; cg.disabled = true; await sb.from('co90_groups').insert({ org_id: S.me.org_id, season: regSeason(), name: nm }); await loadCo90(); renderCenter(); };
+    $('centerBody').querySelectorAll('[data-copick]').forEach(function (b) { b.onclick = function () { var p = b.getAttribute('data-copick').split('|'); CC.coPick = { g: parseInt(p[0], 10), kind: p[1] }; CC.coQ = ''; CC.coHits = []; renderCenter(); var q = $('coQ'); if (q) q.focus(); }; });
+    $('centerBody').querySelectorAll('[data-codel]').forEach(function (b) { b.onclick = async function () { var p = b.getAttribute('data-codel').split('|'); b.disabled = true; await sb.from('co90_members').delete().eq('group_id', parseInt(p[0], 10)).eq('person_id', parseInt(p[1], 10)); await loadCo90(); renderCenter(); }; });
+    $('centerBody').querySelectorAll('[data-coretire]').forEach(function (b) { b.onclick = async function () { b.disabled = true; await sb.from('co90_groups').update({ status: 'retired' }).eq('id', parseInt(b.getAttribute('data-coretire'), 10)); await loadCo90(); renderCenter(); }; });
+    $('centerBody').querySelectorAll('[data-conote]').forEach(function (b) { b.onclick = async function () { var gid = parseInt(b.getAttribute('data-conote'), 10); var ta = $('conote-' + gid); var body = (ta && ta.value || '').trim(); if (!body) return; b.disabled = true; await sb.from('co90_notes').insert({ group_id: gid, org_id: S.me.org_id, author_person_id: S.me.person_id, author_name: S.me.first_name + ' ' + S.me.last_name, body: body }); await loadCo90(); renderCenter(); }; });
+    var coQ = $('coQ');
+    if (coQ) { coQ.oninput = async function () { CC.coQ = coQ.value; if (CC.coQ.trim().length < 2) return; var r = await sb.rpc('co90_find_person', { p_q: CC.coQ.trim() }); CC.coHits = r.data || []; renderCenter(); var q2 = $('coQ'); if (q2) { q2.focus(); q2.setSelectionRange(q2.value.length, q2.value.length); } }; }
+    $('centerBody').querySelectorAll('[data-cohit]').forEach(function (b) { b.onclick = async function () { var pid = parseInt(b.getAttribute('data-cohit'), 10), pk = CC.coPick; if (!pk) return; b.disabled = true;
+      if (pk.kind === 'member') await sb.from('co90_members').insert({ group_id: pk.g, person_id: pid, org_id: S.me.org_id });
+      else await sb.from('co90_groups').update(pk.kind === 'mentor' ? { mentor_person_id: pid } : { national_person_id: pid }).eq('id', pk.g);
+      CC.coPick = null; CC.coHits = []; CC.coQ = ''; await loadCo90(); renderCenter(); }; });
     $('centerBody').querySelectorAll('[data-sday]').forEach(function (b) { b.onclick = function () { CC.sdate = shiftDate(CC.sdate, parseInt(b.getAttribute('data-sday'), 10)); CC.pick = null; loadSchedule().then(renderCenter); }; });
     $('centerBody').querySelectorAll('[data-svenue]').forEach(function (b) { b.onclick = function () { CC.pick = b.getAttribute('data-svenue'); CC.pickFields = []; renderCenter(); }; });
     $('centerBody').querySelectorAll('[data-sblock]').forEach(function (b) { b.onclick = function () { CC.block = b.getAttribute('data-sblock'); renderCenter(); }; });
@@ -2346,6 +2414,29 @@
       }).join('') + '</div>';
     }).join('');
   }
+  function co90RefHtml(c, pid) {
+    if (!c || !c.group_name) return '';
+    var canSet = iCan('coaching') || iCan('review');
+    var bySlot = {}; (c.points || []).forEach(function (p) { bySlot[p.slot] = p; });
+    var rows = [1, 2, 3].map(function (sl) {
+      var p = bySlot[sl];
+      var editing = REF.scSlot === sl;
+      return '<div style="padding:4px 0;border-top:1px solid var(--line)">' +
+        (p ? '<span class="pill" style="margin-right:6px">' + esc(areaWord(p.area)) + '</span>' + esc(p.point) + ' <span class="hint">' + esc(p.set_by || '') + '</span>' : '<span class="hint">' + esc(t('scEmpty')) + '</span>') +
+        (canSet ? ' <button class="linkbtn" data-scslot="' + sl + '">' + esc(t('co90Set')) + '</button>' : '') +
+        (editing ? '<div class="chips" style="padding-top:6px">' + ['laws', 'reading', 'fitness', 'presence'].map(function (a) { return '<button class="chip-btn small' + (REF.scArea === a ? ' on' : '') + '" data-scarea="' + a + '">' + esc(areaWord(a)) + '</button>'; }).join('') + '</div>' +
+          '<input id="scText" placeholder="' + esc(t('scPointHint')) + '" value="' + esc(REF.scText || '') + '" style="font:inherit;width:100%;margin-top:6px;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' +
+          '<div class="actions" style="padding:6px 0 0"><button class="btn outline small" data-scsave="' + sl + '">' + esc(t('save')) + '</button></div>' : '') + '</div>';
+    }).join('');
+    return '<div class="card" style="gap:6px;border-color:var(--gold)"><b>' + esc(/^co90/i.test(c.group_name) ? c.group_name : 'CO90 \u00b7 ' + c.group_name) + '</b>' +
+      '<div class="hint">' + esc(t('co90Mentor')) + ': ' + esc(c.mentor || t('co90None')) + '. ' + esc(t('co90National')) + ': ' + esc(c.national || t('co90None')) + '.</div>' +
+      '<div class="hint" style="font-weight:700">' + esc(t('scTitle')) + '</div><div class="hint">' + esc(t('scHint')) + '</div>' + rows + '</div>';
+  }
+  function wireSeasonCard(name, pid) {
+    $('refBody').querySelectorAll('[data-scslot]').forEach(function (b) { b.onclick = function () { REF.scSlot = parseInt(b.getAttribute('data-scslot'), 10); REF.scArea = null; REF.scText = ''; renderRef(name); }; });
+    $('refBody').querySelectorAll('[data-scarea]').forEach(function (b) { b.onclick = function () { REF.scArea = b.getAttribute('data-scarea'); var x = $('scText'); REF.scText = x ? x.value : REF.scText; renderRef(name); }; });
+    $('refBody').querySelectorAll('[data-scsave]').forEach(function (b) { b.onclick = async function () { var x = $('scText'); var txt = (x && x.value || '').trim(); if (!txt || !REF.scArea) return; b.disabled = true; await sb.rpc('co90_set_point', { p_person: pid, p_slot: parseInt(b.getAttribute('data-scsave'), 10), p_area: REF.scArea, p_point: txt }); REF.scSlot = null; renderRef(name); }; });
+  }
   async function renderRef(name) {
     $('refBack').href = REF.from || '#day';
     $('refBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>';
@@ -2358,6 +2449,7 @@
     ]);
     var card = rr[0], notes = rr[1], ct = rr[2].data;
     var prog = null; try { if (card.data && card.data.person_id) { var pr = await sb.rpc('eval_progress', { p_person: card.data.person_id }); prog = pr.data; } } catch (e) {}
+    var co90 = null; try { if (card.data && card.data.person_id) { var cr = await sb.rpc('co90_card', { p_person: card.data.person_id }); co90 = cr.data; } } catch (e) {}
     busy(false);
     var c = card.data;
     var contact = !ct ? '' : '<div class="card" style="gap:6px;border-color:var(--gold)"><b>' + esc(t('contactTitle')) + (ct.minor ? ' <span class="pill">' + esc(t('contactMinor')) + '</span>' : '') + '</b>' +
@@ -2370,7 +2462,7 @@
     var stat = function (n, l, cls) { return '<div class="stat' + (cls ? ' ' + cls : '') + '"><b>' + (n == null ? '0' : esc(n)) + '</b><i>' + esc(l) + '</i></div>'; };
     $('refBody').innerHTML =
       '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(t('refCardTitle')) + (c.city ? ', ' + esc(c.city) : '') + (c.green_badge ? ', ' + esc(t('greenBadge')) : '') + '</div><div class="disp" style="font-size:40px">' + esc(name) + '</div><div>' + fitBadgeHtml(c.fitness) + (titles || '<span class="hint">' + esc(t('noneYet')) + '</span>') + '</div></div>' +
-      contact + progressHtml(prog, c.person_id) +
+      contact + co90RefHtml(co90, c.person_id) + progressHtml(prog, c.person_id) +
       '<div class="disp h2">' + esc(t('refSeason')) + '</div>' +
       '<div class="stats">' + stat(c.games, t('refGames')) + stat(c.as_center, t('refCenter')) + stat(c.evaluations, t('refEvals')) + '</div>' +
       '<div class="stats">' + stat(c.notes, t('refSeen'), c.notes ? 'green' : 'red') + stat(c.released, t('refReleased')) + stat(c.coaches, t('refCoaches')) + '</div>' +
@@ -2380,6 +2472,7 @@
       '<div class="disp h2">' + esc(t('refNotes')) + '</div>' + ((notes.data || []).length ? (notes.data || []).map(function (n) {
         return '<div class="note"><div class="who">' + esc(n.observer || '') + (n.rater_role ? ', ' + esc(n.rater_role) : '') + ', ' + esc(dayLong(n.date)) + (n.field ? ', ' + esc(n.field) : '') + (n.area ? ', ' + esc(t('areas.' + n.area)) : '') + '</div><div class="text">' + esc(n.final_note || n.cleaned_note || '') + '</div></div>';
       }).join('') : '<div class="card"><div class="hint">' + esc(t('refNoNotes')) + '</div></div>');
+    wireSeasonCard(name, c.person_id);
     Promise.all([upcomingFor(name, 90), loadCoachNames()]).then(function (x) { var list = x[0]; var el = $('refUpcoming'); if (el) el.innerHTML = upcomingHtml(list, name); }).catch(function (e) { var el = $('refUpcoming'); if (el) el.innerHTML = '<div class="msg bad">' + esc(e.message || '') + '</div>'; });
   }
   var REF = { from: '' };
