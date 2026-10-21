@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.21-f';
+  var VERSION = '2026.10.21-g';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -525,7 +525,29 @@
   function stdKey(x) { return FIT[x && x.standard] ? x.standard : 'national'; }
   function fitStd(x) { return FIT[stdKey(x)]; }
   function stdLine(x) { var f = fitStd(x); return t('fitStd.' + stdKey(x)) + ': ' + t('fitStdLine').replace('{rsa}', f.rsa.toFixed(1)).replace('{run}', f.run).replace('{walk}', f.walk); }
-  var SES_SEL = 'id,kind,title,date,start_time,end_time,venue,address,capacity,open_to,notes,active,standard';
+  var SES_SEL = 'id,kind,title,date,start_time,end_time,venue,address,capacity,open_to,notes,active,standard,fee_cents';
+  // ── Payments (Stripe collections; free stays free) ───────────────
+  var FEES = { loaded: false, eval: {} };
+  async function loadFees_() {
+    if (FEES.loaded) return;
+    try {
+      var r = await sb.from('fees').select('kind,purpose,amount_cents,active').eq('active', true);
+      FEES.eval = {};
+      (r.data || []).forEach(function (f) { if (f.kind === 'evaluation' && f.amount_cents > 0) FEES.eval[f.purpose] = f.amount_cents; });
+      FEES.loaded = true;
+    } catch (e) {}
+  }
+  function money(c) { return '$' + (c % 100 === 0 ? String(c / 100) : (c / 100).toFixed(2)); }
+  async function payStart(body, msgId) {
+    try {
+      var r = await sb.functions.invoke('stripe-checkout', { body: body });
+      if (r.data && r.data.url) { location.href = r.data.url; return true; }
+      var m = r.data && r.data.error;
+      if (!m && r.error && r.error.context && r.error.context.json) { try { m = (await r.error.context.json()).error; } catch (e) {} }
+      say(msgId, m || t('payFailed'), 'bad');
+    } catch (e) { say(msgId, t('payFailed'), 'bad'); }
+    return false;
+  }
   async function loadSessions_() {
     var today = todayStr(), back = new Date(Date.now() - 120 * 86400000);
     var r = await Promise.all([
@@ -598,8 +620,9 @@
     if (!list.length) return reregisterHtml() + (SES.badge ? '<div class="card" style="gap:8px;border-color:var(--gold)">' + fitBadgeHtml(SES.badge) + '</div>' : '');
     return reregisterHtml() + '<div class="card" style="gap:8px;border-color:var(--gold)">' + fitBadgeHtml(SES.badge) + '<b>' + esc(t('sesTitle')) + '</b>' + list.map(function (x) {
       var me = mySignup(x.id), n = SES.counts[String(x.id)] || 0, full = x.capacity && n >= x.capacity && !me, fit = x.kind === 'fitness';
+      var payLbl = x.fee_cents > 0 ? t('sesPayJoin').replace('{amt}', money(x.fee_cents)) : t('sesSignUp');
       var state = me ? (me.status === 'passed' ? t('sesPassed') : me.status === 'failed' ? t('sesFailed') : me.status === 'premium' ? t('fitPremium') : me.status === 'no_show' ? t('sesNoShow') : me.status === 'waitlist' ? t('sesWaitlisted') : t('sesIn')) : (full ? t('sesFull') : (x.capacity ? t('sesSpots').replace('{n}', x.capacity - n) : ''));
-      var join = !me && !full ? (fit ? '<div class="no-print" style="margin-top:8px"><a class="chip-btn small" style="display:inline-block;text-decoration:none" href="' + FIT_WAIVER_URL + '" target="_blank" rel="noopener">' + esc(t('fitWaiverOpen')) + '</a><label style="display:flex;gap:10px;align-items:flex-start;min-height:44px;margin-top:6px"><input type="checkbox" data-waiver="' + x.id + '" style="width:22px;height:22px;flex:none;margin-top:2px"> <span class="hint">' + esc(t('fitWaiverConfirm')) + '</span></label><button class="btn primary small" data-ses-in="' + x.id + '" disabled>' + esc(t('sesSignUp')) + '</button></div>' : '<div style="margin-top:8px"><button class="btn primary small" data-ses-in="' + x.id + '">' + esc(t('sesSignUp')) + '</button></div>') : '';
+      var join = !me && !full ? (fit ? '<div class="no-print" style="margin-top:8px"><a class="chip-btn small" style="display:inline-block;text-decoration:none" href="' + FIT_WAIVER_URL + '" target="_blank" rel="noopener">' + esc(t('fitWaiverOpen')) + '</a><label style="display:flex;gap:10px;align-items:flex-start;min-height:44px;margin-top:6px"><input type="checkbox" data-waiver="' + x.id + '" style="width:22px;height:22px;flex:none;margin-top:2px"> <span class="hint">' + esc(t('fitWaiverConfirm')) + '</span></label><button class="btn primary small" data-ses-in="' + x.id + '" disabled>' + esc(payLbl) + '</button></div>' : '<div style="margin-top:8px"><button class="btn primary small" data-ses-in="' + x.id + '">' + esc(payLbl) + '</button></div>') : '';
       return '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div style="flex:1"><b>' + esc(t('sesKind.' + x.kind)) + ': ' + esc(x.title) + '</b><br><span class="hint">' + sessionLine(x) + (state ? '. ' + esc(state) : '') + '</span>' + (x.notes ? '<br><span class="hint">' + esc(x.notes) + '</span>' : '') +
         (fit ? '<br><span class="hint">' + esc(stdLine(x)) + '</span><br><a href="fitness.html" class="chip-btn small" style="display:inline-block;margin-top:6px;text-decoration:none">' + esc(t('fitOpen')) + '</a>' : '') + join + '</div>' +
         (me && ['signed', 'waitlist'].indexOf(me.status) >= 0 ? '<button class="btn outline small" data-ses-out="' + me.id + '">' + esc(t('sesWithdraw')) + '</button>' : '') + '</div>';
@@ -609,6 +632,7 @@
     root.querySelectorAll('[data-waiver]').forEach(function (c) { c.onchange = function () { var b = root.querySelector('[data-ses-in="' + c.getAttribute('data-waiver') + '"]'); if (b) b.disabled = !c.checked; }; });
     root.querySelectorAll('[data-ses-in]').forEach(function (b) { b.onclick = async function () {
       b.disabled = true; var sid = parseInt(b.getAttribute('data-ses-in'), 10), x = SES.list.filter(function (y) { return y.id === sid; })[0];
+      if (x && x.fee_cents > 0) { var paid = await payStart({ kind: 'session', id: sid, waiver: x.kind === 'fitness' }, 'sesMsg'); if (!paid) b.disabled = false; return; }
       var n = SES.counts[String(sid)] || 0, status = x && x.capacity && n >= x.capacity ? 'waitlist' : 'signed';
       var row = { org_id: S.me.org_id, session_id: sid, person_id: S.me.person_id, name: S.me.first_name + ' ' + S.me.last_name, status: status };
       if (x && x.kind === 'fitness') row.waiver_at = new Date().toISOString();
@@ -682,6 +706,29 @@
   }
 
   // ── Setup side: list, create, roster and results.
+  // Fees: evaluation purposes org-wide; session fees sit on each session.
+  function feesSetupHtml() {
+    var evp = ['maintenance', 'upgrade_regional', 'upgrade_national'];
+    var val = function (p) { var r = (SU.fees || []).filter(function (x) { return x.kind === 'evaluation' && x.purpose === p; })[0]; return r && r.active && r.amount_cents > 0 ? String(r.amount_cents % 100 === 0 ? r.amount_cents / 100 : (r.amount_cents / 100).toFixed(2)) : ''; };
+    var inp = function (id, v) { return '<input id="' + id + '" type="number" min="0" step="1" inputmode="decimal" value="' + esc(v) + '" placeholder="0" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">'; };
+    var rows = evp.map(function (p) { return '<div class="grid2" style="align-items:center"><label class="hint" for="fee_' + p + '">' + esc(t('evalPurpose.' + p)) + '</label>' + inp('fee_' + p, val(p)) + '</div>'; }).join('');
+    var payRow = function (p) { return '<div class="rowline"><div><b>' + esc(p.name || '') + '</b><br><span class="hint">' + esc(p.kind === 'evaluation' ? t('evalPurpose.' + p.purpose) : t('paySession')) + ', ' + esc(dayShort(String(p.created_at).slice(0, 10))) + '</span></div><span class="pill' + (p.status === 'paid' ? ' ok' : p.status === 'refunded' || p.status === 'expired' ? ' bad' : '') + '">' + money(p.amount_cents) + ' · ' + esc(t('payStatus.' + p.status)) + '</span></div>'; };
+    var nSet = (SU.fees || []).filter(function (f) { return f.active && f.amount_cents > 0; }).length;
+    return fold('fees', t('feesTitle'), nSet || '', '<div class="hint">' + esc(t('feesHint')) + '</div>' + rows +
+      '<div class="actions" style="padding:8px 0 0"><button class="btn primary small" id="feesSave">' + esc(t('feesSave')) + '</button></div><div class="msg" id="feesMsg" hidden></div>' +
+      ((SU.pays || []).length ? '<b style="display:block;padding-top:10px">' + esc(t('paysTitle')) + '</b>' + SU.pays.map(payRow).join('') : ''), false);
+  }
+  function wireFees(root) {
+    var b = $('feesSave'); if (!b) return;
+    b.onclick = async function () {
+      b.disabled = true;
+      var rows = ['maintenance', 'upgrade_regional', 'upgrade_national'].map(function (p) { var v = parseFloat($('fee_' + p).value || '0'), c = isNaN(v) ? 0 : Math.round(v * 100); return { org_id: S.me.org_id, kind: 'evaluation', purpose: p, amount_cents: c, active: c > 0, updated_at: new Date().toISOString() }; });
+      var r = await sb.from('fees').upsert(rows, { onConflict: 'org_id,kind,purpose' });
+      b.disabled = false;
+      if (r.error) { say('feesMsg', r.error.message, 'bad'); return; }
+      SU.fees = rows; FEES.loaded = false; FEES.eval = {}; say('feesMsg', t('feesSaved'), 'ok');
+    };
+  }
   function sessionsSetupHtml() {
     if (SES.open) {
       var x = sessionById(SES.open);
@@ -703,6 +750,7 @@
       '<div class="grid2"><div><label class="hint" for="sesStart">' + esc(t('sesStart')) + '</label>' + inp('sesStart', f.start_time, 'time') + '</div><div><label class="hint" for="sesEnd">' + esc(t('sesEnd')) + '</label>' + inp('sesEnd', f.end_time, 'time') + '</div></div>' +
       '<label class="hint" for="sesVenue">' + esc(t('eodVenue')) + '</label>' + inp('sesVenue', f.venue) +
       '<label class="hint" for="sesAddr">' + esc(t('sesAddress')) + '</label>' + inp('sesAddr', f.address) +
+      '<label class="hint" for="sesFee">' + esc(t('sesFee')) + '</label>' + inp('sesFee', f.fee, 'number', 'min="0" step="1" inputmode="decimal"') +
       '<label class="hint" for="sesOpen">' + esc(t('sesOpenTo')) + '</label><select id="sesOpen" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' + ['all', 'regional', 'invite'].map(function (k) { return '<option value="' + k + '"' + (f.open_to === k ? ' selected' : '') + '>' + esc(t('sesOpen.' + k)) + '</option>'; }).join('') + '</select>' +
       '<label class="hint" for="sesNotes">' + esc(t('sesNotes')) + '</label><textarea id="sesNotes" style="min-height:70px">' + esc(f.notes || '') + '</textarea>' +
       '<label style="display:flex;gap:10px;align-items:center;min-height:44px"><input type="checkbox" id="sesBul"' + (f.bulletin ? ' checked' : '') + ' style="width:22px;height:22px"> ' + esc(t('sesBulletin')) + '</label>' +
@@ -717,15 +765,15 @@
     busy(false); SES.roster = r.data || []; renderSetup();
   }
   function wireSessionsSetup(root) {
-    var nb = $('sesNew'); if (nb) nb.onclick = function () { SES.form = { kind: 'fitness', standard: 'national', bulletin: true, title: '', date: todayStr(), capacity: '', start_time: '', end_time: '', venue: '', address: '', open_to: 'all', notes: '' }; renderSetup(); };
+    var nb = $('sesNew'); if (nb) nb.onclick = function () { SES.form = { kind: 'fitness', standard: 'national', bulletin: true, title: '', date: todayStr(), capacity: '', start_time: '', end_time: '', venue: '', address: '', open_to: 'all', notes: '', fee: '' }; renderSetup(); };
     var cf = $('sesCancelForm'); if (cf) cf.onclick = function () { SES.form = null; renderSetup(); };
     root.querySelectorAll('[data-ses-kind]').forEach(function (b) { b.onclick = function () { SES.form.kind = b.getAttribute('data-ses-kind'); SES.form.title = $('sesTitle').value; renderSetup(); }; });
     root.querySelectorAll('[data-ses-std]').forEach(function (b) { b.onclick = function () { SES.form.standard = b.getAttribute('data-ses-std'); SES.form.title = $('sesTitle').value; renderSetup(); }; });
     var sv = $('sesSave'); if (sv) sv.onclick = async function () {
-      var f = SES.form; f.title = $('sesTitle').value.trim(); f.date = $('sesDate').value; f.capacity = $('sesCap').value ? parseInt($('sesCap').value, 10) : null; f.start_time = $('sesStart').value || null; f.end_time = $('sesEnd').value || null; f.venue = $('sesVenue').value.trim(); f.address = $('sesAddr').value.trim(); f.open_to = $('sesOpen').value; f.notes = $('sesNotes').value.trim(); f.bulletin = $('sesBul').checked;
+      var f = SES.form; f.title = $('sesTitle').value.trim(); f.date = $('sesDate').value; f.capacity = $('sesCap').value ? parseInt($('sesCap').value, 10) : null; f.start_time = $('sesStart').value || null; f.end_time = $('sesEnd').value || null; f.venue = $('sesVenue').value.trim(); f.address = $('sesAddr').value.trim(); f.open_to = $('sesOpen').value; f.notes = $('sesNotes').value.trim(); f.bulletin = $('sesBul').checked; f.fee = $('sesFee').value;
       if (!f.title || !f.date) { say('sesFormMsg', t('sesNeedTitleDate'), 'bad'); return; }
       sv.disabled = true;
-      var r = await sb.from('sessions').insert({ org_id: S.me.org_id, kind: f.kind, title: f.title, date: f.date, start_time: f.start_time, end_time: f.end_time, venue: f.venue, address: f.address, capacity: f.capacity, open_to: f.open_to, notes: f.notes, standard: f.kind === 'fitness' ? f.standard : null, created_by: S.me.first_name + ' ' + S.me.last_name });
+      var r = await sb.from('sessions').insert({ org_id: S.me.org_id, kind: f.kind, title: f.title, date: f.date, start_time: f.start_time, end_time: f.end_time, venue: f.venue, address: f.address, capacity: f.capacity, open_to: f.open_to, notes: f.notes, standard: f.kind === 'fitness' ? f.standard : null, fee_cents: f.fee && parseFloat(f.fee) > 0 ? Math.round(parseFloat(f.fee) * 100) : null, created_by: S.me.first_name + ' ' + S.me.last_name });
       if (r.error) { sv.disabled = false; say('sesFormMsg', r.error.message, 'bad'); return; }
       // A bulletin so referees hear about it on Your day without anyone sending an email.
       if (f.bulletin) { try { await post({ action: 'postAnnouncement', title: t('sesKind.' + f.kind) + ': ' + f.title, bodyText: t('sesBulletinBody').replace('{when}', sessionLine(f).replace(/&#39;/g, "'").replace(/&amp;/g, '&')) + (f.kind === 'fitness' ? ' ' + stdLine(f) + '. ' + t('fitWaiverBulletin') : ''), startDate: todayStr(), endDate: f.date, severity: 'info', postedBy: S.me.first_name + ' ' + S.me.last_name }); } catch (e) {} }
@@ -1909,6 +1957,7 @@
     SU.events = e.data || [];
     VEN.rows = null; await loadVenues_();
     try { var su = await Promise.all([sb.from('sync_units').select('key,site_id,from_date,to_date,synced_at,games,pruned,ms,error').order('from_date'), sb.from('assignr_sites').select('site_id,name,active')]); SU.sync = su[0].data || []; SU.sites2 = su[1].data || []; } catch (e) { SU.sync = []; SU.sites2 = []; }
+    try { var fz = await Promise.all([sb.from('fees').select('id,kind,purpose,amount_cents,active'), sb.from('payments').select('id,name,kind,purpose,amount_cents,status,created_at').order('created_at', { ascending: false }).limit(30)]); SU.fees = fz[0].data || []; SU.pays = fz[1].data || []; } catch (e) { SU.fees = []; SU.pays = []; }
     var from = shiftDate(todayStr(), -60), to = shiftDate(todayStr(), 60);
     var g = await fetchAll(function () { return sb.from('games').select('venue,site_id,competition').gte('date', from).lte('date', to).order('venue'); });
     var vs = {}, ss = {}, ls = {};
@@ -1948,10 +1997,10 @@
       if (VE.open != null) { $('setupBody').innerHTML = venueEditorHtml(); wireVenueEditor($('setupBody')); return; }
       var tdy = todayStr(), evDone = SU.events.filter(function (e) { return (e.end_date || e.start_date || '') < tdy; }), evOff = SU.events.filter(function (e) { return evDone.indexOf(e) < 0 && !e.active; }), evLive = SU.events.filter(function (e) { return evDone.indexOf(e) < 0 && e.active; }).sort(function (a, b) { return String(a.start_date || '').localeCompare(String(b.start_date || '')); });
       var evPick = '<div class="pad" style="padding-top:10px"><select id="evJump" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><option value="">' + esc(t('evJump')) + '</option>' + [[t('evCurrent'), evLive], [t('evOffTitle'), evOff], [t('evCompleted'), evDone]].map(function (grp) { return grp[1].length ? '<optgroup label="' + esc(grp[0]) + '">' + grp[1].map(function (e) { return '<option value="' + esc(e.id) + '">' + esc(e.name || e.id) + '</option>'; }).join('') + '</optgroup>' : ''; }).join('') + '</select></div>';
-      $('setupBody').innerHTML = rulesCard + sessionsSetupHtml() + '<div class="disp h2">' + esc(t('setupEventsTitle')) + '</div><div class="pad" style="padding-top:12px"><button class="btn primary" id="evNew" style="width:100%">' + esc(t('newEvent')) + '</button></div>' + evPick + '<div class="list">' + evLive.map(evItem).join('') + '</div>' +
+      $('setupBody').innerHTML = rulesCard + feesSetupHtml() + sessionsSetupHtml() + '<div class="disp h2">' + esc(t('setupEventsTitle')) + '</div><div class="pad" style="padding-top:12px"><button class="btn primary" id="evNew" style="width:100%">' + esc(t('newEvent')) + '</button></div>' + evPick + '<div class="list">' + evLive.map(evItem).join('') + '</div>' +
         (evOff.length ? fold('evoff', t('evOffTitle'), evOff.length, '<div class="list">' + evOff.map(evItem).join('') + '</div>', false) : '') +
         (evDone.length ? fold('evdone', t('evCompleted'), evDone.length, '<div class="list">' + evDone.map(evItem).join('') + '</div>', false) : '') + venuesSetupHtml() + syncSetupHtml();
-      wireSessionsSetup($('setupBody')); wireVenuesSetup($('setupBody'));
+      wireSessionsSetup($('setupBody')); wireVenuesSetup($('setupBody')); wireFees($('setupBody'));
       $('evNew').onclick = function () { SU.ev = blankEvent(); SU.check = null; renderSetup(); };
       $('evJump').onchange = function () { var src = SU.events.filter(function (x) { return x.id === $('evJump').value; })[0]; if (!src) return; SU.ev = JSON.parse(JSON.stringify(src)); SU.ev.venues = SU.ev.venues || []; SU.ev.tools = SU.ev.tools || []; SU.ev.alert_emails = SU.ev.alert_emails || []; SU.check = null; renderSetup(); };
       $('setupBody').querySelectorAll('[data-ev]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); var src = SU.events.filter(function (x) { return x.id === a.getAttribute('data-ev'); })[0]; SU.ev = JSON.parse(JSON.stringify(src)); SU.ev.venues = SU.ev.venues || []; SU.ev.tools = SU.ev.tools || []; SU.ev.alert_emails = SU.ev.alert_emails || []; SU.check = null; renderSetup(); }; });
@@ -2654,19 +2703,21 @@
     var req = (ER.mine || []).filter(function (r) { return String(r.game_id) === String(g.game_id); })[0];
     if (req) return '<div class="pad" style="padding-top:10px"><span class="pill ok">' + esc(t('evalReqShort')) + ': ' + esc(t('evalPurpose.' + req.purpose)) + ', ' + esc(t('evalStatus.' + req.status)) + '</span></div>';
     if (!ER.open) return '<div class="pad" style="padding-top:10px"><button class="chip-btn small" id="evalReqOpen">' + esc(t('evalReqShort')) + '</button></div>';
-    return '<div class="pad" style="padding-top:10px"><div class="hint" style="padding-bottom:6px">' + esc(t('evalReqWhy')) + '</div><div class="chips">' + ['maintenance', 'upgrade_regional', 'upgrade_national'].map(function (p) { return '<button class="chip-btn small" data-purpose="' + p + '">' + esc(t('evalPurpose.' + p)) + '</button>'; }).join('') + '<button class="chip-btn small" id="evalReqCancel">' + esc(t('neverMind')) + '</button></div><div class="msg" id="evalReqMsg" hidden></div></div>';
+    return '<div class="pad" style="padding-top:10px"><div class="hint" style="padding-bottom:6px">' + esc(t('evalReqWhy')) + '</div><div class="chips">' + ['maintenance', 'upgrade_regional', 'upgrade_national'].map(function (p) { return '<button class="chip-btn small" data-purpose="' + p + '">' + esc(t('evalPurpose.' + p) + (FEES.eval[p] ? ' · ' + money(FEES.eval[p]) : '')) + '</button>'; }).join('') + '<button class="chip-btn small" id="evalReqCancel">' + esc(t('neverMind')) + '</button></div><div class="msg" id="evalReqMsg" hidden></div></div>';
   }
   function wireEvalRequest(g) {
     var o = $('evalReqOpen'); if (o) o.onclick = function () { ER.open = true; renderGame(g.game_id); };
     var c = $('evalReqCancel'); if (c) c.onclick = function () { ER.open = false; renderGame(g.game_id); };
     $('gameBody').querySelectorAll('[data-purpose]').forEach(function (b) { b.onclick = async function () {
-      b.disabled = true; b.textContent = t('sending');
-      var r = await sb.from('eval_requests').insert({ org_id: S.me.org_id, ref_person_id: S.me.person_id, ref_name: myNameOn(g), purpose: b.getAttribute('data-purpose'), game_id: g.game_id, game_date: g.date, venue: g.venue });
-      if (r.error) { b.disabled = false; b.textContent = t('evalPurpose.' + b.getAttribute('data-purpose')); say('evalReqMsg', r.error.message, 'bad'); return; }
+      b.disabled = true; var pp = b.getAttribute('data-purpose'); b.textContent = t('sending');
+      if (FEES.eval[pp]) { var paid = await payStart({ kind: 'evaluation', purpose: pp, game_id: g.game_id, ref_name: myNameOn(g) }, 'evalReqMsg'); if (!paid) { b.disabled = false; b.textContent = t('evalPurpose.' + pp); } return; }
+      var r = await sb.from('eval_requests').insert({ org_id: S.me.org_id, ref_person_id: S.me.person_id, ref_name: myNameOn(g), purpose: pp, game_id: g.game_id, game_date: g.date, venue: g.venue });
+      if (r.error) { b.disabled = false; b.textContent = t('evalPurpose.' + pp); say('evalReqMsg', r.error.message, 'bad'); return; }
       ER.open = false; await loadEvalRequests(); renderGame(g.game_id);
     }; });
   }
   async function loadEvalRequests() {
+    await loadFees_();
     var r = await sb.from('eval_requests').select('id,game_id,game_date,venue,purpose,status,coach_person_id,ref_name,ref_person_id,note,created_at').order('game_date');
     ER.mine = r.data || [];
   }
@@ -2914,6 +2965,15 @@
   (function boot() {
     try { S.lang = localStorage.getItem('hub-lang') || 'en'; } catch (e) {}
     try { var th = localStorage.getItem('hub-theme'); if (th) setTheme(th); } catch (e) {}
+    // Back from Stripe Checkout: say so once, then clean the address bar.
+    try {
+      var sp = new URLSearchParams(location.search), pv = sp.get('pay');
+      if (pv) {
+        history.replaceState(null, '', location.pathname + location.hash);
+        var pt = document.createElement('div'); pt.className = 'paytoast'; pt.textContent = t(pv === 'ok' ? 'payOkMsg' : 'payCancelMsg');
+        document.body.appendChild(pt); setTimeout(function () { pt.classList.add('gone'); }, 8000);
+      }
+    } catch (e) {}
     ['themeBtn0', 'themeBtn1', 'themeBtn2'].forEach(function (id) { $(id).onclick = toggleTheme; });
     ['langBtn0', 'langBtn1'].forEach(function (id) { $(id).onclick = function () { setLang(S.lang === 'es' ? 'en' : 'es'); }; });
     $('markSignin').src = C.marks.csa; $('markDay').src = C.marks.csa;

@@ -405,3 +405,7 @@ details.fold > .fold-body > .list { padding-top: 8px; }
 .avday.none { border-color: transparent; background: transparent; min-height: 62px; }
 .avday.none .n { color: var(--muted); opacity: .6; }
 .avh.off { visibility: hidden; min-height: 30px; }
+
+/* Back-from-checkout toast (2026.10.21-g) */
+.paytoast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 24px; z-index: 300; background: var(--surface); color: var(--ink); border: 1.5px solid var(--gold); border-radius: 12px; padding: 12px 18px; font-weight: 700; box-shadow: 0 10px 30px rgba(0, 0, 0, .35); transition: opacity .5s; max-width: min(90vw, 480px); text-align: center; }
+.paytoast.gone { opacity: 0; pointer-events: none; }
