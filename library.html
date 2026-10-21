@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- library.html v2026.10.20-j · 2026-10-14 · Colorado Referees Library -->
+<!-- library.html v2026.10.20-k · 2026-10-20 · Colorado Referees Library -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -378,7 +378,7 @@ a{color:inherit;text-decoration:none;}
 
   <div class="section-header" data-section="guide">
     <div class="section-dot" style="background:var(--c-guide)"></div>
-    <div class="section-title" data-l="sec_guide">CSA Guide to Referees 2025/26</div>
+    <div class="section-title" data-l="sec_guide">CSA Guide to Referees 2026/27</div>
   </div>
   <div class="modules-grid" id="grid-guide"></div>
 
@@ -427,7 +427,7 @@ a{color:inherit;text-decoration:none;}
       <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program">
     </div>
     <div class="footer-text">
-      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.10.20-j<br>
+      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.10.20-k<br>
       <a href="https://coloradosoccer.org" class="footer-link">ColoradoSoccer.org</a> &middot;
       <span data-l="questions">Questions:</span> <a href="mailto:refeducation@coloradoreferees.com" class="footer-link">refeducation@coloradoreferees.com</a> &middot; 303.888.6863
     </div>
@@ -482,11 +482,11 @@ try { LANG = localStorage.getItem('hub-lang') === 'es' ? 'es' : 'en'; } catch (e
 var UI = {
   en: { back: '&#8249; Your day', title: 'Library', sub: 'Colorado Referees &middot; the Laws, the guide, game day', offline: '&#9679; Works offline', langSwitch: 'Español', search: 'Search the Library',
         pill_all: 'All Modules', pill_hub: '&#128241; Using the Hub', pill_guide: '&#128218; CSA Guide', pill_laws: '&#9878; Laws', pill_gameday: '&#9917; Game Day', pill_career: '&#128197; Career', pill_policy: '&#128737; Policy', pill_contacts: '&#128222; Contacts',
-        noResults: 'No modules found. Try a different search or filter.', sec_hub: 'Using the Hub', sec_guide: 'CSA Guide to Referees 2025/26', sec_laws: '17 Laws of the Game 2026/27', sec_gameday: 'Game Day Procedures', sec_career: 'Career Resources', sec_policy: 'Policies &amp; Safety', sec_contacts: 'CSA Contacts',
+        noResults: 'No modules found. Try a different search or filter.', sec_hub: 'Using the Hub', sec_guide: 'CSA Guide to Referees 2026/27', sec_laws: '17 Laws of the Game 2026/27', sec_gameday: 'Game Day Procedures', sec_career: 'Career Resources', sec_policy: 'Policies &amp; Safety', sec_contacts: 'CSA Contacts',
         foot1: 'Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition', questions: 'Questions:' },
   es: { back: '&#8249; Tu día', title: 'Biblioteca', sub: 'Árbitros de Colorado &middot; las Reglas, la guía, el día del partido', offline: '&#9679; Funciona sin señal', langSwitch: 'English', search: 'Buscar en la Biblioteca',
         pill_all: 'Todos los módulos', pill_hub: '&#128241; Cómo usar el Hub', pill_guide: '&#128218; Guía CSA', pill_laws: '&#9878; Reglas', pill_gameday: '&#9917; Día del partido', pill_career: '&#128197; Carrera', pill_policy: '&#128737; Políticas', pill_contacts: '&#128222; Contactos',
-        noResults: 'No hay módulos con ese nombre. Prueba otra búsqueda u otro filtro.', sec_hub: 'Cómo usar el Hub', sec_guide: 'Guía CSA para árbitros 2025/26', sec_laws: '17 Reglas de Juego 2026/27', sec_gameday: 'Procedimientos del día del partido', sec_career: 'Recursos de carrera', sec_policy: 'Políticas y seguridad', sec_contacts: 'Contactos de CSA',
+        noResults: 'No hay módulos con ese nombre. Prueba otra búsqueda u otro filtro.', sec_hub: 'Cómo usar el Hub', sec_guide: 'Guía CSA para árbitros 2026/27', sec_laws: '17 Reglas de Juego 2026/27', sec_gameday: 'Procedimientos del día del partido', sec_career: 'Recursos de carrera', sec_policy: 'Políticas y seguridad', sec_contacts: 'Contactos de CSA',
         foot1: 'Biblioteca de Árbitros de Colorado &middot; Colorado Soccer Association &middot; edición 2026/27', questions: 'Preguntas:' }
 };
 function applyLang() {
@@ -662,7 +662,7 @@ var MODULES = [
     iconBg:"rgba(245,200,66,.12)",
     title:"CSA Guide: Introduction & Overview",
     sub:"Welcome, executive summary & highlights",
-    eyebrow:"CSA Guide 2025/26",
+    eyebrow:"CSA Guide 2026/27",
     keywords:"introduction welcome grassroots license colorado",
     build: function() {
       return ds("Welcome",
@@ -676,7 +676,56 @@ var MODULES = [
         chk("<strong>Know the RAP policy.</strong> U.S. Soccer Policy 531-9 is in effect across all sanctioned matches in Colorado. Know your rights and how to report.")) +
       ds("About C.R.E.S.T.",
         dt("If you completed your license through the C.R.E.S.T. Academy at Renaissance Secondary School or a partner school, welcome: you are part of something special.") +
-        dt("C.R.E.S.T. is Colorado Soccer Association's in-school referee development program. Your free digital reference tool: the <strong>C.R.E.S.T. Referee Resources app</strong>: is available at ColoradoSoccer.org and works offline on any device."));
+        dt("C.R.E.S.T. is Colorado Soccer Association's in-school referee development program. Your reference is this Library, inside the Colorado Referees Hub, in English and Spanish, and it works offline on any device."));
+    }
+  },
+  {
+    id:"guide-lc", cat:"guide", icon:"&#127891;",
+    iconBg:"rgba(245,200,66,.12)",
+    title:"Learning Center: Signing Up",
+    sub:"First-time referees: account, the Colorado course, every assignment, the field day",
+    eyebrow:"CSA Guide: New Referees",
+    keywords:"learning center sign up register account first time referee certification course grassroots modules assignments safesport background check field session",
+    build: function() {
+      return ds("1. Create the account",
+        stp(1, "Go to <strong>learning.ussoccer.com</strong>. Create Account.") +
+        stp(2, "Use a <strong>personal email</strong> you will keep, not a school email. The same email is used for Assignr and the Hub.") +
+        stp(3, "Date of birth matters: the minimum age is 13. Under 18, add a parent or guardian email when asked.") +
+        stp(4, "Confirm the email (check the inbox, then spam), sign in.")) +
+      ds("2. Enroll in the Colorado course",
+        stp(1, "Courses, then search <strong>2027 First Time Referee Certification Course</strong>. It is a blended course: online modules plus one in-person field session.") +
+        stp(2, "Choose the <strong>Colorado New Referee Grassroots Training</strong> package. Fee $100: $20 US Soccer annual registration, $30 Colorado annual registration, $50 training course fee. C.R.E.S.T. Academy students: ask the Lead Instructor before paying.") +
+        stp(3, "Pick the in-person session. Academy students pick the date the Lead Instructor gives you; the Academy field day with the Colorado referee instructor is your field session.") +
+        callout("230,57,70","&#9888;","If you were registered as a referee in 2023, 2024 or 2025, this is the wrong course. This one is for new referees and anyone lapsed more than three registration years.")) +
+      ds("3. Finish every assignment (green check on each)",
+        dt("Courses, My Courses, Resume, then the <strong>Assignments</strong> tab. Use a laptop or desktop with Chrome; phones, iPads and Chromebooks are not recommended.") +
+        dt("<strong>Compliance</strong> (kept current every year):") +
+        chk("Introduction to Safe and Healthy Playing Environments, everyone, about 1 hour") +
+        chk("SafeSport Training, 18 and over only, about 1 hour, renewed every year") +
+        chk("Background Screening, 18 and over only, $31.21") +
+        dt("<strong>The course, in order</strong> (about 4.5 hours in all):") +
+        chk("Module 1, How to Use this Course") +
+        chk("Module 2, Welcome to the Whistle") +
+        chk("Module 3, Introduction to the Laws of the Game") +
+        chk("Module 4, Recognizing Fouls") +
+        chk("Module 5, Offside Foundations") +
+        chk("Module 6, Positioning and Game Awareness") +
+        chk("Module 7, Teamwork and Communication") +
+        chk("Module 8, Managing Your First Games") +
+        chk("Module 9, First Games and Next Steps") +
+        chk("Module 10, First Time Assessment (the quiz, about 45 minutes)") +
+        chk("Module 11, Course Complete") +
+        chk("2027 Laws of the Game Update, about 20 minutes") +
+        chk("In-person, on-field training session")) +
+      ds("4. The field day",
+        bul("All online modules must be done at least 24 hours before the session, or you will not be allowed on the field that day.") +
+        bul("Bring a whistle, a wristwatch, something to write on and with, water and a snack. Clothes you can run in. No uniform needed.") +
+        bul("Scrimmages, drills and games. You will referee, so be ready to move.")) +
+      ds("5. After the course",
+        bul("Your license is valid for sanctioned games through December 31 of the registration year, once every assignment shows complete.") +
+        bul("An <strong>Assignr invite</strong> arrives by email automatically. Do not create an Assignr account on your own; use the invite. Then sign in to this Hub.") +
+        bul("Uniform: Colorado offers new referees a discounted kit (7-piece, or 8-piece with two shirts; flag optional). The Lead Instructor has the order link and password.")) +
+      callout("100,180,255","&#9993;","Questions about the course: <strong>RefEducation@ColoradoReferees.com</strong>. Questions about the Academy: your Lead Instructor.");
     }
   },
   {
@@ -803,7 +852,7 @@ var MODULES = [
         chk("<strong>No double booking.</strong> Provide availability to one assignor per time block.")) +
       ds("Game Assignment Guidelines",
         dt("Assignors schedule referees based on experience, ability, and what is best for the game. Newly certified referees need to <strong>work as center referee first</strong> before progressing to higher levels.") +
-        dt("A standard guideline: the referee will be at least two years older than the age group being officiated.") +
+        dt("<strong>Who may work what:</strong> the center referee is at least two years older than the players. Assistant referees may be the same age as the players. A 13-year-old can center 7v7 and lower-level 9v9 and run the line on 9v9. New referees: center on 7v7, center or AR on 9v9, before AR on 11v11. No three-person crews on 7v7; 9v9 is a center plus two ARs (solo on recreational FRL, MRL and SML). Club linespersons are allowed above U11 for ball in and out only. The dual system is not allowed.") +
         dt("Communicate your goals. Tell your assignor your comfort level and where you want to go in your referee career."));
     }
   },
@@ -881,9 +930,10 @@ var MODULES = [
         dt("Log into Assignr.com. Navigate to the Pay section. Set up <strong>Electronic Fund Transfer (EFT/ACH)</strong>: this is free and deposits directly to your bank account. You can also connect Venmo through Assignr.com.") +
         dt("Referees of any age can set up Assignr Pay: a personal checking account is not required.") +
         callout("200,146,26","&#128181;","<strong>EFT/ACH is strongly recommended.</strong> Paper checks have a processing fee and payment will be delayed.")) +
+      ds("CSA league rates per game, fall 2026 to spring 2027",bul("<strong>U9-U10:</strong> center $26.73 (solo $36.73), AR $16.45") +bul("<strong>U11-U12:</strong> center $37.00, AR $26.73") +bul("<strong>U13-U14:</strong> center $51.40, AR $41.12") +bul("<strong>U15-U16:</strong> center $79.16, AR $63.74") +bul("<strong>U17-U19:</strong> center $100.23, AR $79.16") +dt("Cups add a premium per game: $40 international, $30 national, $20 regional. Tournaments and other leagues set their own rates; check the event rules.")) +
       ds("Pay Timeline",
-        bul("Games are typically submitted to the paying league on a bi-weekly cycle") +
-        bul("Allow 3-5 business days after processing for funds to appear") +
+        bul("Assignors confirm reports and fix assignments by Monday night; CSA runs payroll on Tuesday; clubs are invoiced Wednesday to Thursday") +
+        bul("You are paid 3 or more business days after the club funds the games") +
         callout("100,180,255","&#128273;","<strong>Tax reminder:</strong> As an IC, taxes are NOT withheld from your pay. You are responsible for reporting all earnings. Keep records of all payments."));
     }
   },
@@ -896,7 +946,7 @@ var MODULES = [
     keywords:"no-show policy scheduling expectations arrive early check in game day",
     build: function() {
       return ds("Game Day Expectations",
-        bul("Arrive at least <strong>30 minutes before your first game</strong> (45-60 minutes preferred)") +
+        bul("Arrive at least <strong>30 minutes before a league game and 45 minutes before a tournament game</strong> (45-60 minutes preferred)") +
         bul("All teams must check in with the referees prior to kickoff") +
         bul("Start the game on time") +
         bul("Submit game scores and reports within 24 hours")) +
@@ -906,7 +956,10 @@ var MODULES = [
       ds("Assignment Deadlines",
         bul("Requested changes to weekend assignments: by <strong>Tuesday at 9:00 PM</strong>") +
         bul("No cancellations after <strong>Wednesday at 5:00 PM</strong>: after this deadline, you find your own replacement") +
-        bul("Within <strong>72 hours of kickoff</strong>, you own the game"));
+        bul("Accept or decline every assignment within <strong>24 hours</strong>") +
+        bul("Within <strong>72 hours of kickoff</strong>, you own the game: no turn-backs except a real emergency, by phone or text to your assignor (CRC Policy 004)")) +
+      ds("Contact with referees under 18",
+        dt("CSA staff, assignors and Referee Coaches do not call or text referees under 18 between 8 pm and 7 am. Texts and emails to a referee under 18 go between 7 am and 10 pm and copy a parent or guardian (CRC Policy 009). Keep a parent email on your Assignr and Hub profile."));
     }
   },
   {
@@ -1346,14 +1399,64 @@ var MODULES = [
         stp(4,"Whistle and point to penalty mark") +
         stp(5,"Ball must move FORWARD: backward movement = not a valid kick, order retake")) +
       ds("Encroachment Rules",
-        dt("<strong>GK moves forward before kick, kick fails:</strong> Retake + caution GK. Goal scored: allow it.") +
-        dt("<strong>Attacking player encroaches:</strong> Retake regardless of outcome.") +
-        dt("<strong>Defending player encroaches, ball goes in:</strong> Goal stands. Ball does not go in: Retake.") +
-        dt("<strong>Both encroach:</strong> Retake.")) +
+        dt("<strong>GK off the line early, kick fails:</strong> retake only if the goalkeeper's movement clearly affected the kicker; warn the first time, caution on a repeat. Goal scored: allow it.") +
+        dt("<strong>Attacking player encroaches:</strong> goal = retake. No goal = indirect free kick to the defense, no retake.") +
+        dt("<strong>Defending player encroaches:</strong> goal = goal. No goal = retake.") +
+        dt("<strong>A defender and an attacker both encroach:</strong> retake. Only penalize encroachment that affects the kick.") +
+        dt("<strong>New for 2026/27, accidental double touch</strong> (both feet, or the ball hits the standing leg): goal = retake, no goal = indirect free kick. In kicks from the mark: goal = retake, no goal = missed. The automatic caution when kicker and goalkeeper offend together is gone.")) +
       ds("Penalty Shootout",
         bul("Teams take alternating kicks. Note order and which players have kicked.") +
         bul("GK injured with no substitutes? Replacement must come from an outfield player on the field.") +
         bul("Ball rebounds to kicker after save? Kick is over: kicker may NOT play it again."));
+    }
+  },
+
+  {
+    id:"gd-ar", cat:"gameday", icon:"&#128681;",
+    iconBg:"rgba(46,204,113,.12)",
+    title:"AR Mechanics & Signals",
+    sub:"Where to stand, how to move, every flag signal, areas of involvement",
+    eyebrow:"Game Day",
+    keywords:"assistant referee AR mechanics flag signals offside positioning side step second last defender areas of involvement throw-in goal kick corner substitution",
+    build: function() {
+      return ds("Where you stand",
+        bul("<strong>Level with the second-last defender, or the ball if the ball is closer to the goal line.</strong> That line is your job. The second-last defender is usually the last outfield player; the goalkeeper is the last.") +
+        bul("Your half of the field: from the halfway line to your goal line, on the touchline. Both ARs cover the whole field between them.") +
+        bul("Never in your own half beyond the halfway line: the offside line is at least the halfway line.") +
+        bul("Goal kick: level with the edge of the penalty area until the ball is in play, then the second-last defender.") +
+        bul("Corner kick: behind the corner flag, in line with the goal line. Check the ball is inside the arc, then watch the goal line and the offside line.") +
+        bul("Penalty kick: at the junction of the goal line and the penalty area. Watch the goalkeeper's feet and whether the ball crosses the line.") +
+        bul("Kicks from the mark: one AR at the goal line and penalty area junction to judge the goalkeeper; the other at the center circle with the players.")) +
+      ds("How you move",
+        bul("<strong>Side-step</strong> for short distances so your eyes stay on the field. Sprint when the ball goes long; turn and run, then recover to the line.") +
+        bul("Hold the flag in the hand nearest the referee so the referee can see it; switch hands as play changes direction. Keep it unfurled and still when there is nothing to signal.") +
+        bul("<strong>Wait and see.</strong> On a tight offside, hold for a moment: if the ball goes to a player who was onside, or the goalkeeper saves, no flag. The flag goes up when the player in an offside position becomes involved.") +
+        bul("Eye contact with the referee at every stoppage. If the referee does not see your flag, keep it up until the referee looks or the defending team gains clear control.")) +
+      ds("The signals",
+        stp(1, "<strong>Offside:</strong> flag straight up, wait for the whistle, then point: flag low (45 degrees down) for the near side of the field, level for the middle, high for the far side.") +
+        stp(2, "<strong>Throw-in:</strong> flag at 45 degrees in the direction the team that gets the throw is attacking. Flag up first if the referee needs help with the call.") +
+        stp(3, "<strong>Goal kick:</strong> flag pointed at the goal area, straight out, arm level.") +
+        stp(4, "<strong>Corner kick:</strong> flag down at 45 degrees pointing at the corner arc.") +
+        stp(5, "<strong>Foul out of the referee's view:</strong> flag up and a small wave, then, when the referee whistles, flag at 45 degrees toward the goal the fouled team attacks. Hand across the chest for a penalty kick: flag up, then walk toward the corner flag.") +
+        stp(6, "<strong>Goal:</strong> no signal when it is clear; sprint toward the halfway line. Ball crossed the line but the referee could not see it: flag up, then run toward the halfway line. Ball did not cross: flag up, then point to the goal kick.") +
+        stp(7, "<strong>Substitution:</strong> flag held horizontally above the head with both hands at the next stoppage, after the fourth official or the substitute has told you.") +
+        stp(8, "<strong>Ball out of play over the goal line, then back in:</strong> flag up, then the restart signal. The referee needs to know it went out.")) +
+      ds("Your areas of involvement",
+        dt("US Soccer's list of what the AR is for. Everything else is the referee's call and you help only when asked.") +
+        chk("Offside: position and involvement") +
+        chk("Ball in and out of play, and which team gets the restart") +
+        chk("Fouls and misconduct out of the referee's view, or closer to you than to the referee") +
+        chk("Goal or no goal when the referee cannot see") +
+        chk("Goalkeeper movement at a penalty kick, and the kicker's double touch") +
+        chk("Substitutions and the players' equipment at the touchline") +
+        chk("Anything the referee asks you to watch in the pregame: the bench, a particular player, the far-side touchline")) +
+      ds("Pregame with the referee, two minutes",
+        bul("Who takes the attacking half for offside, and who has the technical area and the benches.") +
+        bul("Fouls: flag only what the referee cannot see, or what happens close to you. Agree the signal for a penalty kick.") +
+        bul("Goals: what you do when the ball crosses the line clearly, and when it is close.") +
+        bul("Eye contact at every restart. If the referee misses your flag, how long you hold it.") +
+        bul("Kicks from the mark: who goes where.")) +
+      callout("46,204,113","&#128161;","The best ARs are quiet. One flag at the right moment is worth more than ten flags that make the referee look. When in doubt, keep the flag down and the game flowing.");
     }
   },
 
@@ -1422,8 +1525,8 @@ var MODULES = [
         dt("<strong>Dwolla</strong> is a legitimate, regulated payment processor. Your banking info is stored by Dwolla, not by Assignr or CSA.") +
         dt("You can also connect <strong>Venmo</strong> through Assignr.com. Referees of any age can set up Assignr Pay: no personal checking account required.")) +
       ds("Pay Timeline",
-        bul("Games submitted to paying league on a bi-weekly cycle") +
-        bul("Allow 3-5 business days after processing for funds to appear") +
+        bul("CSA runs payroll on Tuesday; clubs are invoiced Wednesday to Thursday") +
+        bul("You are paid 3 or more business days after the club funds the games") +
         bul("Tournaments typically pay fastest: usually shortly after tournament ends") +
         callout("100,180,255","&#128273;","<strong>Tax reminder:</strong> As an IC, taxes are NOT withheld. Keep records of all earnings. Uniform and equipment are deductible business expenses."));
     }
@@ -1686,7 +1789,7 @@ var ES = {
   },
 
   "guide-intro": {
-    title: "Guía CSA: Introducción y resumen", sub: "Bienvenida, resumen ejecutivo y puntos clave", eyebrow: "Guía CSA 2025/26",
+    title: "Guía CSA: Introducción y resumen", sub: "Bienvenida, resumen ejecutivo y puntos clave", eyebrow: "Guía CSA 2026/27",
     keywords: "introducción bienvenida grassroots licencia colorado",
     build: function() {
       return ds("Bienvenida",
@@ -1700,7 +1803,55 @@ var ES = {
         chk("<strong>Conoce la política RAP.</strong> La Política 531-9 de U.S. Soccer está vigente en todos los partidos sancionados en Colorado. Conoce tus derechos y cómo reportar.")) +
       ds("Acerca de C.R.E.S.T.",
         dt("Si obtuviste tu licencia a través de la Academia C.R.E.S.T. en Renaissance Secondary School o en una escuela asociada, bienvenido: eres parte de algo especial.") +
-        dt("C.R.E.S.T. es el programa de desarrollo arbitral en las escuelas de Colorado Soccer Association. Tu herramienta de referencia digital gratuita: la <strong>app C.R.E.S.T. Referee Resources</strong>: está disponible en ColoradoSoccer.org y funciona sin conexión en cualquier dispositivo."));
+        dt("C.R.E.S.T. es el programa de desarrollo arbitral en las escuelas de Colorado Soccer Association. Tu referencia es esta Biblioteca, dentro del Colorado Referees Hub, en inglés y español, y funciona sin conexión en cualquier dispositivo."));
+    }
+  },
+
+  "guide-lc": {
+    title: "Learning Center: cómo inscribirse",
+    sub: "Árbitros nuevos: la cuenta, el curso de Colorado, cada tarea, el día de campo",
+    eyebrow: "Guía CSA: árbitros nuevos",
+    keywords: "learning center inscribirse registrarse cuenta árbitro nuevo primera vez certificación curso grassroots módulos tareas safesport antecedentes sesión de campo",
+    build: function() {
+      return ds("1. Crea la cuenta",
+        stp(1, "Entra a <strong>learning.ussoccer.com</strong>. Create Account.") +
+        stp(2, "Usa un <strong>correo personal</strong> que vayas a conservar, no el de la escuela. El mismo correo sirve para Assignr y para el Hub.") +
+        stp(3, "La fecha de nacimiento importa: la edad mínima es 13. Menores de 18: agrega el correo de un padre, madre o tutor cuando lo pida.") +
+        stp(4, "Confirma el correo (revisa la bandeja y el spam) e inicia sesión.")) +
+      ds("2. Inscríbete en el curso de Colorado",
+        stp(1, "Courses y busca <strong>2027 First Time Referee Certification Course</strong>. Es un curso mixto: módulos en línea más una sesión presencial en el campo.") +
+        stp(2, "Elige el paquete <strong>Colorado New Referee Grassroots Training</strong>. Cuota $100: $20 registro anual de US Soccer, $30 registro anual de Colorado, $50 cuota del curso. Estudiantes de la Academia C.R.E.S.T.: pregunten al instructor principal antes de pagar.") +
+        stp(3, "Elige la sesión presencial. Estudiantes de la Academia: la fecha que les dé el instructor principal; el día de campo de la Academia con el instructor de árbitros de Colorado es su sesión de campo.") +
+        callout("230,57,70","&#9888;","Si estuviste registrado como árbitro en 2023, 2024 o 2025, este no es tu curso. Este es para árbitros nuevos y para quien lleva más de tres años sin registrarse.")) +
+      ds("3. Completa cada tarea (palomita verde en cada una)",
+        dt("Courses, My Courses, Resume y luego la pestaña <strong>Assignments</strong>. Usa una laptop o computadora con Chrome; no se recomiendan teléfonos, iPads ni Chromebooks.") +
+        dt("<strong>Cumplimiento</strong> (se mantiene vigente cada año):") +
+        chk("Introduction to Safe and Healthy Playing Environments, todos, cerca de 1 hora") +
+        chk("SafeSport Training, solo 18 años o más, cerca de 1 hora, se renueva cada año") +
+        chk("Background Screening, solo 18 años o más, $31.21") +
+        dt("<strong>El curso, en orden</strong> (unas 4.5 horas en total):") +
+        chk("Módulo 1, How to Use this Course") +
+        chk("Módulo 2, Welcome to the Whistle") +
+        chk("Módulo 3, Introduction to the Laws of the Game") +
+        chk("Módulo 4, Recognizing Fouls") +
+        chk("Módulo 5, Offside Foundations") +
+        chk("Módulo 6, Positioning and Game Awareness") +
+        chk("Módulo 7, Teamwork and Communication") +
+        chk("Módulo 8, Managing Your First Games") +
+        chk("Módulo 9, First Games and Next Steps") +
+        chk("Módulo 10, First Time Assessment (el examen, unos 45 minutos)") +
+        chk("Módulo 11, Course Complete") +
+        chk("2027 Laws of the Game Update, unos 20 minutos") +
+        chk("Sesión presencial de entrenamiento en el campo")) +
+      ds("4. El día de campo",
+        bul("Todos los módulos en línea deben estar terminados al menos 24 horas antes de la sesión, o no podrás entrar al campo ese día.") +
+        bul("Trae silbato, reloj de pulsera, algo para escribir, agua y un refrigerio. Ropa para correr. No hace falta uniforme.") +
+        bul("Partidos cortos, ejercicios y juegos. Vas a arbitrar, así que ven listo para moverte.")) +
+      ds("5. Después del curso",
+        bul("Tu licencia sirve para partidos sancionados hasta el 31 de diciembre del año de registro, una vez que cada tarea aparezca completa.") +
+        bul("La <strong>invitación de Assignr</strong> llega por correo automáticamente. No crees una cuenta de Assignr por tu cuenta; usa la invitación. Luego inicia sesión en este Hub.") +
+        bul("Uniforme: Colorado ofrece a los árbitros nuevos un kit con descuento (7 piezas, u 8 con dos camisetas; bandera opcional). El instructor principal tiene el enlace y la contraseña para pedirlo.")) +
+      callout("100,180,255","&#9993;","Preguntas sobre el curso: <strong>RefEducation@ColoradoReferees.com</strong>. Preguntas sobre la Academia: tu instructor principal.");
     }
   },
 
@@ -1812,7 +1963,7 @@ var ES = {
         chk("<strong>No te comprometas dos veces.</strong> Da tu disponibilidad a un solo asignador por bloque de tiempo.")) +
       ds("Lineamientos para las asignaciones",
         dt("Los asignadores programan a los árbitros según la experiencia, la capacidad y lo que es mejor para el partido. Los árbitros recién certificados necesitan <strong>trabajar primero como árbitro central</strong> antes de avanzar a niveles más altos.") +
-        dt("Un lineamiento habitual: el árbitro tendrá al menos dos años más que la categoría de edad que dirige.") +
+        dt("<strong>Quién puede dirigir qué:</strong> el árbitro central tiene al menos dos años más que los jugadores. Los árbitros asistentes pueden tener la misma edad que los jugadores. Un árbitro de 13 años puede ser central en 7v7 y en 9v9 de nivel bajo, y asistente en 9v9. Árbitros nuevos: central en 7v7, central o asistente en 9v9, antes de ser asistente en 11v11. No hay ternas en 7v7; el 9v9 lleva central y dos asistentes (solo el central en FRL, MRL y SML recreativas). Se permiten jueces de línea de club arriba de U11 solo para balón dentro o fuera. El sistema dual no está permitido.") +
         dt("Comunica tus metas. Dile a tu asignador tu nivel de comodidad y hasta dónde quieres llegar en tu carrera arbitral."));
     }
   },
@@ -1881,9 +2032,10 @@ var ES = {
         dt("Inicia sesión en Assignr.com. Ve a la sección Pay. Configura la <strong>transferencia electrónica de fondos (EFT/ACH)</strong>: es gratis y se deposita directamente en tu cuenta bancaria. También puedes conectar Venmo a través de Assignr.com.") +
         dt("Los árbitros de cualquier edad pueden configurar Assignr Pay: no se requiere una cuenta de cheques personal.") +
         callout("200,146,26","&#128181;","<strong>Se recomienda mucho usar EFT/ACH.</strong> Los cheques en papel tienen una cuota de procesamiento y el pago se retrasa.")) +
+      ds("Tarifas de liga CSA por partido, otoño 2026 a primavera 2027",bul("<strong>U9-U10:</strong> central $26.73 (solo $36.73), AA $16.45") +bul("<strong>U11-U12:</strong> central $37.00, AA $26.73") +bul("<strong>U13-U14:</strong> central $51.40, AA $41.12") +bul("<strong>U15-U16:</strong> central $79.16, AA $63.74") +bul("<strong>U17-U19:</strong> central $100.23, AA $79.16") +dt("Las copas agregan un extra por partido: $40 internacional, $30 nacional, $20 regional. Los torneos y otras ligas fijan sus propias tarifas; revisa las reglas del evento.")) +
       ds("Plazos de pago",
-        bul("Normalmente los partidos se envían a la liga que paga en un ciclo quincenal") +
-        bul("Espera de 3-5 días hábiles después del procesamiento para que aparezcan los fondos") +
+        bul("Los asignadores confirman reportes y corrigen asignaciones el lunes por la noche; CSA corre la nómina el martes; a los clubes se les factura miércoles y jueves") +
+        bul("Te pagan 3 o más días hábiles después de que el club financia los partidos") +
         callout("100,180,255","&#128273;","<strong>Recordatorio fiscal:</strong> Como IC, NO se retienen impuestos de tu pago. Eres responsable de reportar todos tus ingresos. Guarda un registro de todos los pagos."));
     }
   },
@@ -1893,7 +2045,7 @@ var ES = {
     keywords: "inasistencia no presentarse política politica programación programacion expectativas llegar temprano registrarse día de partido",
     build: function() {
       return ds("Expectativas del día de partido",
-        bul("Llega al menos <strong>30 minutos antes de tu primer partido</strong> (de preferencia 45-60 minutos)") +
+        bul("Llega al menos <strong>30 minutos antes de un partido de liga y 45 minutos antes de un partido de torneo</strong> (de preferencia 45-60 minutos)") +
         bul("Todos los equipos deben registrarse con los árbitros antes del saque de salida") +
         bul("Inicia el partido a tiempo") +
         bul("Envía los marcadores y reportes dentro de 24 horas")) +
@@ -1903,7 +2055,10 @@ var ES = {
       ds("Plazos de asignación",
         bul("Solicitudes de cambio a asignaciones de fin de semana: hasta el <strong>martes a las 9:00 PM</strong>") +
         bul("No hay cancelaciones después del <strong>miércoles a las 5:00 PM</strong>: pasado ese plazo, tú buscas tu propio reemplazo") +
-        bul("Dentro de las <strong>72 horas antes del saque de salida</strong>, el partido es tuyo"));
+        bul("Acepta o rechaza cada asignación dentro de <strong>24 horas</strong>") +
+        bul("Dentro de las <strong>72 horas antes del saque de salida</strong>, el partido es tuyo: no se devuelve salvo una emergencia real, por llamada o texto a tu asignador (Política CRC 004)")) +
+      ds("Contacto con árbitros menores de 18",
+        dt("El personal de CSA, los asignadores y los Referee Coaches no llaman ni envían textos a árbitros menores de 18 entre las 8 pm y las 7 am. Los textos y correos a un árbitro menor de 18 van entre las 7 am y las 10 pm y con copia a un padre, madre o tutor (Política CRC 009). Ten el correo de un padre o madre en tu perfil de Assignr y del Hub."));
     }
   },
 
@@ -2299,6 +2454,53 @@ var ES = {
     }
   },
 
+  "gd-ar": {
+    title: "Mecánica y señales del árbitro asistente",
+    sub: "Dónde pararte, cómo moverte, cada señal con la bandera, áreas de participación",
+    eyebrow: "Día de partido",
+    keywords: "árbitro asistente AA mecánica bandera señales fuera de juego posición paso lateral penúltimo defensor áreas de participación saque de banda saque de meta córner cambio",
+    build: function() {
+      return ds("Dónde te paras",
+        bul("<strong>A la altura del penúltimo defensor, o del balón si el balón está más cerca de la línea de meta.</strong> Esa línea es tu trabajo. El penúltimo defensor suele ser el último jugador de campo; el portero es el último.") +
+        bul("Tu mitad del campo: de la línea media a tu línea de meta, sobre la línea de banda. Entre los dos asistentes cubren todo el campo.") +
+        bul("Nunca pases la línea media hacia la otra mitad: la línea de fuera de juego es como mínimo la línea media.") +
+        bul("Saque de meta: a la altura del borde del área penal hasta que el balón esté en juego; luego el penúltimo defensor.") +
+        bul("Saque de esquina: detrás del banderín, en línea con la línea de meta. Revisa que el balón esté dentro del cuadrante y luego vigila la línea de meta y la línea de fuera de juego.") +
+        bul("Tiro penal: en la intersección de la línea de meta con el área penal. Vigila los pies del portero y si el balón cruza la línea.") +
+        bul("Tiros desde el punto penal: un asistente en la intersección de la línea de meta y el área para juzgar al portero; el otro en el círculo central con los jugadores.")) +
+      ds("Cómo te mueves",
+        bul("<strong>Paso lateral</strong> en distancias cortas para no quitar la vista del campo. Corre cuando el balón va largo; gira y corre, luego recupera la línea.") +
+        bul("Lleva la bandera en la mano más cercana al árbitro para que la vea; cambia de mano cuando cambia la dirección del juego. Desplegada y quieta cuando no hay nada que señalar.") +
+        bul("<strong>Espera y mira.</strong> En un fuera de juego ajustado, aguanta un momento: si el balón va a un jugador habilitado, o el portero ataja, no hay bandera. La bandera sube cuando el jugador en posición de fuera de juego participa.") +
+        bul("Contacto visual con el árbitro en cada interrupción. Si el árbitro no ve tu bandera, mantenla arriba hasta que mire o hasta que el equipo defensor tenga el control claro.")) +
+      ds("Las señales",
+        stp(1, "<strong>Fuera de juego:</strong> bandera recta hacia arriba, espera el silbato y luego señala: bandera baja (45 grados hacia abajo) para el lado cercano, horizontal para el centro, alta para el lado lejano.") +
+        stp(2, "<strong>Saque de banda:</strong> bandera a 45 grados en la dirección en que ataca el equipo que saca. Primero arriba si el árbitro necesita ayuda con la decisión.") +
+        stp(3, "<strong>Saque de meta:</strong> bandera apuntando al área de meta, brazo horizontal.") +
+        stp(4, "<strong>Saque de esquina:</strong> bandera hacia abajo a 45 grados apuntando al cuadrante.") +
+        stp(5, "<strong>Falta fuera de la vista del árbitro:</strong> bandera arriba con un movimiento corto; cuando el árbitro pita, bandera a 45 grados hacia la portería que ataca el equipo que recibió la falta. Mano cruzada sobre el pecho para tiro penal: bandera arriba y camina hacia el banderín de esquina.") +
+        stp(6, "<strong>Gol:</strong> sin señal cuando es claro; corre hacia la línea media. El balón cruzó la línea pero el árbitro no pudo verlo: bandera arriba y corre hacia la línea media. No cruzó: bandera arriba y señala saque de meta.") +
+        stp(7, "<strong>Cambio:</strong> bandera horizontal sobre la cabeza con las dos manos en la siguiente interrupción, después de que el cuarto árbitro o el suplente te avise.") +
+        stp(8, "<strong>Balón fuera por la línea de meta y vuelve a entrar:</strong> bandera arriba y luego la señal de la reanudación. El árbitro necesita saber que salió.")) +
+      ds("Tus áreas de participación",
+        dt("La lista de U.S. Soccer de para qué está el asistente. Todo lo demás es decisión del árbitro y ayudas solo cuando te lo pide.") +
+        chk("Fuera de juego: posición y participación") +
+        chk("Balón dentro o fuera de juego, y qué equipo reanuda") +
+        chk("Faltas y conducta incorrecta fuera de la vista del árbitro, o más cerca de ti que del árbitro") +
+        chk("Gol o no gol cuando el árbitro no puede ver") +
+        chk("Movimiento del portero en el tiro penal, y doble toque del ejecutor") +
+        chk("Cambios y el equipamiento de los jugadores en la línea de banda") +
+        chk("Lo que el árbitro te pida vigilar en la charla previa: el banquillo, un jugador en particular, la banda lejana")) +
+      ds("Charla previa con el árbitro, dos minutos",
+        bul("Quién toma la mitad de ataque para el fuera de juego y quién tiene el área técnica y los banquillos.") +
+        bul("Faltas: señala solo lo que el árbitro no puede ver, o lo que pasa cerca de ti. Acuerden la señal para tiro penal.") +
+        bul("Goles: qué haces cuando el balón cruza la línea claramente y cuando está ajustado.") +
+        bul("Contacto visual en cada reanudación. Si el árbitro no ve tu bandera, cuánto la mantienes.") +
+        bul("Tiros desde el punto penal: quién va a dónde.")) +
+      callout("46,204,113","&#128161;","Los mejores asistentes son silenciosos. Una bandera en el momento justo vale más que diez banderas que hacen voltear al árbitro. Ante la duda, bandera abajo y el juego sigue.");
+    }
+  },
+
   "gd-pk": {
     title: "Procedimiento del tiro penal",
     sub: "Tiro penal paso a paso, tandas de penales, reglas de invasión",
@@ -2317,10 +2519,11 @@ var ES = {
         stp(4,"Silbato y señala el punto penal") +
         stp(5,"El balón debe moverse HACIA ADELANTE: movimiento hacia atrás = tiro no válido, ordena repetirlo")) +
       ds("Reglas de invasión",
-        dt("<strong>El portero se adelanta antes del tiro y el tiro falla:</strong> Se repite + amonestación al portero. Si hay gol: concédelo.") +
-        dt("<strong>Un jugador atacante invade:</strong> Se repite sin importar el resultado.") +
-        dt("<strong>Un jugador defensor invade y el balón entra:</strong> El gol es válido. Si el balón no entra: se repite.") +
-        dt("<strong>Ambos invaden:</strong> Se repite.")) +
+        dt("<strong>El portero sale de la línea antes de tiempo y el tiro falla:</strong> se repite solo si el movimiento del portero afectó claramente al ejecutor; advierte la primera vez, amonesta si se repite. Si hay gol: concédelo.") +
+        dt("<strong>Un jugador atacante invade:</strong> gol = se repite. No hay gol = tiro libre indirecto para la defensa, no se repite.") +
+        dt("<strong>Un jugador defensor invade:</strong> gol = gol. No hay gol = se repite.") +
+        dt("<strong>Un defensor y un atacante invaden:</strong> se repite. Sanciona solo la invasión que afecta el tiro.") +
+        dt("<strong>Nuevo en 2026/27, doble toque accidental</strong> (con ambos pies, o el balón golpea la pierna de apoyo): gol = se repite, no hay gol = tiro libre indirecto. En los tiros desde el punto penal: gol = se repite, no hay gol = fallado. Desaparece la amonestación automática cuando el ejecutor y el portero infringen a la vez.")) +
       ds("Tanda de penales",
         bul("Los equipos ejecutan tiros alternados. Anota el orden y qué jugadores ya han tirado.") +
         bul("¿Portero lesionado sin suplentes? El reemplazo debe ser un jugador de campo que esté en el terreno.") +
@@ -2388,8 +2591,8 @@ var ES = {
         dt("<strong>Dwolla</strong> es un procesador de pagos legítimo y regulado. Tu información bancaria la guarda Dwolla, no Assignr ni CSA.") +
         dt("También puedes conectar <strong>Venmo</strong> a través de Assignr.com. Los árbitros de cualquier edad pueden configurar Assignr Pay: no se requiere una cuenta de cheques personal.")) +
       ds("Plazos de pago",
-        bul("Los partidos se envían a la liga que paga en un ciclo quincenal") +
-        bul("Espera de 3 a 5 días hábiles después del procesamiento para que aparezcan los fondos") +
+        bul("CSA corre la nómina el martes; a los clubes se les factura miércoles y jueves") +
+        bul("Te pagan 3 o más días hábiles después de que el club financia los partidos") +
         bul("Los torneos suelen pagar más rápido: normalmente poco después de que termina el torneo") +
         callout("100,180,255","&#128273;","<strong>Recordatorio de impuestos:</strong> Como contratista independiente (IC), NO se retienen impuestos. Guarda registros de todos tus ingresos. El uniforme y el equipo son gastos de negocio deducibles."));
     }
