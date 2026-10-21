@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.21-c';
+  var VERSION = '2026.10.21-d';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -247,6 +247,7 @@
       '<div class="pad no-print" style="display:flex;flex-wrap:wrap;gap:8px;padding-top:0">' + (canEdit ? '<button class="btn primary small" id="evSave">' + esc(t('save')) + '</button>' : '') +
       (canSubmit ? '<button class="btn outline small" id="evSubmit">' + esc(t('evalSubmit')) + '</button>' : '') +
       (isRev && rs === 'submitted' ? '<button class="btn primary small" id="evApprove">' + esc(t('evalApprove')) + '</button><button class="btn outline small" id="evReturn">' + esc(t('evalReturn')) + '</button>' : '') +
+      (isRev && rs === 'approved' ? '<button class="btn outline small" id="evRecall">' + esc(t('evalRecall')) + '</button>' : '') +
       '</div><div class="msg" id="evMsg" hidden></div>' +
       (e.report_at ? '<div class="pad hint">' + esc(t('evalDraftedAt')) + ' ' + esc(dayLong(e.report_at.slice(0, 10))) + '</div>' : '');
     var dr = $('evDraft'); if (dr) dr.onclick = async function () {
@@ -261,6 +262,7 @@
     var sub = $('evSubmit'); if (sub) sub.onclick = async function () { var txt = $('evText').value; if (!txt.trim()) { say('evMsg', t('evalEmpty'), 'bad'); return; } if (!window.confirm(t('evalSubmitConfirm'))) return; if (await evUpdate({ report: txt, report_at: new Date().toISOString(), report_status: 'submitted', review_note: null })) renderEval(id); };
     var ap = $('evApprove'); if (ap) ap.onclick = async function () { if (await evUpdate({ report: $('evText').value, report_status: 'approved', reviewed_by: S.me.person_id, reviewed_at: new Date().toISOString(), review_note: null })) renderEval(id); };
     var rt = $('evReturn'); if (rt) rt.onclick = async function () { var note = window.prompt(t('evalReturnPrompt'), ''); if (note === null) return; if (await evUpdate({ report_status: 'returned', reviewed_by: S.me.person_id, reviewed_at: new Date().toISOString(), review_note: note.trim() || null })) renderEval(id); };
+    var rc = $('evRecall'); if (rc) rc.onclick = async function () { var note = window.prompt(t('evalRecallPrompt'), ''); if (note === null) return; if (!note.trim()) { say('evMsg', t('evalRecallNeedsReason'), 'bad'); return; } if (await evUpdate({ report_status: 'returned', reviewed_by: S.me.person_id, reviewed_at: new Date().toISOString(), review_note: note })) renderEval(id); };
     var cp = $('evCopy'); if (cp) cp.onclick = async function () { try { await navigator.clipboard.writeText($('evText').value); say('evMsg', t('evalCopied'), 'good'); } catch (err) { $('evText').select(); } };
     var pr = $('evPrint'); if (pr) pr.onclick = function () { window.print(); };
   }
@@ -945,6 +947,7 @@
   // game day (a tournament on Saturday, looked at on Monday).
   function regSeason() { var d = new Date(); return d.getFullYear() + (d.getMonth() >= 6 ? 1 : 0); }
   function areaWord(a) { return t('co90Area.' + a) || a; }
+  function areaR90(a) { return t('co90AreaR90.' + a) || ''; }
   function co90DayHtml() {
     var c = S.co90;
     if (!c || !c.group_name) return '';
@@ -2424,13 +2427,13 @@
       return '<div style="padding:4px 0;border-top:1px solid var(--line)">' +
         (p ? '<span class="pill" style="margin-right:6px">' + esc(areaWord(p.area)) + '</span>' + esc(p.point) + ' <span class="hint">' + esc(p.set_by || '') + '</span>' : '<span class="hint">' + esc(t('scEmpty')) + '</span>') +
         (canSet ? ' <button class="linkbtn" data-scslot="' + sl + '">' + esc(t('co90Set')) + '</button>' : '') +
-        (editing ? '<div class="chips" style="padding-top:6px">' + ['laws', 'reading', 'fitness', 'presence'].map(function (a) { return '<button class="chip-btn small' + (REF.scArea === a ? ' on' : '') + '" data-scarea="' + a + '">' + esc(areaWord(a)) + '</button>'; }).join('') + '</div>' +
+        (editing ? '<div class="chips" style="padding-top:6px">' + ['laws', 'reading', 'fitness', 'presence'].map(function (a) { return '<button class="chip-btn small' + (REF.scArea === a ? ' on' : '') + '" data-scarea="' + a + '" title="' + esc(areaR90(a)) + '">' + esc(areaWord(a)) + '</button>'; }).join('') + '</div>' +
           '<input id="scText" placeholder="' + esc(t('scPointHint')) + '" value="' + esc(REF.scText || '') + '" style="font:inherit;width:100%;margin-top:6px;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' +
           '<div class="actions" style="padding:6px 0 0"><button class="btn outline small" data-scsave="' + sl + '">' + esc(t('save')) + '</button></div>' : '') + '</div>';
     }).join('');
     return '<div class="card" style="gap:6px;border-color:var(--gold)"><b>' + esc(/^co90/i.test(c.group_name) ? c.group_name : 'CO90 \u00b7 ' + c.group_name) + '</b>' +
       '<div class="hint">' + esc(t('co90Mentor')) + ': ' + esc(c.mentor || t('co90None')) + '. ' + esc(t('co90National')) + ': ' + esc(c.national || t('co90None')) + '.</div>' +
-      '<div class="hint" style="font-weight:700">' + esc(t('scTitle')) + '</div><div class="hint">' + esc(t('scHint')) + '</div>' + rows + '</div>';
+      '<div class="hint" style="font-weight:700">' + esc(t('scTitle')) + '</div><div class="hint">' + esc(t('scHint')) + ' ' + esc(t('scR90Hint')) + '</div>' + rows + '</div>';
   }
   function wireSeasonCard(name, pid) {
     $('refBody').querySelectorAll('[data-scslot]').forEach(function (b) { b.onclick = function () { REF.scSlot = parseInt(b.getAttribute('data-scslot'), 10); REF.scArea = null; REF.scText = ''; renderRef(name); }; });
