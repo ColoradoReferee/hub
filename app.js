@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.21-e';
+  var VERSION = '2026.10.21-f';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -277,7 +277,8 @@
   }
 
   // ── The upgrade tracker: every Regional requirement, with the game log the sync cannot see ──
-  var UP = { pid: null, data: null, add: false };
+  var UP = { pid: null, data: null, add: false, role: '' };
+  function renderUpgradeFromData(pid) { renderUpgrade(pid); }
   async function renderUpgrade(pid) {
     UP.pid = pid || null;
     var body = $('upgradeBody'); body.innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>';
@@ -294,7 +295,10 @@
     var nextOk = d.last_fail ? shiftDate(d.last_fail, 30) : null, waitOn = nextOk && nextOk > todayStr();
     var evalDetail = esc(t('upEvalDetail').replace('{c}', d.eval_coaches).replace('{a}', d.eval_adult).replace('{y}', d.eval_youth).replace('{avg}', d.eval_avg == null ? '–' : d.eval_avg)) + (waitOn ? '<br><span style="color:var(--red);font-weight:700">' + esc(t('upWait').replace('{d}', dayLong(nextOk))) + '</span>' : '');
     var evList = evs.length ? '<div class="list">' + evs.map(function (e) { return '<a class="item" href="' + (iCan('evaluations') || iCan('review') ? '#eval/' + e.id : '#upgrade') + '"><div><b>' + esc(dayLong(e.date)) + '</b> ' + (e.score != null ? '<span class="pill' + (Number(e.score) >= 8 ? ' ok' : ' bad') + '">' + esc(e.score) + '</span>' : '<span class="pill">' + esc(t('upNoScore')) + '</span>') + '<br><span class="hint">' + esc(e.coach || '') + ', ' + esc(t('upLevel.' + (e.level || 'other'))) + (e.competition ? ', ' + esc(e.competition) : '') + ', ' + esc(t('evalPurpose.' + e.purpose) || e.purpose) + '</span></div></a>'; }).join('') + '</div>' : '<div class="pad hint">' + esc(t('upNoEvals')) + '</div>';
-    var logRows = (d.log || []).map(function (g) { return '<div class="rowline"><div><b>' + esc(dayLong(g.date)) + '</b>, ' + esc(g.role === 'ar' ? t('upRoleAr') : t('upRoleCr')) + ', ' + esc(t('upLevel.' + g.level)) + (g.verified ? ' <span class="pill ok">' + esc(t('upVerified')) + '</span>' : '') + '<div class="hint">' + esc([g.league, g.home && g.away ? g.home + ' v ' + g.away : '', g.venue, g.crew].filter(Boolean).join('. ')) + '</div></div>' + (iCan('review') && !g.verified ? '<button class="linkbtn" data-up-verify="' + g.id + '">' + esc(t('upVerify')) + '</button>' : '') + (canEdit && !g.verified ? '<button class="linkbtn" style="color:var(--red)" data-up-del="' + g.id + '">' + esc(t('remove')) + '</button>' : '') + '</div>'; }).join('');
+    var logAll = d.log || [];
+    var logShown = UP.role ? logAll.filter(function (g) { return g.role === UP.role; }) : logAll;
+    var roleChips = '<div class="chips" style="padding:4px 0">' + [['', t('upRoleAll')], ['cr', t('upRoleCr')], ['ar', t('upRoleAr')]].map(function (x) { return '<button class="chip-btn small' + (UP.role === x[0] ? ' on' : '') + '" data-uprole="' + x[0] + '">' + esc(x[1]) + '</button>'; }).join('') + '</div>' + (UP.role ? '<div class="hint">' + esc(t('upFiltered').replace('{n}', logShown.length).replace('{all}', logAll.length)) + '</div>' : '');
+    var logRows = logShown.map(function (g) { return '<div class="rowline"><div><b>' + esc(dayLong(g.date)) + '</b>, ' + esc(g.role === 'ar' ? t('upRoleAr') : t('upRoleCr')) + ', ' + esc(t('upLevel.' + g.level)) + (g.verified ? ' <span class="pill ok">' + esc(t('upVerified')) + '</span>' : '') + '<div class="hint">' + esc([g.league, g.home && g.away ? g.home + ' v ' + g.away : '', g.venue, g.crew].filter(Boolean).join('. ')) + '</div></div>' + (iCan('review') && !g.verified ? '<button class="linkbtn" data-up-verify="' + g.id + '">' + esc(t('upVerify')) + '</button>' : '') + (canEdit && !g.verified ? '<button class="linkbtn" style="color:var(--red)" data-up-del="' + g.id + '">' + esc(t('remove')) + '</button>' : '') + '</div>'; }).join('');
     var LEAGUES = ['Colorado Premier League', 'Mountain Premier League', 'Boulder Soccer League', 'Arsenal Colorado adult', 'Colorado Adult Soccer League', 'USL-2', 'USL W', 'WPSL', 'League of Clubs', 'USCCS'];
     var inp = 'style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"';
     var addForm = !canEdit ? '' : (UP.add ? '<div class="card" style="gap:8px">' +
@@ -320,7 +324,8 @@
       '</div>' +
       (Number(d.maint_coaches) ? '<div class="pad hint">' + esc(t('upMaint').replace('{c}', d.maint_coaches).replace('{avg}', d.maint_avg == null ? '–' : d.maint_avg)) + '</div>' : '') +
       '<div class="disp h2">' + esc(t('upEvalsTitle')) + '</div>' + evList +
-      '<div class="disp h2">' + esc(t('upLogTitle')) + '</div><div class="pad hint" style="padding-top:0">' + esc(t('upLogHint')) + '</div>' + addForm + (logRows ? '<div class="pad">' + logRows + '</div>' : '');
+      '<div class="disp h2">' + esc(t('upLogTitle')) + '</div><div class="pad hint" style="padding-top:0">' + esc(t('upLogHint')) + '</div>' + addForm + (logAll.length ? '<div class="pad">' + roleChips + logRows + '</div>' : '');
+    body.querySelectorAll('[data-uprole]').forEach(function (c) { c.onclick = function () { UP.role = c.getAttribute('data-uprole'); renderUpgradeFromData(pid); }; });
     var ab = $('upAddBtn'); if (ab) ab.onclick = function () { UP.add = true; renderUpgrade(pid); };
     var cb = $('upCancel'); if (cb) cb.onclick = function () { UP.add = false; renderUpgrade(pid); };
     var sv = $('upSave'); if (sv) sv.onclick = async function () {

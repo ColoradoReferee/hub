@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Evaluator v2026.10.21-e · 2026-10-20 · the coach's live log, post-match ratings and PDF. The formal evaluation is written by the coach in the Hub. -->
+<!-- Evaluator v2026.10.21-f · 2026-10-20 · the coach's live log, post-match ratings and PDF. The formal evaluation is written by the coach in the Hub. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -899,7 +899,7 @@ body { background:#0E1E3F !important; }
 .saved-pill { position: fixed; bottom: 14px; left: 14px; z-index: 40; font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 999px; background: rgba(61,186,99,.2); color: #3DBA63; border: 1px solid #3DBA63; pointer-events: none; opacity: 0; transition: opacity .3s; }
 .saved-pill.on { opacity: 1; }
 
-/* ── Wide screens: keep the work in a column; outdoor sizes (2026.10.21-e) ── */
+/* ── Wide screens: keep the work in a column; outdoor sizes (2026.10.21-f) ── */
 @media (min-width: 820px) {
   #screen-live .live-hdr, #screen-live .ev-wrap, #screen-live .log-wrap, #screen-live > :not(.crest-strip) { max-width: 920px; margin-left: auto; margin-right: auto; width: 100%; }
   #screen-postmatch .pm-hdr-inner, #screen-postmatch .recap-card, #screen-postmatch .pm-tabs, #screen-postmatch .pm-c, #screen-export > * { max-width: 760px; margin-left: auto; margin-right: auto; width: 100%; }
@@ -2089,7 +2089,7 @@ function setLang(l) { LANG = l; try { localStorage.setItem('hub-lang', l); } cat
 // ═══════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════
-var EVAL_VERSION = '2026.10.21-e';
+var EVAL_VERSION = '2026.10.21-f';
 document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v' + EVAL_VERSION; });
 var MD = {};
 var OT = { active:false, half:0, len:10, otStarted:false };
