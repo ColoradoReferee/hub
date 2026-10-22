@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.22-a';
+  var VERSION = '2026.10.22-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -943,9 +943,12 @@
     var pickBox = function (g) {
       if (!ASG.pick || ASG.pick.game_id !== g.game_id) return '';
       var warns = ASG.warns ? (ASG.warns.warnings || []) : null;
+      // The demo group first: most offers go to them, one tap, no typing.
+      var quick = (ASG.roster || []).map(function (p) { return '<button class="chip-btn small' + (ASG.sel && ASG.sel.person_id === p.id ? ' on' : '') + '" data-asg-cand="' + p.id + '" data-asg-nm="' + esc(p.first_name + ' ' + p.last_name) + '">' + esc(p.first_name + ' ' + p.last_name) + '</button>'; }).join('');
       return '<div style="padding-top:8px"><div class="hint">' + esc(t('asgPickWho').replace('{slot}', asgSlotWord(ASG.pick.slot))) + '</div>' +
-        '<input id="asgQ" value="' + esc(ASG.q) + '" placeholder="' + esc(t('coachSearch')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink);margin-top:6px">' +
-        '<div class="chips" style="padding-top:8px">' + (ASG.cand || []).map(function (x) { return '<button class="chip-btn small' + (ASG.sel && ASG.sel.person_id === x.person_id ? ' on' : '') + '" data-asg-cand="' + x.person_id + '">' + esc(x.name) + (x.minor ? ' ●' : '') + '</button>'; }).join('') + '</div>' +
+        (quick ? '<div class="chips" style="padding-top:8px">' + quick + '</div>' : '') +
+        '<input id="asgQ" value="' + esc(ASG.q) + '" placeholder="' + esc(t('asgPickOther')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink);margin-top:6px">' +
+        '<div class="chips" style="padding-top:8px">' + (ASG.cand || []).map(function (x) { return '<button class="chip-btn small' + (ASG.sel && ASG.sel.person_id === x.person_id ? ' on' : '') + '" data-asg-cand="' + x.person_id + '" data-asg-nm="' + esc(x.name) + '">' + esc(x.name) + (x.minor ? ' ●' : '') + '</button>'; }).join('') + '</div>' +
         (ASG.sel ? '<div style="padding-top:6px">' + (warns && warns.length ? warns.map(function (w) { return '<div class="hint" style="color:var(--gold)">⚠ ' + esc(t('asgWarn.' + w)) + '</div>'; }).join('') : '<div class="hint" style="color:var(--green, #3DBA63)">' + esc(t('asgNoWarn')) + '</div>') +
           '<div class="actions" style="padding:8px 0 0"><button class="btn primary small" id="asgSend">' + esc(t('asgSend').replace('{name}', ASG.sel.name)) + '</button></div></div>' : '') +
         '<div class="msg" id="asgPickMsg" hidden></div></div>';
@@ -955,7 +958,7 @@
         '<div class="chips">' + ['cr', 'ar1', 'ar2', 'fourth', 'coach'].map(function (s) { return asgSlotChip(g, s); }).join('') + '</div>' + pickBox(g) + '</div>';
     };
     var roster = fold('asgroster', t('asgRoster'), (ASG.roster || []).length,
-      '<div class="hint">' + esc(t('asgRosterHint')) + '</div><div class="chips" style="padding-top:6px">' + (ASG.roster || []).map(function (p) { return '<button class="chip-btn small" data-asg-drop="' + p.id + '">' + esc(p.first_name + ' ' + p.last_name) + ' ✕</button>'; }).join('') + '</div>' +
+      '<div class="hint">' + esc(t('asgRosterHint')) + '</div><div class="chips" style="padding-top:6px">' + (ASG.roster || []).map(function (p) { return '<button class="chip-btn small" data-asg-drop="' + p.id + '" data-asg-nm="' + esc(p.first_name + ' ' + p.last_name) + '">' + esc(p.first_name + ' ' + p.last_name) + ' ✕</button>'; }).join('') + '</div>' +
       '<input id="asgRq" value="' + esc(ASG.rq) + '" placeholder="' + esc(t('coachSearch')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink);margin-top:8px">' +
       '<div class="chips" style="padding-top:8px">' + (ASG.rcand || []).map(function (x) { return '<button class="chip-btn small" data-asg-addp="' + x.person_id + '">+ ' + esc(x.name) + '</button>'; }).join('') + '</div><div class="msg" id="asgRMsg" hidden></div>', false);
     return form + '<div class="disp h2">' + esc(t('asgGamesTitle')) + '</div>' +
@@ -982,7 +985,7 @@
     }
     root.querySelectorAll('[data-asg-cand]').forEach(function (b) { b.onclick = async function () {
       var pid = parseInt(b.getAttribute('data-asg-cand'), 10);
-      ASG.sel = (ASG.cand || []).filter(function (x) { return x.person_id === pid; })[0];
+      ASG.sel = { person_id: pid, name: b.getAttribute('data-asg-nm') || '' };
       var r = await sb.rpc('asg_check', { p_person: pid, p_game: ASG.pick.game_id });
       ASG.warns = r.data || { warnings: [] };
       renderAssign();
@@ -1005,6 +1008,7 @@
       ASG.rq = ''; ASG.rcand = null; await loadAssign(); renderAssign();
     }; });
     root.querySelectorAll('[data-asg-drop]').forEach(function (b) { b.onclick = async function () {
+      if (!window.confirm(t('asgDropConfirm').replace('{name}', b.getAttribute('data-asg-nm') || ''))) return;
       b.disabled = true;
       var r = await sb.from('asg_demo').delete().eq('person_id', parseInt(b.getAttribute('data-asg-drop'), 10));
       if (r.error) { say('asgRMsg', r.error.message, 'bad'); b.disabled = false; return; }
