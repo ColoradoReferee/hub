@@ -1,0 +1,5 @@
+/* fonts.css · 2026-10-21 · self-hosted fonts, replaces fonts.googleapis.com.
+   Latin subsets of the exact faces every page loads. */
+@font-face { font-family: 'Barlow Condensed'; font-style: italic; font-weight: 800; font-display: swap; src: url('barlow-condensed-latin-800-italic.woff2') format('woff2'); }
+@font-face { font-family: 'Atkinson Hyperlegible'; font-style: normal; font-weight: 400; font-display: swap; src: url('atkinson-hyperlegible-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Atkinson Hyperlegible'; font-style: normal; font-weight: 700; font-display: swap; src: url('atkinson-hyperlegible-latin-700-normal.woff2') format('woff2'); }
