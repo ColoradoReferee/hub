@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.22-b';
+  var VERSION = '2026.10.22-c';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -890,10 +890,14 @@
   }
   function wireAsgDay(root) {
     root.querySelectorAll('[data-asg-resp]').forEach(function (b) { b.onclick = async function () {
-      var act = b.getAttribute('data-asg-resp');
-      if (act === 'turn_back' && !window.confirm(t('asgTurnConfirm'))) return;
+      var act = b.getAttribute('data-asg-resp'), reason = null;
+      if (act === 'turn_back') {
+        reason = window.prompt(t('asgTurnWhy'));
+        if (reason === null) return;
+        if (!reason.trim()) { say('asgMsg', t('asgTurnNeedsWhy'), 'bad'); return; }
+      }
       b.disabled = true;
-      var r = await sb.rpc('asg_respond', { p_offer: parseInt(b.getAttribute('data-oid'), 10), p_action: act });
+      var r = await sb.rpc('asg_respond', { p_offer: parseInt(b.getAttribute('data-oid'), 10), p_action: act, p_reason: reason });
       if (r.error || !r.data) { b.disabled = false; say('asgMsg', r.error ? r.error.message : t('reviewFailed'), 'bad'); return; }
       var my = await sb.rpc('asg_my'); S.asg = my.data || S.asg;
       await loadDay(); renderAll();
@@ -961,7 +965,20 @@
       '<div class="hint">' + esc(t('asgRosterHint')) + '</div><div class="chips" style="padding-top:6px">' + (ASG.roster || []).map(function (p) { return '<button class="chip-btn small" data-asg-drop="' + p.id + '" data-asg-nm="' + esc(p.first_name + ' ' + p.last_name) + '">' + esc(p.first_name + ' ' + p.last_name) + ' ✕</button>'; }).join('') + '</div>' +
       '<input id="asgRq" value="' + esc(ASG.rq) + '" placeholder="' + esc(t('coachSearch')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink);margin-top:8px">' +
       '<div class="chips" style="padding-top:8px">' + (ASG.rcand || []).map(function (x) { return '<button class="chip-btn small" data-asg-addp="' + x.person_id + '">+ ' + esc(x.name) + '</button>'; }).join('') + '</div><div class="msg" id="asgRMsg" hidden></div>', false);
-    return form + '<div class="disp h2">' + esc(t('asgGamesTitle')) + '</div>' +
+    // Slots that opened back up after a decline or turnback, reasons attached.
+    var attn = [];
+    (ASG.board || []).forEach(function (g) {
+      var open = {};
+      ['cr', 'ar1', 'ar2', 'fourth', 'coach'].forEach(function (s) {
+        var active = (g.offers || []).some(function (o) { return o.slot === s && (o.status === 'offered' || o.status === 'accepted'); });
+        open[s] = !active && (s === 'coach' || !g[s]);
+      });
+      (g.offers || []).forEach(function (o) { if ((o.status === 'declined' || o.status === 'turned_back') && open[o.slot]) attn.push({ g: g, o: o }); });
+    });
+    var attnFold = attn.length ? fold('asgattn', t('asgAttnTitle'), attn.length, attn.map(function (x) {
+      return '<div class="rowline"><div><b>' + esc(asgGameLine(x.g)) + ' · ' + asgSlotWord(x.o.slot) + '</b><br><span class="hint">' + esc(x.o.name || '') + ', ' + esc(t(x.o.status === 'declined' ? 'asgDeclinedWord' : 'asgTurnedWord')) + (x.o.reason ? ': ' + esc(x.o.reason) : '') + '</span></div></div>';
+    }).join(''), true) : '';
+    return form + attnFold + '<div class="disp h2">' + esc(t('asgGamesTitle')) + '</div>' +
       ((ASG.board || []).length ? ASG.board.map(gameCard).join('') : '<div class="pad hint">' + esc(t('asgNone')) + '</div>') + roster;
   }
   function wireAssign(root) {
@@ -1153,6 +1170,19 @@
     if (!b) return;
     b.onclick = async function () {
       b.disabled = true; b.textContent = t('checkingIn');
+      // Hub games check in straight to the database; the backend has never heard of them.
+      if (Number(g.game_id) >= 900000000) {
+        var hr = await sb.rpc('asg_checkin', { p_game: g.game_id });
+        if (hr.error || !hr.data) {
+          b.disabled = false; b.textContent = t('checkIn');
+          var hm = root.querySelector('#ci-msg-' + g.game_id); if (hm) { hm.hidden = false; hm.textContent = hr.error ? hr.error.message : t('checkinFailed'); }
+          return;
+        }
+        var hnow = new Date().toISOString();
+        S.games.forEach(function (x) { if (key(x.venue) === key(g.venue) && Number(x.game_id) >= 900000000) S.checkins[String(x.game_id)] = hnow; });
+        renderAll();
+        return;
+      }
       var ev = eventFor(g);
       try {
         var r = await fetch(C.backend, { method: 'POST', body: JSON.stringify({ action: 'checkinVenue', event: ev ? ev.id : '', refName: myNameOn(g), venue: g.venue, date: g.date }) });
@@ -2842,6 +2872,14 @@
         '<div style="margin:14px 20px 0">' + (inAt ? '<div class="btn done"><span class="disp">' + esc(t('checkedIn')) + '</span><small>' + esc(clock(inAt)) + '</small></div>' : '<div class="actions" style="padding:0">' + checkinBtn(g, null) + '</div><div class="msg bad" id="ci-msg-' + esc(g.game_id) + '" hidden></div>') + '</div>' +
         (ev && ev.blurb ? '<div class="card"><div class="sep" style="border:0;padding:0">' + esc(ev.blurb) + '</div></div>' : '') +
         '<div style="margin:14px 20px 0"><a class="btn outline" href="#ops">' + esc(t('opsEntry')) + '</a></div>';
+      wireCheckin(g, $('gameBody'));
+      return;
+    }
+    // A coach block is not a match: no teams, no score, role is Referee Coach.
+    if (isCoachSlot(g)) {
+      $('gameBody').innerHTML = '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(ev ? ev.name : g.competition || '') + ', ' + esc(dayLong(g.date)) + '</div><div class="disp" style="font-size:44px">' + esc(t('coachSlot')) + '</div><div class="lead">' + esc(g.venue || '') + (g.field ? ', ' + esc(fieldShort(g.field)) : '') + ', ' + esc(clock(g.kickoff)) + '</div></div>' +
+        '<div style="margin:14px 20px 0">' + (inAt ? '<div class="btn done"><span class="disp">' + esc(t('checkedIn')) + '</span><small>' + esc(clock(inAt)) + '</small></div>' : '<div class="actions" style="padding:0">' + checkinBtn(g, null) + '</div><div class="msg bad" id="ci-msg-' + esc(g.game_id) + '" hidden></div>') + '</div>' +
+        '<div style="margin:14px 20px 0"><a class="btn outline" href="#coach" style="width:100%">' + esc(t('coachingEntry')) + '</a></div>';
       wireCheckin(g, $('gameBody'));
       return;
     }
