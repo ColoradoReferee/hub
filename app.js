@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.21-i';
+  var VERSION = '2026.10.22-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -65,7 +65,10 @@
   function eventFor(g) {
     var num = String(g.game_num || '').toUpperCase(), venue = key(g.venue);
     var hit = null;
-    S.events.forEach(function (e) {
+    // Hub-created games (id range 900M, game_num H...) never match an event by prefix;
+    // their rules come from the competition name alone.
+    var isHub = Number(g.game_id) >= 900000000;
+    if (!isHub) S.events.forEach(function (e) {
       if (hit) return;
       if (e.game_prefix && num.indexOf(String(e.game_prefix).toUpperCase()) === 0) hit = e;
     });
@@ -850,7 +853,7 @@
   // ── Assigning: the quiet build. Referee side renders only for the demo
   //    roster; the assignor board only behind the assigning unlock. ─────
   var ASG = { board: null, from: null, to: null, form: null, pick: null, q: '', cand: null, sel: null, warns: null, roster: null, rq: '', rcand: null };
-  function asgSlotWord(s) { return s === 'cr' ? 'CR' : s === 'ar1' ? 'AR1' : s === 'ar2' ? 'AR2' : '4TH'; }
+  function asgSlotWord(s) { return s === 'cr' ? 'CR' : s === 'ar1' ? 'AR1' : s === 'ar2' ? 'AR2' : s === 'coach' ? t('asgCoachWord') : '4TH'; }
   function asgGameLine(o) { return dayShort(o.date) + ', ' + clock(o.kickoff) + ', ' + (o.venue || '') + (o.field ? ', ' + fieldShort(o.field) : ''); }
   function asgAvailHtml() {
     var a = S.asg, today = todayStr(), have = {};
@@ -920,7 +923,8 @@
   }
   function asgSlotChip(g, slot) {
     var off = (g.offers || []).filter(function (o) { return o.slot === slot && (o.status === 'offered' || o.status === 'accepted'); })[0];
-    if (g[slot]) return '<span class="chip-btn small on" style="pointer-events:none">' + asgSlotWord(slot) + ' ' + esc(g[slot]) + '</span>';
+    var filled = slot === 'coach' ? (off && off.status === 'accepted' ? off.name : '') : g[slot];
+    if (filled) return '<span class="chip-btn small on" style="pointer-events:none">' + asgSlotWord(slot) + ' ' + esc(filled) + '</span>';
     if (off && off.status === 'offered') return '<button class="chip-btn small" style="border-color:var(--gold)" data-asg-wd="' + off.id + '">' + asgSlotWord(slot) + ' ' + esc(off.name || '') + ' · ' + esc(t('asgOfferedChip')) + ' ✕</button>';
     var picking = ASG.pick && ASG.pick.game_id === g.game_id && ASG.pick.slot === slot;
     return '<button class="chip-btn small' + (picking ? ' on' : '') + '" data-asg-slot="' + g.game_id + '|' + slot + '">' + asgSlotWord(slot) + ' · ' + esc(t('asgOpen')) + '</button>';
@@ -948,7 +952,7 @@
     };
     var gameCard = function (g) {
       return '<div class="card" style="gap:6px"><b>' + esc(dayLong(g.date)) + ', ' + esc(clock(g.kickoff)) + '</b><div class="hint">' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + '. ' + esc(g.competition || '') + (g.age_group ? ', ' + esc(g.age_group) : '') + (g.home ? '. ' + esc(g.home) + ' v ' + esc(g.away || '') : '') + '</div>' +
-        '<div class="chips">' + ['cr', 'ar1', 'ar2', 'fourth'].map(function (s) { return asgSlotChip(g, s); }).join('') + '</div>' + pickBox(g) + '</div>';
+        '<div class="chips">' + ['cr', 'ar1', 'ar2', 'fourth', 'coach'].map(function (s) { return asgSlotChip(g, s); }).join('') + '</div>' + pickBox(g) + '</div>';
     };
     var roster = fold('asgroster', t('asgRoster'), (ASG.roster || []).length,
       '<div class="hint">' + esc(t('asgRosterHint')) + '</div><div class="chips" style="padding-top:6px">' + (ASG.roster || []).map(function (p) { return '<button class="chip-btn small" data-asg-drop="' + p.id + '">' + esc(p.first_name + ' ' + p.last_name) + ' ✕</button>'; }).join('') + '</div>' +
@@ -2845,7 +2849,7 @@
       '<div style="margin:14px 20px 0" id="gameCheckin">' + (inAt ? '<div class="btn done"><span class="disp">' + esc(t('checkedIn')) + '</span><small>' + esc(clock(inAt)) + '. ' + esc(t('checkedInAt')) + '</small></div>' : '<div class="actions" style="padding:0">' + checkinBtn(g, null) + '</div><div class="msg bad" id="ci-msg-' + esc(g.game_id) + '" hidden></div>') + '</div>' +
       '<div class="card"><div class="grid2"><div class="kv"><div class="k">' + esc(t('home')) + '</div><div class="v">' + esc(g.home || '') + '</div></div><div class="kv"><div class="k">' + esc(t('away')) + '</div><div class="v">' + esc(g.away || '') + '</div></div></div>' +
       '<div>' + esc(g.age_group || '') + (g.gender ? ', ' + esc(g.gender) : '') + (g.competition ? ', ' + esc(g.competition) : '') + '</div>' +
-      '<div class="sep"><span class="hint">' + esc(t('crew')) + ':</span> ' + (crew.length > 1 ? crew.join(', ') : esc(myNameOn(g)) + ', ' + esc(t('role.' + role)) + '. ' + esc(t('alone'))) + '</div>' +
+      '<div class="sep"><span class="hint">' + esc(t('crew')) + ':</span> ' + (crew.length > 1 ? crew.join(', ') : esc(myNameOn(g)) + ', ' + esc(t('role.' + role)) + (role === 'cr' ? '. ' + esc(t('alone')) : '')) + '</div>' +
       (ev && ev.blurb ? '<div class="sep">' + esc(ev.blurb) + '</div>' : '') + '</div>' +
       '<div style="margin:14px 20px 0;display:grid;grid-template-columns:1fr 1fr;gap:10px">' + (r ? '<a class="btn outline" href="' + esc(r) + '">' + esc(t('rules')) + '</a>' : '<div class="hint" style="align-self:center">' + esc(t('rulesNotPosted')) + '</div>') + '<a class="btn outline" href="#map/' + encodeURIComponent(g.venue || '') + '/' + encodeURIComponent(g.field || '') + '">' + esc(t('map')) + '</a></div>' +
       evalRequestHtml(g) +
