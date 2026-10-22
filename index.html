@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#142850" media="(prefers-color-scheme: dark)">
 <title>Colorado Referees</title>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css?v=2026.10.21-h">
+<link rel="stylesheet" href="app.css?v=2026.10.21-i">
 </head>
 <body>
 <div id="busy" style="display:none" aria-live="polite"><span class="ball">&#9917;</span></div>
@@ -63,12 +63,14 @@
     <div id="noteBox"></div>
     <div id="evalLine"></div>
     <div id="co90Line"></div>
+    <div id="asgLine"></div>
     <div id="sessionsLine"></div>
     <div id="wrapLine"></div>
     <div id="bulletins"></div>
     <div class="pad hint" id="rulesNote" style="display:none;padding-top:10px" data-t="rulesNotPosted"></div>
     <div class="tools" id="tools">
       <div id="opsEntry"></div>
+      <div id="asgEntry"></div>
       <div id="centerEntry"></div>
       <div id="reviewEntry"></div>
       <div id="coachEntry"></div>
@@ -208,6 +210,16 @@
   </section>
 
   <!-- ── Setup: events ───────────────────────────────────────── -->
+  <section class="screen" id="s-assign">
+    <div class="top">
+      <a class="backlink" href="#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="yourDay"></span></a>
+      <img id="markAssign" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+    <div class="pad" style="padding-top:16px"><div class="disp" style="font-size:44px" data-t="asgTitle"></div><div class="lead" data-t="asgLead"></div></div>
+    <div id="assignBody"></div>
+    <div class="credit" style="margin-top:auto"><span class="chip"><img id="ja19" alt=""></span><span class="ver"></span></div>
+  </section>
+
   <section class="screen" id="s-setup">
     <div class="top">
       <a class="backlink" href="#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="yourDay"></span></a>
@@ -284,9 +296,9 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="lang.js?v=2026.10.21-h"></script>
-<script src="pacer.js?v=2026.10.21-h"></script>
-<script src="fieldmap.js?v=2026.10.21-h"></script>
-<script src="app.js?v=2026.10.21-h"></script>
+<script src="lang.js?v=2026.10.21-i"></script>
+<script src="pacer.js?v=2026.10.21-i"></script>
+<script src="fieldmap.js?v=2026.10.21-i"></script>
+<script src="app.js?v=2026.10.21-i"></script>
 </body>
 </html>

@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.21-h';
+  var VERSION = '2026.10.21-i';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -152,9 +152,11 @@
       sb.rpc('coached_venues', { p_date: today }),
       sb.from('late_notices').select('id,game_id,ref_name,venue,field,eta_min,created_at,ack_by,ack_at').eq('date', today),
       loadSessions_(),
-      sb.rpc('co90_card')
+      sb.rpc('co90_card'),
+      sb.rpc('asg_my')
     ]);
     S.co90 = r[11] && r[11].data || null;
+    S.asg = r[12] && r[12].data || null;
     S.games = (r[0].data || []).filter(function (x) { return ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(x[k])) >= 0; }); });
     S.events = r[1].data || [];
     S.checkins = {};
@@ -845,6 +847,168 @@
     else if (mins >= 120) { $('countN').textContent = Math.floor(mins / 60); $('countW').innerHTML = t('hoursToKickoff'); }
     else { $('countN').textContent = Math.abs(mins); $('countW').innerHTML = t('kickedOff') + '<br>' + t('minAgo'); }
   }
+  // ── Assigning: the quiet build. Referee side renders only for the demo
+  //    roster; the assignor board only behind the assigning unlock. ─────
+  var ASG = { board: null, from: null, to: null, form: null, pick: null, q: '', cand: null, sel: null, warns: null, roster: null, rq: '', rcand: null };
+  function asgSlotWord(s) { return s === 'cr' ? 'CR' : s === 'ar1' ? 'AR1' : s === 'ar2' ? 'AR2' : '4TH'; }
+  function asgGameLine(o) { return dayShort(o.date) + ', ' + clock(o.kickoff) + ', ' + (o.venue || '') + (o.field ? ', ' + fieldShort(o.field) : ''); }
+  function asgAvailHtml() {
+    var a = S.asg, today = todayStr(), have = {};
+    (a.availability || []).forEach(function (x) { have[x.date + '|' + x.block] = 1; });
+    var start = new Date(today + 'T12:00:00'); start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    var weeks = [], d = new Date(start), end = shiftDate(today, 27);
+    for (var w = 0; w < 5; w++) { var row = []; for (var i = 0; i < 7; i++) { row.push(iso(d)); d.setDate(d.getDate() + 1); } weeks.push(row); if (row[6] >= end) break; }
+    var dows = S.lang === 'es' ? ['L', 'M', 'X', 'J', 'V', 'S', 'D'] : ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    var monthOf = function (ds) { return new Date(ds + 'T12:00:00').toLocaleDateString(S.lang === 'es' ? 'es-US' : 'en-US', { month: 'short' }); };
+    var cells = weeks.map(function (row) {
+      return '<div class="avweek">' + row.map(function (ds) {
+        var past = ds < today, dt = new Date(ds + 'T12:00:00');
+        if (past) return '<div class="avday past"><span class="n">' + dt.getDate() + '</span></div>';
+        var half = function (b) { return '<button class="avh' + (have[ds + '|' + b] ? ' on' : '') + '" data-rav="' + ds + '|' + b + '" aria-label="' + esc(dayLong(ds) + ' ' + t(b === 'am' ? 'blockAm' : 'blockPm')) + '">' + (b === 'am' ? 'AM' : 'PM') + '</button>'; };
+        return '<div class="avday' + (ds === today ? ' today' : '') + '"><span class="n">' + (dt.getDate() === 1 || ds === today ? monthOf(ds) + ' ' : '') + dt.getDate() + '</span>' + half('am') + half('pm') + '</div>';
+      }).join('') + '</div>';
+    }).join('');
+    var n = (a.availability || []).length;
+    return fold('asgavail', t('asgAvailTitle'), n, '<div class="avcal"><div class="avweek head">' + dows.map(function (x) { return '<div class="avdow">' + x + '</div>'; }).join('') + '</div>' + cells + '</div><div class="hint">' + esc(t('asgAvailHint')) + '</div>', n === 0);
+  }
+  function asgDayHtml() {
+    var a = S.asg;
+    if (!a || !a.demo) return '';
+    var offered = (a.offers || []).filter(function (o) { return o.status === 'offered'; });
+    var accepted = (a.offers || []).filter(function (o) { return o.status === 'accepted'; });
+    var offCards = offered.map(function (o) {
+      return '<div class="card" style="border-color:var(--gold);gap:6px"><b>' + esc(t('asgOfferTitle')) + '</b><div>' + esc(asgGameLine(o)) + '. ' + esc(o.competition || '') + (o.age_group ? ', ' + esc(o.age_group) : '') + '. <b>' + asgSlotWord(o.slot) + '</b></div>' + (o.note ? '<div class="hint">' + esc(o.note) + '</div>' : '') +
+        '<div class="actions" style="padding:0"><button class="btn primary" data-asg-resp="accept" data-oid="' + o.id + '">' + esc(t('asgAccept')) + '</button><button class="btn outline" data-asg-resp="decline" data-oid="' + o.id + '">' + esc(t('asgDecline')) + '</button></div></div>';
+    }).join('');
+    var accList = accepted.length ? fold('asgacc', t('asgAccepted'), accepted.length, accepted.map(function (o) {
+      return '<div class="rowline"><div><b>' + esc(asgGameLine(o)) + '</b><br><span class="hint">' + esc(o.competition || '') + ', ' + asgSlotWord(o.slot) + '</span></div><button class="chip-btn small" data-asg-resp="turn_back" data-oid="' + o.id + '">' + esc(t('asgTurnBack')) + '</button></div>';
+    }).join(''), false) : '';
+    return offCards + accList + asgAvailHtml() + '<div class="msg" id="asgMsg" hidden></div>';
+  }
+  function wireAsgDay(root) {
+    root.querySelectorAll('[data-asg-resp]').forEach(function (b) { b.onclick = async function () {
+      var act = b.getAttribute('data-asg-resp');
+      if (act === 'turn_back' && !window.confirm(t('asgTurnConfirm'))) return;
+      b.disabled = true;
+      var r = await sb.rpc('asg_respond', { p_offer: parseInt(b.getAttribute('data-oid'), 10), p_action: act });
+      if (r.error || !r.data) { b.disabled = false; say('asgMsg', r.error ? r.error.message : t('reviewFailed'), 'bad'); return; }
+      var my = await sb.rpc('asg_my'); S.asg = my.data || S.asg;
+      await loadDay(); renderAll();
+    }; });
+    root.querySelectorAll('[data-rav]').forEach(function (c) { c.onclick = async function () {
+      var p = c.getAttribute('data-rav').split('|'), on = c.classList.contains('on');
+      c.disabled = true;
+      var r = on ? await sb.from('ref_availability').delete().eq('person_id', S.me.person_id).eq('date', p[0]).eq('block', p[1])
+                 : await sb.from('ref_availability').insert({ org_id: S.me.org_id, person_id: S.me.person_id, date: p[0], block: p[1] });
+      c.disabled = false;
+      if (r.error) { say('asgMsg', r.error.message, 'bad'); return; }
+      if (on) S.asg.availability = (S.asg.availability || []).filter(function (x) { return !(x.date === p[0] && x.block === p[1]); });
+      else (S.asg.availability = S.asg.availability || []).push({ date: p[0], block: p[1] });
+      c.classList.toggle('on');
+    }; });
+  }
+  async function loadAssign() {
+    ASG.from = todayStr(); ASG.to = shiftDate(ASG.from, 20);
+    var r = await Promise.all([
+      sb.rpc('asg_board', { p_from: ASG.from, p_to: ASG.to }),
+      sb.from('asg_demo').select('person_id')
+    ]);
+    ASG.board = r[0].data || [];
+    var ids = (r[1].data || []).map(function (x) { return x.person_id; });
+    ASG.roster = [];
+    if (ids.length) { var p = await sb.from('people').select('id,first_name,last_name').in('id', ids).order('last_name'); ASG.roster = p.data || []; }
+  }
+  function asgSlotChip(g, slot) {
+    var off = (g.offers || []).filter(function (o) { return o.slot === slot && (o.status === 'offered' || o.status === 'accepted'); })[0];
+    if (g[slot]) return '<span class="chip-btn small on" style="pointer-events:none">' + asgSlotWord(slot) + ' ' + esc(g[slot]) + '</span>';
+    if (off && off.status === 'offered') return '<button class="chip-btn small" style="border-color:var(--gold)" data-asg-wd="' + off.id + '">' + asgSlotWord(slot) + ' ' + esc(off.name || '') + ' · ' + esc(t('asgOfferedChip')) + ' ✕</button>';
+    var picking = ASG.pick && ASG.pick.game_id === g.game_id && ASG.pick.slot === slot;
+    return '<button class="chip-btn small' + (picking ? ' on' : '') + '" data-asg-slot="' + g.game_id + '|' + slot + '">' + asgSlotWord(slot) + ' · ' + esc(t('asgOpen')) + '</button>';
+  }
+  function assignHtml() {
+    var inp = function (id, v, type, ph) { return '<input id="' + id + '" type="' + (type || 'text') + '" value="' + esc(v == null ? '' : v) + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : '') + ' style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">'; };
+    var f = ASG.form;
+    var form = !f ? '<div class="pad" style="padding-top:12px"><button class="btn outline" id="asgNew" style="width:100%">' + esc(t('asgNewGame')) + '</button></div>' :
+      '<div class="card" style="gap:8px"><b>' + esc(t('asgNewGame')) + '</b>' +
+      '<div class="grid2"><div><label class="hint">' + esc(t('eodDate')) + '</label>' + inp('agDate', f.date, 'date') + '</div><div><label class="hint">' + esc(t('asgKick')) + '</label>' + inp('agTime', f.time, 'time') + '</div></div>' +
+      '<label class="hint">' + esc(t('eodVenue')) + '</label>' + inp('agVenue', f.venue) +
+      '<div class="grid2"><div><label class="hint">' + esc(t('asgFieldL')) + '</label>' + inp('agField', f.field) + '</div><div><label class="hint">' + esc(t('asgAge')) + '</label>' + inp('agAge', f.age, 'text', 'U12') + '</div></div>' +
+      '<label class="hint">' + esc(t('asgComp')) + '</label>' + inp('agComp', f.comp) +
+      '<div class="grid2"><div><label class="hint">' + esc(t('asgHome')) + '</label>' + inp('agHome', f.home) + '</div><div><label class="hint">' + esc(t('asgAway')) + '</label>' + inp('agAway', f.away) + '</div></div>' +
+      '<div class="actions" style="padding:0"><button class="btn primary" id="asgCreate">' + esc(t('asgCreate')) + '</button><button class="btn outline" id="asgCancel">' + esc(t('neverMind')) + '</button></div><div class="msg" id="agMsg" hidden></div></div>';
+    var pickBox = function (g) {
+      if (!ASG.pick || ASG.pick.game_id !== g.game_id) return '';
+      var warns = ASG.warns ? (ASG.warns.warnings || []) : null;
+      return '<div style="padding-top:8px"><div class="hint">' + esc(t('asgPickWho').replace('{slot}', asgSlotWord(ASG.pick.slot))) + '</div>' +
+        '<input id="asgQ" value="' + esc(ASG.q) + '" placeholder="' + esc(t('coachSearch')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink);margin-top:6px">' +
+        '<div class="chips" style="padding-top:8px">' + (ASG.cand || []).map(function (x) { return '<button class="chip-btn small' + (ASG.sel && ASG.sel.person_id === x.person_id ? ' on' : '') + '" data-asg-cand="' + x.person_id + '">' + esc(x.name) + (x.minor ? ' ●' : '') + '</button>'; }).join('') + '</div>' +
+        (ASG.sel ? '<div style="padding-top:6px">' + (warns && warns.length ? warns.map(function (w) { return '<div class="hint" style="color:var(--gold)">⚠ ' + esc(t('asgWarn.' + w)) + '</div>'; }).join('') : '<div class="hint" style="color:var(--green, #3DBA63)">' + esc(t('asgNoWarn')) + '</div>') +
+          '<div class="actions" style="padding:8px 0 0"><button class="btn primary small" id="asgSend">' + esc(t('asgSend').replace('{name}', ASG.sel.name)) + '</button></div></div>' : '') +
+        '<div class="msg" id="asgPickMsg" hidden></div></div>';
+    };
+    var gameCard = function (g) {
+      return '<div class="card" style="gap:6px"><b>' + esc(dayLong(g.date)) + ', ' + esc(clock(g.kickoff)) + '</b><div class="hint">' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + '. ' + esc(g.competition || '') + (g.age_group ? ', ' + esc(g.age_group) : '') + (g.home ? '. ' + esc(g.home) + ' v ' + esc(g.away || '') : '') + '</div>' +
+        '<div class="chips">' + ['cr', 'ar1', 'ar2', 'fourth'].map(function (s) { return asgSlotChip(g, s); }).join('') + '</div>' + pickBox(g) + '</div>';
+    };
+    var roster = fold('asgroster', t('asgRoster'), (ASG.roster || []).length,
+      '<div class="hint">' + esc(t('asgRosterHint')) + '</div><div class="chips" style="padding-top:6px">' + (ASG.roster || []).map(function (p) { return '<button class="chip-btn small" data-asg-drop="' + p.id + '">' + esc(p.first_name + ' ' + p.last_name) + ' ✕</button>'; }).join('') + '</div>' +
+      '<input id="asgRq" value="' + esc(ASG.rq) + '" placeholder="' + esc(t('coachSearch')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink);margin-top:8px">' +
+      '<div class="chips" style="padding-top:8px">' + (ASG.rcand || []).map(function (x) { return '<button class="chip-btn small" data-asg-addp="' + x.person_id + '">+ ' + esc(x.name) + '</button>'; }).join('') + '</div><div class="msg" id="asgRMsg" hidden></div>', false);
+    return form + '<div class="disp h2">' + esc(t('asgGamesTitle')) + '</div>' +
+      ((ASG.board || []).length ? ASG.board.map(gameCard).join('') : '<div class="pad hint">' + esc(t('asgNone')) + '</div>') + roster;
+  }
+  function wireAssign(root) {
+    var nb = $('asgNew'); if (nb) nb.onclick = function () { ASG.form = { date: todayStr(), time: '', venue: '', field: '', age: '', comp: '', home: '', away: '' }; renderAssign(); };
+    var cb = $('asgCancel'); if (cb) cb.onclick = function () { ASG.form = null; renderAssign(); };
+    var cr = $('asgCreate'); if (cr) cr.onclick = async function () {
+      var f = ASG.form; f.date = $('agDate').value; f.time = $('agTime').value; f.venue = $('agVenue').value.trim(); f.field = $('agField').value.trim(); f.age = $('agAge').value.trim(); f.comp = $('agComp').value.trim(); f.home = $('agHome').value.trim(); f.away = $('agAway').value.trim();
+      if (!f.date || !f.time || !f.venue) { say('agMsg', t('asgNeedFields'), 'bad'); return; }
+      cr.disabled = true;
+      var kick = new Date(f.date + 'T' + f.time + ':00');
+      var r = await sb.rpc('asg_add_game', { p: { date: f.date, kickoff: kick.toISOString(), venue: f.venue, field: f.field, age_group: f.age, competition: f.comp, home: f.home, away: f.away } });
+      if (r.error || !r.data) { cr.disabled = false; say('agMsg', r.error ? r.error.message : t('reviewFailed'), 'bad'); return; }
+      ASG.form = null; await loadAssign(); renderAssign();
+    };
+    root.querySelectorAll('[data-asg-slot]').forEach(function (b) { b.onclick = function () { var p = b.getAttribute('data-asg-slot').split('|'); ASG.pick = { game_id: parseInt(p[0], 10), slot: p[1] }; ASG.q = ''; ASG.cand = null; ASG.sel = null; ASG.warns = null; renderAssign(); var q = $('asgQ'); if (q) q.focus(); }; });
+    root.querySelectorAll('[data-asg-wd]').forEach(function (b) { b.onclick = async function () { if (!window.confirm(t('asgWithdrawConfirm'))) return; b.disabled = true; await sb.rpc('asg_withdraw', { p_offer: parseInt(b.getAttribute('data-asg-wd'), 10) }); await loadAssign(); renderAssign(); }; });
+    var q = $('asgQ');
+    if (q) {
+      var qt = null;
+      q.oninput = function () { clearTimeout(qt); qt = setTimeout(async function () { ASG.q = q.value.trim(); if (ASG.q.length < 2) { ASG.cand = null; return; } var r = await sb.rpc('co90_find_person', { p_q: ASG.q }); ASG.cand = r.data || []; ASG.sel = null; ASG.warns = null; renderAssign(); var nq = $('asgQ'); if (nq) { nq.focus(); nq.setSelectionRange(nq.value.length, nq.value.length); } }, 350); };
+    }
+    root.querySelectorAll('[data-asg-cand]').forEach(function (b) { b.onclick = async function () {
+      var pid = parseInt(b.getAttribute('data-asg-cand'), 10);
+      ASG.sel = (ASG.cand || []).filter(function (x) { return x.person_id === pid; })[0];
+      var r = await sb.rpc('asg_check', { p_person: pid, p_game: ASG.pick.game_id });
+      ASG.warns = r.data || { warnings: [] };
+      renderAssign();
+    }; });
+    var sd = $('asgSend'); if (sd) sd.onclick = async function () {
+      sd.disabled = true;
+      var r = await sb.rpc('asg_offer', { p_game: ASG.pick.game_id, p_slot: ASG.pick.slot, p_person: ASG.sel.person_id });
+      if (r.error) { sd.disabled = false; say('asgPickMsg', r.error.message, 'bad'); return; }
+      ASG.pick = null; ASG.sel = null; ASG.cand = null; await loadAssign(); renderAssign();
+    };
+    var rq = $('asgRq');
+    if (rq) {
+      var rt = null;
+      rq.oninput = function () { clearTimeout(rt); rt = setTimeout(async function () { ASG.rq = rq.value.trim(); if (ASG.rq.length < 2) { ASG.rcand = null; return; } var r = await sb.rpc('co90_find_person', { p_q: ASG.rq }); ASG.rcand = r.data || []; renderAssign(); var n = $('asgRq'); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 350); };
+    }
+    root.querySelectorAll('[data-asg-addp]').forEach(function (b) { b.onclick = async function () {
+      b.disabled = true;
+      var r = await sb.from('asg_demo').insert({ org_id: S.me.org_id, person_id: parseInt(b.getAttribute('data-asg-addp'), 10), added_by: S.me.person_id });
+      if (r.error) { say('asgRMsg', r.error.message, 'bad'); b.disabled = false; return; }
+      ASG.rq = ''; ASG.rcand = null; await loadAssign(); renderAssign();
+    }; });
+    root.querySelectorAll('[data-asg-drop]').forEach(function (b) { b.onclick = async function () {
+      b.disabled = true;
+      var r = await sb.from('asg_demo').delete().eq('person_id', parseInt(b.getAttribute('data-asg-drop'), 10));
+      if (r.error) { say('asgRMsg', r.error.message, 'bad'); b.disabled = false; return; }
+      await loadAssign(); renderAssign();
+    }; });
+  }
+  function renderAssign() { $('assignBody').innerHTML = assignHtml(); wireAssign($('assignBody')); }
+
   function renderDay() {
     var me = S.me, h = new Date().getHours();
     var greet = t(h < 12 ? 'greeting.morning' : h < 17 ? 'greeting.afternoon' : 'greeting.evening');
@@ -885,6 +1049,7 @@
     var coachEvals = iCan('evaluations') ? (ER.mine || []).filter(function (r) { return r.coach_person_id === S.me.person_id && r.status === 'assigned' && r.game_date >= todayStr(); }) : [];
     var coachEvalHtml = coachEvals.map(function (r) { return '<div class="card" style="border-color:var(--red);gap:6px"><b>' + esc(t('evalYouAssigned')) + '</b><div>' + refLink(r.ref_name) + ', ' + esc(dayLong(r.game_date)) + ', ' + esc(r.venue || '') + '. ' + esc(t('evalPurpose.' + r.purpose)) + '</div><div class="actions" style="padding:0"><a class="btn primary" href="evaluator.html?gameId=' + esc(r.game_id) + '">' + esc(t('evalOpenEvaluator')) + '</a><a class="btn outline" href="#coach/game/' + esc(r.game_id) + '">' + esc(t('details')) + '</a></div></div>'; }).join('');
     $('co90Line').innerHTML = co90DayHtml();
+    $('asgLine').innerHTML = asgDayHtml(); wireAsgDay($('asgLine'));
     $('sessionsLine').innerHTML = signupCardHtml(); wireSignup($('sessionsLine'));
     renderWrap();
     if (ER.prog === undefined) { ER.prog = null; sb.rpc('eval_progress').then(function (pr) { ER.prog = pr.data || null; var el = $('evalProg'); if (el) el.innerHTML = progressHtml(ER.prog); }); }
@@ -897,6 +1062,7 @@
     $('centerEntry').innerHTML = iCan('review') ? '<a class="rowbtn" href="#center" style="margin-top:8px"><span><span class="t">' + esc(t('centerEntry')) + '</span><br><span class="s">' + esc(t('centerEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
     $('stateEntry').innerHTML = iCan('state_view') ? '<a class="rowbtn" href="#state" style="margin-top:8px"><span><span class="t">' + esc(t('stateEntry')) + '</span><br><span class="s">' + esc(t('stateEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
     $('opsEntry').innerHTML = iCan('command_center') ? '<a class="rowbtn" href="#ops" style="margin-top:8px"><span><span class="t">' + esc(t('opsEntry')) + '</span><br><span class="s">' + esc(t('opsEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
+    $('asgEntry').innerHTML = iCan('assigning') ? '<a class="rowbtn" href="#assign" style="margin-top:8px"><span><span class="t">' + esc(t('asgEntryT')) + '</span><br><span class="s">' + esc(t('asgEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
     var pb = $('previewBar');
     if (S.me.previewing) { pb.style.display = 'flex'; $('previewText').textContent = t('previewing').replace('{name}', S.me.first_name + ' ' + S.me.last_name) + ' ' + t('previewNoWrite'); $('previewStop').textContent = t('previewStop'); $('previewStop').onclick = async function () { await sb.rpc('clear_preview'); location.hash = ''; start(); }; }
     else pb.style.display = 'none';
@@ -2917,6 +3083,7 @@
     if (h === 'upgrade' || h.indexOf('upgrade/') === 0) { show('s-upgrade'); renderUpgrade(h === 'upgrade' ? null : parseInt(h.slice(8), 10)); return; }
     if (h.indexOf('map/') === 0) { var mp = h.slice(4).split('/'); show('s-map'); renderMap(decodeURIComponent(mp[0] || ''), decodeURIComponent(mp[1] || '')); return; }
     if (h === 'eod') { if (!canEod()) { location.hash = '#day'; return; } $('eodBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-eod'); loadEod().then(renderEod).catch(function (e) { $('eodBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
+    if (h === 'assign') { if (!iCan('assigning')) { location.hash = '#day'; return; } $('assignBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-assign'); loadAssign().then(renderAssign).catch(function (e) { $('assignBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'setup') { if (!iCan('setup')) { location.hash = '#day'; return; } $('setupBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-setup'); SU.ev = null; loadSetup().then(renderSetup).catch(function (e) { $('setupBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'people') { if (!iCan('people')) { location.hash = '#day'; return; } show('s-people'); PP.person = null; $('personCard').innerHTML = ''; renderPeople(); setTimeout(function () { $('peopleQ').focus(); }, 50); return; }
     if (h === 'ops') { if (!iCan('command_center')) { location.hash = '#day'; return; } if (OPS.openStaff) { OPS.tab = 'staff'; OPS.openStaff = false; } $('opsBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-ops'); loadOps().then(renderOps).catch(function (e) { $('opsBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
@@ -2977,8 +3144,8 @@
     ['themeBtn0', 'themeBtn1', 'themeBtn2'].forEach(function (id) { $(id).onclick = toggleTheme; });
     ['langBtn0', 'langBtn1'].forEach(function (id) { $(id).onclick = function () { setLang(S.lang === 'es' ? 'en' : 'es'); }; });
     $('markSignin').src = C.marks.csa; $('markDay').src = C.marks.csa;
-    ['markGame', 'markNotes', 'markHelp', 'markCoach', 'markCoachGame', 'markMyNotes', 'markReview', 'markCenter', 'markOps', 'markPeople', 'markSetup', 'markEod', 'markRef', 'markState', 'markMap', 'markEval', 'markUpgrade'].forEach(function (id) { $(id).src = C.marks.program; });
-    ['ja0', 'ja1', 'ja2', 'ja3', 'ja4', 'ja5', 'ja6', 'ja7', 'ja8', 'ja9', 'ja10', 'ja11', 'ja12', 'ja13', 'ja14', 'ja15', 'ja16', 'ja17', 'ja18'].forEach(function (id) { $(id).src = C.marks.ja; });
+    ['markGame', 'markNotes', 'markHelp', 'markCoach', 'markCoachGame', 'markMyNotes', 'markReview', 'markCenter', 'markOps', 'markPeople', 'markSetup', 'markEod', 'markRef', 'markState', 'markMap', 'markEval', 'markUpgrade', 'markAssign'].forEach(function (id) { $(id).src = C.marks.program; });
+    ['ja0', 'ja1', 'ja2', 'ja3', 'ja4', 'ja5', 'ja6', 'ja7', 'ja8', 'ja9', 'ja10', 'ja11', 'ja12', 'ja13', 'ja14', 'ja15', 'ja16', 'ja17', 'ja18', 'ja19'].forEach(function (id) { $(id).src = C.marks.ja; });
     $('peopleQ').oninput = function () { var q = $('peopleQ').value.trim(); clearTimeout(PP.timer); PP.timer = setTimeout(function () { searchPeople(q); }, 300); };
     $('peopleQ').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); } };
     $('staffBtn').onclick = function () { renderStaff(); };
