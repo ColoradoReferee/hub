@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- library.html v2026.10.21-h · 2026-10-21 · Colorado Referees Library -->
+<!-- library.html v2026.10.23-d · 2026-10-23 · Colorado Referees Library -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -427,7 +427,7 @@ a{color:inherit;text-decoration:none;}
       <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program">
     </div>
     <div class="footer-text">
-      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.10.21-h<br>
+      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.10.23-d<br>
       <a href="https://coloradosoccer.org" class="footer-link">ColoradoSoccer.org</a> &middot;
       <span data-l="questions">Questions:</span> <a href="mailto:refeducation@coloradoreferees.com" class="footer-link">refeducation@coloradoreferees.com</a> &middot; 303.888.6863
     </div>
@@ -1586,6 +1586,65 @@ var MODULES = [
     }
   },
 
+  {
+    id:"career-premium", cat:"career", icon:"&#128176;",
+    iconBg:"rgba(39,174,96,.12)",
+    title:"Premium Pay",
+    sub:"Three tiers, who qualifies, the Tier 3 test, how to apply",
+    eyebrow:"Career Resources",
+    keywords:"premium pay tier 1 2 3 extra per match grassroots education D&G evaluation fitness test $5 $7.50 $10 apply application deadline february march DRL digital bridge",
+    build: function() {
+      var tiers = [
+        ["Tier 1","$5 per match","5 hours of continuing education during the cycle"],
+        ["Tier 2","$7.50 per match","Tier 1, plus a D&G evaluation"],
+        ["Tier 3","$10 per match","Tier 2, plus the fitness test"]
+      ];
+      return ds("What premium pay is",
+        dt("Premium pay is an extra per-match amount CSA pays grassroots referees who train, keep learning, and stay engaged in the U.S. Soccer program. It applies whether you work as referee, assistant referee, or fourth official.") +
+        tiers.map(function(row) {
+          return "<div style=\"border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:8px\">" +
+            "<div style=\"display:flex;justify-content:space-between;margin-bottom:4px\">" +
+            "<span style=\"font-size:11px;font-weight:700;color:var(--grn)\">" + row[0] + "</span>" +
+            "<span style=\"font-size:11px;font-weight:700;color:var(--gold)\">" + row[1] + "</span></div>" +
+            "<div style=\"font-size:13px;color:var(--ink)\">" + row[2] + "</div></div>";
+        }).join("") +
+        dt("<strong>Which games pay it?</strong> Colorado Advanced League and MRL games, plus tournaments that opt in. FRL, in-house, recreational, and interbranch leagues do not participate. Check with your tournament assignor whether an event uses the premium pay scale.") +
+        dt("<strong>Is the fitness test required to referee?</strong> No. It is only required for Tier 3. Referees who skip it can still earn Tier 1 or Tier 2, or standard game fees.")) +
+      ds("Who is eligible",
+        chk("Grassroots referees certified for at least one year") +
+        chk("At least 10 competitive games worked as center referee") +
+        bul("<strong>Regional and above</strong> are not part of this program; they receive separate advanced-grade premiums ($20 Regional, $30 National or Pro, $40 International)") +
+        bul("<strong>Digital Referee License holders</strong> are not eligible until they complete the Digital Bridge Course and move to the full referee license") +
+        dt("The D&G evaluation for Tiers 2 and 3 must be approved in advance by the State Director of Referee Development, and the referee pays the evaluation fee.")) +
+      ds("The Tier 3 fitness test",
+        dt("A modified version of U.S. Soccer's FIFA fitness test, run on a grass or turf soccer field, not a track. Two parts, 6 to 8 minutes of rest between them, and you must pass both in the same session:") +
+        bul("<strong>Repeated Sprint Ability:</strong> 6 sprints of 40 m, each in 6.8 seconds or less, with up to 60 seconds walking back between sprints") +
+        bul("<strong>Interval test:</strong> at least 24 repetitions of a 75 m run and a 25 m walk, at the Regional times: 17 seconds per run, 20 seconds (men) or 24 seconds (women) per walk, to an audio signal") +
+        bul("<strong>Miss a sprint?</strong> You run a seventh right after the sixth. Missing two of seven is a fail") +
+        bul("<strong>Late on an interval?</strong> First time is a clear warning; the second stops the test") +
+        dt("Bring cleats or turf shoes for the surface, water, and athletic clothing for the weather. Arrive 15 minutes early to check in and warm up. No referee uniform required.") +
+        dt("<strong>Injured or unwell?</strong> Do not test. Contact the State Director of Referee Development to reschedule at no penalty. Anyone with a medical condition should check with their doctor first.") +
+        dt("The full fitness page has diagrams, a pacer that plays the interval signal from your phone, and the audio to train with.") +
+        "<a class=\"btn\" href=\"fitness.html\" style=\"display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:10px;background:var(--navy);color:var(--onnavy);font-weight:700;text-decoration:none\">Open the fitness test page &#8250;</a>") +
+      ds("Dates, fees, and the deadline",
+        bul("Test sessions are posted on the Colorado Referees events calendar and appear on Your day in the Hub; tests run at least 4 times a year") +
+        bul("Registration closes 24 hours before each session; no walk-ups") +
+        bul("The referee pays the fitness test fee of <strong>$50</strong>; the D&G evaluation also has a fee the referee pays") +
+        callout("245,200,66","&#128197;","For the 2027 registration year: complete every Tier 3 requirement by <strong>February 28, 2027</strong> and recertify for 2027 by <strong>December 31, 2026</strong>. Meeting the requirements is not enough on its own: everyone must also submit the premium pay application by February 28.")) +
+      ds("Apply in the Hub",
+        stp(1, "Open the Hub and find the <strong>Premium pay</strong> fold on your referee card. It already shows what CSA has on record: seasons certified, career centers, your fitness pass, and evaluations in the cycle.") +
+        stp(2, "Pick your tier, list your continuing education line by line, and submit. Tier 2 and 3 add a line for your D&G evaluation.") +
+        stp(3, "Referee Operations reviews the application right in the Hub and you see the decision on the same card. You can withdraw and resubmit any time before the deadline.")) +
+      ds("Results and pay",
+        bul("Fitness results are recorded in your referee history within 7 business days") +
+        bul("Qualifying referees join the premium pay group on <strong>March 1</strong>; pay is not retroactive, so games before then are at base rates") +
+        bul("Referee Operations updates your Assignr profile once your pass is recorded; eligible games then show the premium fee. If a fee looks wrong, say so before the pay period closes") +
+        bul("<strong>Did not pass?</strong> Retest at any session before the deadline, no minimum wait. With the education and D&G done you still qualify for Tier 2") +
+        bul("Premium pay can be lost if your pass expires, your certification lapses, or you stop meeting the other requirements")) +
+      callout("39,174,96","&#128172;","Questions? Fitness testing: the State Director of Referee Development. Premium pay: Referee Operations at <strong>refeducation@coloradoreferees.com</strong>. Training help to prepare: ask for a referee mentor or coach through CREST.");
+    }
+  },
+
   /* ══════════ POLICY ══════════ */
   {
     id:"policy-rap", cat:"policy", icon:"&#128737;",
@@ -2680,6 +2739,63 @@ var ES = {
         "<a class=\"btn\" href=\"fitness.html\" style=\"display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:10px;background:var(--navy);color:var(--onnavy);font-weight:700;text-decoration:none\">Abrir la página de la prueba física &#8250;</a>") +
       ds("Inscribirme",
         dt("Las fechas de la prueba aparecen en Tu día en el Hub cuando el Departamento de Árbitros programa una. Inscríbete ahí; la tarjeta de inscripción enlaza de vuelta a esta página."));
+    }
+  },
+
+  "career-premium": {
+    title: "Pago premium",
+    sub: "Tres niveles, quién califica, la prueba del Nivel 3, cómo aplicar",
+    eyebrow: "Recursos de carrera",
+    keywords: "pago premium nivel 1 2 3 extra por partido grassroots educación evaluación D&G prueba física $5 $7.50 $10 aplicar solicitud fecha límite febrero marzo DRL puente digital",
+    build: function() {
+      var tiers = [
+        ["Nivel 1","$5 por partido","5 horas de educación continua durante el ciclo"],
+        ["Nivel 2","$7.50 por partido","Nivel 1, más una evaluación D&G"],
+        ["Nivel 3","$10 por partido","Nivel 2, más la prueba física"]
+      ];
+      return ds("Qué es el pago premium",
+        dt("El pago premium es un monto extra por partido que CSA paga a los árbitros grassroots que entrenan, siguen aprendiendo y se mantienen activos en el programa de U.S. Soccer. Aplica trabajes como árbitro central, asistente o cuarto oficial.") +
+        tiers.map(function(row) {
+          return "<div style=\"border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:8px\">" +
+            "<div style=\"display:flex;justify-content:space-between;margin-bottom:4px\">" +
+            "<span style=\"font-size:11px;font-weight:700;color:var(--grn)\">" + row[0] + "</span>" +
+            "<span style=\"font-size:11px;font-weight:700;color:var(--gold)\">" + row[1] + "</span></div>" +
+            "<div style=\"font-size:13px;color:var(--ink)\">" + row[2] + "</div></div>";
+        }).join("") +
+        dt("<strong>¿Qué partidos lo pagan?</strong> Los partidos de la Colorado Advanced League y de MRL, más los torneos que decidan participar. FRL, las ligas internas, recreativas e interbranch no participan. Pregunta al asignador de tu torneo si el evento usa la escala de pago premium.") +
+        dt("<strong>¿La prueba física es obligatoria para arbitrar?</strong> No. Solo se requiere para el Nivel 3. Quien no la tome puede ganar el premium de Nivel 1 o 2, o las tarifas estándar.")) +
+      ds("Quién es elegible",
+        chk("Árbitros grassroots con al menos un año de certificación") +
+        chk("Al menos 10 partidos competitivos trabajados como árbitro central") +
+        bul("<strong>Regional y superiores</strong> no forman parte de este programa; reciben premiums de grado avanzado por separado ($20 Regional, $30 Nacional o Pro, $40 Internacional)") +
+        bul("<strong>Quienes tienen la Licencia Digital de Árbitro (DRL)</strong> no son elegibles hasta completar el Curso Puente Digital y pasar a la licencia completa") +
+        dt("La evaluación D&G para los Niveles 2 y 3 debe aprobarse por adelantado con el Director Estatal de Desarrollo Arbitral, y el árbitro paga la cuota de la evaluación.")) +
+      ds("La prueba física del Nivel 3",
+        dt("Una versión modificada de la prueba física FIFA de U.S. Soccer, en una cancha de pasto natural o sintético, no en pista. Dos partes, con 6 a 8 minutos de descanso entre ellas, y debes aprobar ambas en la misma sesión:") +
+        bul("<strong>Sprints repetidos (RSA):</strong> 6 sprints de 40 m, cada uno en 6.8 segundos o menos, con hasta 60 segundos caminando de regreso entre sprints") +
+        bul("<strong>Prueba de intervalos:</strong> al menos 24 repeticiones de una carrera de 75 m y una caminata de 25 m, con los tiempos de Regional: 17 segundos por carrera, 20 segundos (hombres) o 24 segundos (mujeres) por caminata, al ritmo de una señal de audio") +
+        bul("<strong>¿Fallaste un sprint?</strong> Corres un séptimo justo después del sexto. Fallar dos de siete es reprobar") +
+        bul("<strong>¿Llegaste tarde en un intervalo?</strong> La primera vez es una advertencia clara; la segunda detiene la prueba") +
+        dt("Lleva tacos o zapatos de turf según la superficie, agua y ropa deportiva para el clima. Llega 15 minutos antes para registrarte y calentar. No se requiere uniforme de árbitro.") +
+        dt("<strong>¿Lesionado o enfermo?</strong> No tomes la prueba. Contacta al Director Estatal de Desarrollo Arbitral para reprogramar sin penalización. Quien tenga una condición médica debe consultar a su médico primero.") +
+        dt("La página completa de la prueba tiene diagramas, un marcapasos que reproduce la señal de intervalo desde tu teléfono y el audio para entrenar.") +
+        "<a class=\"btn\" href=\"fitness.html\" style=\"display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:10px;background:var(--navy);color:var(--onnavy);font-weight:700;text-decoration:none\">Abrir la página de la prueba física &#8250;</a>") +
+      ds("Fechas, cuotas y la fecha límite",
+        bul("Las sesiones de prueba se publican en el calendario de eventos de Colorado Referees y aparecen en Tu día en el Hub; hay pruebas al menos 4 veces al año") +
+        bul("La inscripción cierra 24 horas antes de cada sesión; no se permite llegar sin registro") +
+        bul("El árbitro paga la cuota de la prueba física de <strong>$50</strong>; la evaluación D&G también tiene una cuota que paga el árbitro") +
+        callout("245,200,66","&#128197;","Para el año de registro 2027: completa todos los requisitos del Nivel 3 antes del <strong>28 de febrero de 2027</strong> y recertifícate para 2027 antes del <strong>31 de diciembre de 2026</strong>. Cumplir los requisitos no basta por sí solo: todos deben además enviar la solicitud de pago premium antes del 28 de febrero.")) +
+      ds("Aplica en el Hub",
+        stp(1, "Abre el Hub y busca la sección <strong>Pago premium</strong> en tu tarjeta de árbitro. Ya muestra lo que CSA tiene en el registro: temporadas certificadas, partidos como central, tu prueba física y las evaluaciones del ciclo.") +
+        stp(2, "Elige tu nivel, enumera tu educación continua línea por línea y envía. Los Niveles 2 y 3 agregan una línea para tu evaluación D&G.") +
+        stp(3, "Operaciones Arbitrales revisa la solicitud en el mismo Hub y ves la decisión en la misma tarjeta. Puedes retirarla y reenviarla en cualquier momento antes de la fecha límite.")) +
+      ds("Resultados y pago",
+        bul("Los resultados de la prueba se registran en tu historial dentro de 7 días hábiles") +
+        bul("Quienes califican entran al grupo de pago premium el <strong>1 de marzo</strong>; el pago no es retroactivo, así que los partidos anteriores se pagan a tarifa base") +
+        bul("Operaciones Arbitrales actualiza tu perfil de Assignr cuando se registra tu aprobación; los partidos elegibles muestran entonces la tarifa premium. Si una tarifa se ve mal, avisa antes de que cierre el periodo de pago") +
+        bul("<strong>¿No aprobaste?</strong> Vuelve a intentarlo en cualquier sesión antes de la fecha límite, sin espera mínima. Con la educación y la D&G completas aún calificas para el Nivel 2") +
+        bul("El pago premium se puede perder si tu aprobación vence, tu certificación caduca o dejas de cumplir los demás requisitos")) +
+      callout("39,174,96","&#128172;","¿Preguntas? Prueba física: el Director Estatal de Desarrollo Arbitral. Pago premium: Operaciones Arbitrales en <strong>refeducation@coloradoreferees.com</strong>. ¿Ayuda para entrenar? Pide un mentor o coach de árbitros a través de CREST.");
     }
   },
 

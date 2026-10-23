@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.23-c';
+  var VERSION = '2026.10.23-d';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1113,7 +1113,7 @@
           '<div class="actions" style="padding:8px 0 0"><button class="btn primary small"' + (eligible ? '' : ' disabled') + ' id="premGo">' + esc(t('premSubmit')) + '</button></div>' : '') +
         '<div class="msg" id="premMsg" hidden></div>';
     }
-    return fold('premium', t('premTitle').replace('{y}', p.season || ''), a ? 1 : '', '<div class="hint">' + esc(t('premLead')) + '</div>' + inner, false);
+    return fold('premium', t('premTitle').replace('{y}', p.season || ''), a ? 1 : '', '<div class="hint">' + esc(t('premLead')) + ' <a href="' + (C.library || 'library.html') + '#career-premium" target="_blank" rel="noopener">' + esc(t('premFaq')) + '</a></div>' + inner, false);
   }
   function wirePremium(root) {
     root.querySelectorAll('[data-prem-tier]').forEach(function (b) { b.onclick = function () { var ed = $('premEdu'); if (ed) PREM.edu = ed.value; var dg = $('premDgIn'); if (dg) PREM.dg = dg.value; PREM.tier = parseInt(b.getAttribute('data-prem-tier'), 10); $('premiumLine').innerHTML = premiumHtml(); wirePremium($('premiumLine')); }; });
