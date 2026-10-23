@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.23-b';
+  var VERSION = '2026.10.23-c';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -857,24 +857,39 @@
   var ASG = { board: null, from: null, to: null, form: null, pick: null, q: '', cand: null, sel: null, warns: null, roster: null, rq: '', rcand: null };
   function asgSlotWord(s) { return s === 'cr' ? 'CR' : s === 'ar1' ? 'AR1' : s === 'ar2' ? 'AR2' : s === 'coach' ? t('asgCoachWord') : '4TH'; }
   function asgGameLine(o) { return dayShort(o.date) + ', ' + clock(o.kickoff) + ', ' + (o.venue || '') + (o.field ? ', ' + fieldShort(o.field) : ''); }
+  var AV = { day: null, from: '', to: '' };
+  function minClock(m) { if (m === 1440) return t('avMidnight'); var h = Math.floor(m / 60), mm = m % 60, h12 = h % 12 === 0 ? 12 : h % 12; return h12 + (mm ? ':' + (mm < 10 ? '0' : '') + mm : '') + ' ' + (h < 12 ? 'AM' : 'PM'); }
+  function dayWins(ds) { return ((S.asg && S.asg.availability) || []).filter(function (x) { return x.date === ds; }).sort(function (a, b) { return a.from_min - b.from_min; }); }
   function asgAvailHtml() {
-    var a = S.asg, today = todayStr(), have = {};
-    (a.availability || []).forEach(function (x) { have[x.date + '|' + x.block] = 1; });
+    var a = S.asg, today = todayStr();
     var start = new Date(today + 'T12:00:00'); start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
     var weeks = [], d = new Date(start), end = shiftDate(today, 27);
     for (var w = 0; w < 5; w++) { var row = []; for (var i = 0; i < 7; i++) { row.push(iso(d)); d.setDate(d.getDate() + 1); } weeks.push(row); if (row[6] >= end) break; }
     var dows = S.lang === 'es' ? ['L', 'M', 'X', 'J', 'V', 'S', 'D'] : ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
     var monthOf = function (ds) { return new Date(ds + 'T12:00:00').toLocaleDateString(S.lang === 'es' ? 'es-US' : 'en-US', { month: 'short' }); };
+    var short = function (m) { var h = Math.floor(m / 60), mm = m % 60, h12 = h % 12 === 0 ? 12 : h % 12; return h12 + (mm ? ':' + (mm < 10 ? '0' : '') + mm : '') + (h < 12 ? 'a' : 'p'); };
     var cells = weeks.map(function (row) {
       return '<div class="avweek">' + row.map(function (ds) {
         var past = ds < today, dt = new Date(ds + 'T12:00:00');
         if (past) return '<div class="avday past"><span class="n">' + dt.getDate() + '</span></div>';
-        var half = function (b) { return '<button class="avh' + (have[ds + '|' + b] ? ' on' : '') + '" data-rav="' + ds + '|' + b + '" aria-label="' + esc(dayLong(ds) + ' ' + t(b === 'am' ? 'blockAm' : 'blockPm')) + '">' + (b === 'am' ? 'AM' : 'PM') + '</button>'; };
-        return '<div class="avday' + (ds === today ? ' today' : '') + '"><span class="n">' + (dt.getDate() === 1 || ds === today ? monthOf(ds) + ' ' : '') + dt.getDate() + '</span>' + half('am') + half('pm') + '</div>';
+        var ws = dayWins(ds);
+        var lbl = !ws.length ? '+' : (ws.length === 1 && ws[0].from_min === 0 && ws[0].to_min === 1440) ? esc(t('avAllShort')) : ws.slice(0, 2).map(function (x) { return short(x.from_min) + '-' + (x.to_min === 1440 ? '12a' : short(x.to_min)); }).join('<br>') + (ws.length > 2 ? '…' : '');
+        return '<div class="avday' + (ds === AV.day ? ' games' : '') + (ds === today ? ' today' : '') + '"><span class="n">' + (dt.getDate() === 1 || ds === today ? monthOf(ds) + ' ' : '') + dt.getDate() + '</span><button class="avh' + (ws.length ? ' on' : '') + '" data-avday="' + ds + '" aria-label="' + esc(dayLong(ds)) + '" style="font-size:10px;line-height:1.25;min-height:34px;padding:2px 1px">' + lbl + '</button></div>';
       }).join('') + '</div>';
     }).join('');
-    var n = (a.availability || []).length;
-    return fold('asgavail', t('asgAvailTitle'), n, '<div class="avcal"><div class="avweek head">' + dows.map(function (x) { return '<div class="avdow">' + x + '</div>'; }).join('') + '</div>' + cells + '</div><div class="hint">' + esc(t('asgAvailHint')) + '</div>', n === 0);
+    var ed = '';
+    if (AV.day && AV.day >= today) {
+      var ws2 = dayWins(AV.day);
+      var dowName = new Date(AV.day + 'T12:00:00').toLocaleDateString(S.lang === 'es' ? 'es-US' : 'en-US', { weekday: 'long' });
+      ed = '<div class="card" style="gap:8px;margin-top:10px"><b>' + esc(dayLong(AV.day)) + '</b>' +
+        (ws2.length ? ws2.map(function (x) { return '<div class="rowline"><div>' + esc(minClock(x.from_min) + ' ' + t('avToWord') + ' ' + minClock(x.to_min)) + '</div><button class="chip-btn small" data-avdel="' + x.id + '" aria-label="' + esc(t('avRemove')) + '">✕</button></div>'; }).join('') : '<div class="hint">' + esc(t('avNoneDay')) + '</div>') +
+        '<div class="chips"><button class="chip-btn small" data-avpre="0|1440">' + esc(t('avAllDay')) + '</button><button class="chip-btn small" data-avpre="0|720">' + esc(t('avMorning')) + '</button><button class="chip-btn small" data-avpre="720|1440">' + esc(t('avAfternoon')) + '</button></div>' +
+        '<div class="grid2"><div><label class="hint" for="avFrom">' + esc(t('avFrom')) + '</label><input id="avFrom" type="time" value="' + esc(AV.from) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div><div><label class="hint" for="avTo">' + esc(t('avTo')) + '</label><input id="avTo" type="time" value="' + esc(AV.to) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div></div>' +
+        '<div class="actions" style="padding:0"><button class="btn primary small" id="avAddW">' + esc(t('avAdd')) + '</button>' + (ws2.length ? '<button class="btn outline small" id="avCopyW">' + esc(t('avCopyDow').replace('{dow}', dowName)) + '</button>' : '') + '</div>' +
+        '<div class="msg" id="avWMsg" hidden></div></div>';
+    }
+    var n = ((a && a.availability) || []).length;
+    return fold('asgavail', t('asgAvailTitle'), n, '<div class="avcal"><div class="avweek head">' + dows.map(function (x) { return '<div class="avdow">' + x + '</div>'; }).join('') + '</div>' + cells + '</div><div class="hint">' + esc(t('avPick')) + '</div>' + ed + '<div class="hint">' + esc(t('asgAvailHint')) + '</div>', n === 0);
   }
   function asgDayHtml() {
     var a = S.asg;
@@ -904,17 +919,54 @@
       var my = await sb.rpc('asg_my'); S.asg = my.data || S.asg;
       await loadDay(); renderAll();
     }; });
-    root.querySelectorAll('[data-rav]').forEach(function (c) { c.onclick = async function () {
-      var p = c.getAttribute('data-rav').split('|'), on = c.classList.contains('on');
-      c.disabled = true;
-      var r = on ? await sb.from('ref_availability').delete().eq('person_id', S.me.person_id).eq('date', p[0]).eq('block', p[1])
-                 : await sb.from('ref_availability').insert({ org_id: S.me.org_id, person_id: S.me.person_id, date: p[0], block: p[1] });
-      c.disabled = false;
-      if (r.error) { say('asgMsg', r.error.message, 'bad'); return; }
-      if (on) S.asg.availability = (S.asg.availability || []).filter(function (x) { return !(x.date === p[0] && x.block === p[1]); });
-      else (S.asg.availability = S.asg.availability || []).push({ date: p[0], block: p[1] });
-      c.classList.toggle('on');
+    var redraw = async function (refetch) {
+      if (refetch) { var m = await sb.rpc('asg_my'); if (m.data) S.asg = m.data; }
+      $('asgLine').innerHTML = asgDayHtml(); wireAsgDay($('asgLine'));
+    };
+    var addWins = async function (dates, from, to) {
+      var have = {};
+      (S.asg.availability || []).forEach(function (x) { have[x.date + '|' + x.from_min + '|' + x.to_min] = 1; });
+      var rows = dates.filter(function (ds) { return !have[ds + '|' + from + '|' + to]; })
+        .map(function (ds) { return { org_id: S.me.org_id, person_id: S.me.person_id, date: ds, from_min: from, to_min: to }; });
+      if (!rows.length) return null;
+      return await sb.from('ref_availability').insert(rows);
+    };
+    root.querySelectorAll('[data-avday]').forEach(function (c) { c.onclick = function () { var iv = $('avFrom'); if (iv) AV.from = iv.value; var it = $('avTo'); if (it) AV.to = it.value; AV.day = c.getAttribute('data-avday'); redraw(false); }; });
+    root.querySelectorAll('[data-avpre]').forEach(function (b) { b.onclick = async function () {
+      b.disabled = true;
+      var p = b.getAttribute('data-avpre').split('|');
+      var r = await addWins([AV.day], parseInt(p[0], 10), parseInt(p[1], 10));
+      if (r && r.error) { b.disabled = false; say('avWMsg', r.error.message, 'bad'); return; }
+      redraw(true);
     }; });
+    var aw = $('avAddW'); if (aw) aw.onclick = async function () {
+      var f = $('avFrom').value, to = $('avTo').value;
+      if (!f || !to) { say('avWMsg', t('avNeedTimes'), 'bad'); return; }
+      var fm = parseInt(f.slice(0, 2), 10) * 60 + parseInt(f.slice(3, 5), 10);
+      var tm = parseInt(to.slice(0, 2), 10) * 60 + parseInt(to.slice(3, 5), 10);
+      if (tm === 0) tm = 1440;
+      if (tm <= fm) { say('avWMsg', t('avBadOrder'), 'bad'); return; }
+      aw.disabled = true;
+      var r = await addWins([AV.day], fm, tm);
+      if (r && r.error) { aw.disabled = false; say('avWMsg', r.error.message, 'bad'); return; }
+      AV.from = ''; AV.to = '';
+      redraw(true);
+    };
+    root.querySelectorAll('[data-avdel]').forEach(function (b) { b.onclick = async function () {
+      b.disabled = true;
+      var r = await sb.from('ref_availability').delete().eq('person_id', S.me.person_id).eq('id', parseInt(b.getAttribute('data-avdel'), 10));
+      if (r.error) { b.disabled = false; say('avWMsg', r.error.message, 'bad'); return; }
+      redraw(true);
+    }; });
+    var cp = $('avCopyW'); if (cp) cp.onclick = async function () {
+      cp.disabled = true;
+      var today = todayStr(), targets = [];
+      for (var k = 1; k <= 4; k++) { var dsk = shiftDate(AV.day, k * 7); if (dsk <= shiftDate(today, 27) && dsk >= today) targets.push(dsk); }
+      var wins = dayWins(AV.day), err = null;
+      for (var w = 0; w < wins.length; w++) { var r = await addWins(targets, wins[w].from_min, wins[w].to_min); if (r && r.error) err = r.error; }
+      if (err) { cp.disabled = false; say('avWMsg', err.message, 'bad'); return; }
+      redraw(true);
+    };
   }
   async function loadAssign() {
     ASG.from = todayStr(); ASG.to = shiftDate(ASG.from, 20);
