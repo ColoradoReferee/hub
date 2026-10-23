@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.23-d';
+  var VERSION = '2026.10.23-e';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1011,9 +1011,20 @@
           '<div class="actions" style="padding:8px 0 0"><button class="btn primary small" id="asgSend">' + esc(t('asgSend').replace('{name}', ASG.sel.name)) + '</button></div></div>' : '') +
         '<div class="msg" id="asgPickMsg" hidden></div></div>';
     };
+    var editBox = function (g) {
+      var e = ASG.edit;
+      if (!e || e.game_id !== g.game_id) return '<div class="chips" style="padding-top:4px"><button class="chip-btn small" data-asg-edit="' + g.game_id + '">' + esc(t('asgChangeBtn')) + '</button><button class="chip-btn small" data-asg-cxl="' + g.game_id + '" style="border-color:var(--red)">' + esc(t('asgCxlBtn')) + '</button></div>';
+      return '<div style="padding-top:8px">' +
+        '<div class="grid2"><div><label class="hint">' + esc(t('eodDate')) + '</label>' + inp('aeDate', e.date, 'date') + '</div><div><label class="hint">' + esc(t('asgKick')) + '</label>' + inp('aeTime', e.time, 'time') + '</div></div>' +
+        '<label class="hint">' + esc(t('eodVenue')) + '</label>' + inp('aeVenue', e.venue) +
+        '<label class="hint">' + esc(t('asgFieldL')) + '</label>' + inp('aeField', e.field) +
+        '<div class="actions" style="padding:8px 0 0"><button class="btn primary small" id="asgESave">' + esc(t('asgSaveChange')) + '</button><button class="btn outline small" id="asgECancel">' + esc(t('neverMind')) + '</button></div><div class="msg" id="aeMsg" hidden></div></div>';
+    };
     var gameCard = function (g) {
-      return '<div class="card" style="gap:6px"><b>' + esc(dayLong(g.date)) + ', ' + esc(clock(g.kickoff)) + '</b><div class="hint">' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + '. ' + esc(g.competition || '') + (g.age_group ? ', ' + esc(g.age_group) : '') + (g.home ? '. ' + esc(g.home) + ' v ' + esc(g.away || '') : '') + '</div>' +
-        '<div class="chips">' + ['cr', 'ar1', 'ar2', 'fourth', 'coach'].map(function (s) { return asgSlotChip(g, s); }).join('') + '</div>' + pickBox(g) + '</div>';
+      var head = '<b>' + esc(dayLong(g.date)) + ', ' + esc(clock(g.kickoff)) + '</b><div class="hint">' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + '. ' + esc(g.competition || '') + (g.age_group ? ', ' + esc(g.age_group) : '') + (g.home ? '. ' + esc(g.home) + ' v ' + esc(g.away || '') : '') + '</div>';
+      if (g.status === 'C') return '<div class="card" style="gap:6px;opacity:.65">' + head + '<div><span class="pill bad">' + esc(t('asgCanceledBadge')) + '</span></div></div>';
+      return '<div class="card" style="gap:6px">' + head +
+        '<div class="chips">' + ['cr', 'ar1', 'ar2', 'fourth', 'coach'].map(function (s) { return asgSlotChip(g, s); }).join('') + '</div>' + pickBox(g) + editBox(g) + '</div>';
     };
     var roster = fold('asgroster', t('asgRoster'), (ASG.roster || []).length,
       '<div class="hint">' + esc(t('asgRosterHint')) + '</div><div class="chips" style="padding-top:6px">' + (ASG.roster || []).map(function (p) { return '<button class="chip-btn small" data-asg-drop="' + p.id + '" data-asg-nm="' + esc(p.first_name + ' ' + p.last_name) + '">' + esc(p.first_name + ' ' + p.last_name) + ' ✕</button>'; }).join('') + '</div>' +
@@ -1027,10 +1038,11 @@
         var active = (g.offers || []).some(function (o) { return o.slot === s && (o.status === 'offered' || o.status === 'accepted'); });
         open[s] = !active && (s === 'coach' || !g[s]);
       });
-      (g.offers || []).forEach(function (o) { if ((o.status === 'declined' || o.status === 'turned_back') && open[o.slot]) attn.push({ g: g, o: o }); });
+      if (g.status === 'C') return;
+      (g.offers || []).forEach(function (o) { if ((o.status === 'declined' || o.status === 'turned_back' || o.status === 'expired') && open[o.slot]) attn.push({ g: g, o: o }); });
     });
     var attnFold = attn.length ? fold('asgattn', t('asgAttnTitle'), attn.length, attn.map(function (x) {
-      return '<div class="rowline"><div><b>' + esc(asgGameLine(x.g)) + ' · ' + asgSlotWord(x.o.slot) + '</b><br><span class="hint">' + esc(x.o.name || '') + ', ' + esc(t(x.o.status === 'declined' ? 'asgDeclinedWord' : 'asgTurnedWord')) + (x.o.reason ? ': ' + esc(x.o.reason) : '') + '</span></div></div>';
+      return '<div class="rowline"><div><b>' + esc(asgGameLine(x.g)) + ' · ' + asgSlotWord(x.o.slot) + '</b><br><span class="hint">' + esc(x.o.name || '') + ', ' + esc(t(x.o.status === 'declined' ? 'asgDeclinedWord' : x.o.status === 'expired' ? 'asgExpiredWord' : 'asgTurnedWord')) + (x.o.reason ? ': ' + esc(x.o.reason) : '') + '</span></div></div>';
     }).join(''), true) : '';
     return form + attnFold + '<div class="disp h2">' + esc(t('asgGamesTitle')) + '</div>' +
       ((ASG.board || []).length ? ASG.board.map(gameCard).join('') : '<div class="pad hint">' + esc(t('asgNone')) + '</div>') + roster;
@@ -1049,6 +1061,31 @@
     };
     root.querySelectorAll('[data-asg-slot]').forEach(function (b) { b.onclick = function () { var p = b.getAttribute('data-asg-slot').split('|'); ASG.pick = { game_id: parseInt(p[0], 10), slot: p[1] }; ASG.q = ''; ASG.cand = null; ASG.sel = null; ASG.warns = null; renderAssign(); var q = $('asgQ'); if (q) q.focus(); }; });
     root.querySelectorAll('[data-asg-wd]').forEach(function (b) { b.onclick = async function () { if (!window.confirm(t('asgWithdrawConfirm'))) return; b.disabled = true; await sb.rpc('asg_withdraw', { p_offer: parseInt(b.getAttribute('data-asg-wd'), 10) }); await loadAssign(); renderAssign(); }; });
+    root.querySelectorAll('[data-asg-edit]').forEach(function (b) { b.onclick = function () {
+      var gid = parseInt(b.getAttribute('data-asg-edit'), 10);
+      var g = (ASG.board || []).filter(function (x) { return x.game_id === gid; })[0]; if (!g) return;
+      var k = new Date(g.kickoff);
+      ASG.edit = { game_id: gid, date: g.date, time: String(k.getHours()).padStart(2, '0') + ':' + String(k.getMinutes()).padStart(2, '0'), venue: g.venue || '', field: g.field || '' };
+      renderAssign();
+    }; });
+    var ec = $('asgECancel'); if (ec) ec.onclick = function () { ASG.edit = null; renderAssign(); };
+    var es_ = $('asgESave'); if (es_) es_.onclick = async function () {
+      var e = ASG.edit, d = $('aeDate').value, tm = $('aeTime').value, v = $('aeVenue').value.trim(), fl = $('aeField').value.trim();
+      if (!d || !tm || !v) { say('aeMsg', t('asgNeedFields'), 'bad'); return; }
+      es_.disabled = true;
+      var kick = new Date(d + 'T' + tm + ':00');
+      var r = await sb.rpc('asg_change_game', { p_game: e.game_id, p_kickoff: kick.toISOString(), p_venue: v, p_field: fl });
+      if (r.error) { es_.disabled = false; say('aeMsg', r.error.message, 'bad'); return; }
+      ASG.edit = null; await loadAssign(); renderAssign();
+    };
+    root.querySelectorAll('[data-asg-cxl]').forEach(function (b) { b.onclick = async function () {
+      var gid = parseInt(b.getAttribute('data-asg-cxl'), 10);
+      var why = window.prompt(t('asgCxlWhy')); if (!why || !why.trim()) return;
+      if (!window.confirm(t('asgCxlConfirm'))) return;
+      b.disabled = true;
+      await sb.rpc('asg_cancel_game', { p_game: gid, p_reason: why.trim() });
+      await loadAssign(); renderAssign();
+    }; });
     var q = $('asgQ');
     if (q) {
       var qt = null;
