@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.22-c';
+  var VERSION = '2026.10.23-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -156,10 +156,12 @@
       sb.from('late_notices').select('id,game_id,ref_name,venue,field,eta_min,created_at,ack_by,ack_at').eq('date', today),
       loadSessions_(),
       sb.rpc('co90_card'),
-      sb.rpc('asg_my')
+      sb.rpc('asg_my'),
+      sb.rpc('premium_mine')
     ]);
     S.co90 = r[11] && r[11].data || null;
     S.asg = r[12] && r[12].data || null;
+    S.prem = r[13] && r[13].data || null;
     S.games = (r[0].data || []).filter(function (x) { return ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(x[k])) >= 0; }); });
     S.events = r[1].data || [];
     S.checkins = {};
@@ -1034,6 +1036,56 @@
   }
   function renderAssign() { $('assignBody').innerHTML = assignHtml(); wireAssign($('assignBody')); }
 
+  // ── Premium pay (Tiers 1 to 3; grassroots only; Director of Referee
+  //    Operations FAQ, October 2026 R2) ─────────────────────────────
+  var PREM = { tier: 0, edu: '', dg: '' };
+  function premiumHtml() {
+    var p = S.prem;
+    if (!p || !p.check || p.check.advanced) return '';
+    var c = p.check, a = p.app && p.app.status !== 'withdrawn' ? p.app : null;
+    var inner;
+    if (a) {
+      inner = '<div><span class="pill' + (a.status === 'approved' ? ' ok' : a.status === 'denied' ? ' bad' : '') + '">' + esc(t('premTier').replace('{n}', a.status === 'approved' && a.tier_approved ? a.tier_approved : a.tier)) + ' · ' + esc(t('premSt.' + a.status)) + '</span></div>' +
+        (a.note ? '<div class="hint" style="padding-top:6px">' + esc(a.note) + '</div>' : '') +
+        ((a.education || []).length ? '<div class="hint" style="padding-top:6px">' + a.education.map(function (e) { return '• ' + esc(e.text || ''); }).join('<br>') + '</div>' : '') +
+        (a.status === 'submitted' ? '<div class="actions" style="padding:8px 0 0"><button class="btn outline small" id="premWd">' + esc(t('premWithdraw')) + '</button></div>' : '');
+    } else if (c.drl) {
+      inner = '<div class="hint">' + esc(t('premDrlNo')) + '</div>';
+    } else {
+      var okRow = function (b, txt) { return '<div class="hint">' + (b ? '✓ ' : '✗ ') + esc(txt) + '</div>'; };
+      var eligible = (c.seasons || 0) >= 2 && (c.centers || 0) >= 10;
+      inner = okRow((c.seasons || 0) >= 2, t('premReqCert')) + okRow((c.centers || 0) >= 10, t('premReqCenters').replace('{n}', c.centers || 0)) + okRow(!!c.fitness_date, t('premReqFit')) +
+        '<div class="hint" style="padding-top:6px">' + esc(t('premPick')) + '</div><div class="chips">' + [1, 2, 3].map(function (n) { return '<button class="chip-btn small' + (PREM.tier === n ? ' on' : '') + '" data-prem-tier="' + n + '">' + esc(t('premTier').replace('{n}', n)) + ' · $' + (n === 1 ? '5' : n === 2 ? '7.50' : '10') + '</button>'; }).join('') + '</div>' +
+        (PREM.tier ? '<label class="hint" for="premEdu" style="display:block;padding-top:8px">' + esc(t('premEduLabel')) + '</label><textarea id="premEdu" style="min-height:80px">' + esc(PREM.edu || '') + '</textarea>' +
+          (PREM.tier >= 2 ? '<label class="hint" for="premDgIn" style="display:block;padding-top:8px">' + esc(t('premDgLabel')) + '</label><input id="premDgIn" value="' + esc(PREM.dg || '') + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' : '') +
+          '<div class="actions" style="padding:8px 0 0"><button class="btn primary small"' + (eligible ? '' : ' disabled') + ' id="premGo">' + esc(t('premSubmit')) + '</button></div>' : '') +
+        '<div class="msg" id="premMsg" hidden></div>';
+    }
+    return fold('premium', t('premTitle').replace('{y}', p.season || ''), a ? 1 : '', '<div class="hint">' + esc(t('premLead')) + '</div>' + inner, false);
+  }
+  function wirePremium(root) {
+    root.querySelectorAll('[data-prem-tier]').forEach(function (b) { b.onclick = function () { var ed = $('premEdu'); if (ed) PREM.edu = ed.value; var dg = $('premDgIn'); if (dg) PREM.dg = dg.value; PREM.tier = parseInt(b.getAttribute('data-prem-tier'), 10); $('premiumLine').innerHTML = premiumHtml(); wirePremium($('premiumLine')); }; });
+    var go = $('premGo'); if (go) go.onclick = async function () {
+      PREM.edu = $('premEdu') ? $('premEdu').value.trim() : '';
+      PREM.dg = $('premDgIn') ? $('premDgIn').value.trim() : '';
+      if (!PREM.edu) { say('premMsg', t('premNeedEdu'), 'bad'); return; }
+      go.disabled = true;
+      var rows = PREM.edu.split('\n').map(function (l) { return l.trim(); }).filter(Boolean).map(function (l) { return { text: l }; });
+      var r = await sb.from('premium_apps').insert({ org_id: S.me.org_id, person_id: S.me.person_id, season: S.prem.season, tier: PREM.tier, education: rows, dg_note: PREM.tier >= 2 && PREM.dg ? PREM.dg : null });
+      if (r.error) { go.disabled = false; say('premMsg', r.error.message, 'bad'); return; }
+      var m = await sb.rpc('premium_mine'); S.prem = m.data || S.prem; PREM.tier = 0; PREM.edu = ''; PREM.dg = '';
+      $('premiumLine').innerHTML = premiumHtml(); wirePremium($('premiumLine'));
+    };
+    var wd = $('premWd'); if (wd) wd.onclick = async function () {
+      if (!window.confirm(t('premWdConfirm'))) return;
+      wd.disabled = true;
+      var r = await sb.from('premium_apps').update({ status: 'withdrawn' }).eq('id', S.prem.app.id);
+      if (r.error) { wd.disabled = false; return; }
+      var m = await sb.rpc('premium_mine'); S.prem = m.data || S.prem;
+      $('premiumLine').innerHTML = premiumHtml(); wirePremium($('premiumLine'));
+    };
+  }
+
   function renderDay() {
     var me = S.me, h = new Date().getHours();
     var greet = t(h < 12 ? 'greeting.morning' : h < 17 ? 'greeting.afternoon' : 'greeting.evening');
@@ -1076,6 +1128,7 @@
     $('co90Line').innerHTML = co90DayHtml();
     $('asgLine').innerHTML = asgDayHtml(); wireAsgDay($('asgLine'));
     $('sessionsLine').innerHTML = signupCardHtml(); wireSignup($('sessionsLine'));
+    $('premiumLine').innerHTML = premiumHtml(); wirePremium($('premiumLine'));
     renderWrap();
     if (ER.prog === undefined) { ER.prog = null; sb.rpc('eval_progress').then(function (pr) { ER.prog = pr.data || null; var el = $('evalProg'); if (el) el.innerHTML = progressHtml(ER.prog); }); }
     $('evalLine').innerHTML = coachEvalHtml + '<div id="evalProg">' + progressHtml(ER.prog) + '</div>' + (myEval ? '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('evalReqTitle')) + '</b><div>' + esc(dayLong(myEval.game_date)) + ', ' + esc(myEval.venue || '') + '. ' + esc(t('evalPurpose.' + myEval.purpose)) + '. ' + esc(t('evalStatus.' + myEval.status)) + '</div></div>' : '');
@@ -1899,7 +1952,7 @@
     return Object.keys(here).sort().concat(Object.keys(all).filter(function (n) { return !here[n]; }).sort());
   }
   function renderOps() {
-    var tabs = ['board', 'staff', 'protection', 'retain', 'bulletins'];
+    var tabs = iCan('people') ? ['board', 'staff', 'protection', 'retain', 'premium', 'bulletins'] : ['board', 'staff', 'protection', 'retain', 'bulletins'];
     var openAlerts = OPS.alerts.filter(function (a) { return a.status === 'open'; }).length, msgCount = (OPS.msgs || []).length;
     var head = '<div class="tabs">' + tabs.map(function (k) { return '<button class="chip-btn' + (OPS.tab === k ? ' on' : '') + '" data-otab="' + k + '">' + esc(t('tab' + k.charAt(0).toUpperCase() + k.slice(1))) + (k === 'protection' && openAlerts ? ' ' + openAlerts : '') + (k === 'staff' && msgCount ? ' ' + msgCount : '') + '</button>'; }).join('') + '</div>';
     var body = '';
@@ -1978,6 +2031,20 @@
       var quiet = CC.cov.filter(function (r) { return r.last_game && r.last_game < cut && !r.next_game; }).sort(function (a, b) { return b.games - a.games; }).slice(0, 40);
       var rows = function (list) { return list.length ? list.map(function (r) { return '<div class="rowline"><div><b>' + refLink(r.name) + '</b><br><span class="hint">' + esc(t('lastGame')) + ' ' + esc(r.last_game ? dayLong(r.last_game) : '') + (r.next_game ? '. <b>' + esc(t('refNext')) + '</b> ' + esc(dayLong(r.next_game)) + ', ' + esc(r.next_venue || '') : '') + '</span></div><div class="n">' + r.games + '</div></div>'; }).join('') : '<div class="hint">' + esc(t('noneHere')) + '</div>'; };
       body = '<div class="pad lead" style="padding-top:12px">' + esc(t('retainLead')) + '</div><div class="disp h2">' + esc(t('retainNever')) + '</div><div class="pad">' + rows(never) + '</div><div class="disp h2">' + esc(t('retainQuiet')) + '</div><div class="pad">' + rows(quiet) + '</div>';
+    } else if (OPS.tab === 'premium') {
+      var pq = OPS.prem;
+      var chk = function (c) { if (!c) return ''; return esc(t('premCenters').replace('{n}', c.centers || 0)) + (c.drl ? ' · DRL' : '') + (c.advanced ? ' · ' + esc(t('premAdvanced')) : '') + (c.fitness_date ? ' · ' + esc(t('premFitPass')) + ' ' + esc(dayShort(c.fitness_date)) : '') + ' · ' + esc(t('premEvals').replace('{n}', c.evals || 0)); };
+      body = '<div class="pad lead" style="padding-top:12px">' + esc(t('premQueueLead')) + '</div><div class="pad">' +
+        (pq == null ? '<div class="hint">' + esc(t('loadingReview')) + '</div>' :
+         !pq.length ? '<div class="hint">' + esc(t('noneHere')) + '</div>' :
+         pq.map(function (a) {
+           var edu = (a.education || []).map(function (e) { return '<div class="hint">• ' + esc(e.text || '') + '</div>'; }).join('');
+           return '<div class="card" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + refLink(a.name || '') + '</b><span class="pill' + (a.status === 'approved' ? ' ok' : a.status === 'denied' ? ' bad' : '') + '">' + esc(t('premTier').replace('{n}', a.status === 'approved' && a.tier_approved ? a.tier_approved : a.tier)) + ' · ' + esc(t('premSt.' + a.status)) + '</span></div>' +
+             '<div class="hint">' + chk(a.check) + '</div>' + edu +
+             (a.dg_note ? '<div class="hint"><b>' + esc(t('premDg')) + ':</b> ' + esc(a.dg_note) + '</div>' : '') +
+             (a.note ? '<div class="hint"><b>' + esc(t('premOpsNote')) + ':</b> ' + esc(a.note) + '</div>' : '') +
+             (a.status === 'submitted' ? '<div class="chips no-print"><button class="chip-btn small" data-prem-ok="' + a.id + '" data-tier="' + a.tier + '">' + esc(t('premApprove')) + '</button><button class="chip-btn small" data-prem-no="' + a.id + '">' + esc(t('premDeny')) + '</button></div>' : '') + '</div>';
+         }).join('')) + '</div>';
     } else {
       var today = todayStr();
       body = '<div class="pad lead" style="padding-top:12px">' + esc(t('bulletinsLead')) + '</div>' +
@@ -1992,7 +2059,20 @@
           return '<div class="card" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + esc(b.title || '') + '</b><span class="pill' + (state === 'live' ? ' ok' : '') + '">' + esc(t(state === 'live' ? 'bulletinLive' : state === 'future' ? 'bulletinFuture' : 'bulletinOver')) + '</span></div><div style="font-size:15px">' + esc(b.body || '') + '</div><div class="hint">' + esc(b.start_date || '') + (b.end_date && b.end_date !== b.start_date ? ' to ' + esc(b.end_date) : '') + (b.venue ? ', ' + esc(b.venue) : '') + (b.posted_by ? ', ' + esc(b.posted_by) : '') + '</div>' + (b.active && state !== 'over' ? '<button class="btn outline small" data-clear="' + esc(b.src_key) + '">' + esc(t('bulClear')) + '</button>' : '') + '</div>';
     }
     $('opsBody').innerHTML = head + body;
-    $('opsBody').querySelectorAll('[data-otab]').forEach(function (b) { b.onclick = function () { OPS.tab = b.getAttribute('data-otab'); if (OPS.tab === 'retain' && !CC.cov.length) loadCenter().then(renderOps); else renderOps(); }; });
+    $('opsBody').querySelectorAll('[data-otab]').forEach(function (b) { b.onclick = function () { OPS.tab = b.getAttribute('data-otab'); if (OPS.tab === 'retain' && !CC.cov.length) { loadCenter().then(renderOps); return; } if (OPS.tab === 'premium' && OPS.prem == null) { renderOps(); sb.rpc('premium_queue').then(function (r) { OPS.prem = r.data || []; renderOps(); }); return; } renderOps(); }; });
+    $('opsBody').querySelectorAll('[data-prem-ok]').forEach(function (b) { b.onclick = async function () {
+      b.disabled = true;
+      var r = await sb.from('premium_apps').update({ status: 'approved', tier_approved: parseInt(b.getAttribute('data-tier'), 10), reviewed_by: S.me.person_id, reviewed_at: new Date().toISOString() }).eq('id', parseInt(b.getAttribute('data-prem-ok'), 10));
+      if (r.error) { b.disabled = false; window.alert(r.error.message); return; }
+      var q = await sb.rpc('premium_queue'); OPS.prem = q.data || []; renderOps();
+    }; });
+    $('opsBody').querySelectorAll('[data-prem-no]').forEach(function (b) { b.onclick = async function () {
+      var why = window.prompt(t('premDenyWhy')); if (why === null) return;
+      b.disabled = true;
+      var r = await sb.from('premium_apps').update({ status: 'denied', note: why.trim() || null, reviewed_by: S.me.person_id, reviewed_at: new Date().toISOString() }).eq('id', parseInt(b.getAttribute('data-prem-no'), 10));
+      if (r.error) { b.disabled = false; window.alert(r.error.message); return; }
+      var q = await sb.rpc('premium_queue'); OPS.prem = q.data || []; renderOps();
+    }; });
     $('opsBody').querySelectorAll('[data-day]').forEach(function (b) { b.onclick = function () { OPS.date = shiftDate(OPS.date, parseInt(b.getAttribute('data-day'), 10)); OPS.venue = null; loadOps().then(renderOps); }; });
     $('opsBody').querySelectorAll('[data-focus]').forEach(function (b) { b.onclick = function () { OPS.focus = b.getAttribute('data-focus') === '1'; try { localStorage.setItem('hub-focus', OPS.focus ? '1' : '0'); } catch (e) {} renderOps(); }; });
     $('opsBody').querySelectorAll('[data-late-ack]').forEach(function (b) { b.onclick = async function (e) { e.stopPropagation(); b.disabled = true; var r = await sb.from('late_notices').update({ ack_by: S.me.first_name + ' ' + S.me.last_name, ack_at: new Date().toISOString() }).eq('id', parseInt(b.getAttribute('data-late-ack'), 10)); if (r.error) { b.disabled = false; return; } loadOps().then(renderOps); }; });
