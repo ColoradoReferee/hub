@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.28-e';
+  var VERSION = '2026.10.28-f';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -625,7 +625,9 @@
   function signupCardHtml() {
     var list = SES.list.filter(function (x) { return x.open_to !== 'invite' || mySignup(x.id); });
     if (!list.length) return reregisterHtml() + (SES.badge ? '<div class="card" style="gap:8px;border-color:var(--gold)">' + fitBadgeHtml(SES.badge) + '</div>' : '');
-    return reregisterHtml() + '<div class="card" style="gap:8px;border-color:var(--gold)">' + fitBadgeHtml(SES.badge) + '<b>' + esc(t('sesTitle')) + '</b>' + list.map(function (x) {
+    // Compact like the premium fold: one line, closed until the referee taps it,
+    // the whole sign-up flow inside. The passed badge rides along in the body.
+    var inner = '<div class="pad" style="display:flex;flex-direction:column;gap:14px;padding-top:4px;padding-bottom:12px">' + fitBadgeHtml(SES.badge) + list.map(function (x) {
       var me = mySignup(x.id), n = SES.counts[String(x.id)] || 0, full = x.capacity && n >= x.capacity && !me, fit = x.kind === 'fitness';
       var payLbl = x.fee_cents > 0 ? t('sesPayJoin').replace('{amt}', money(x.fee_cents)) : t('sesSignUp');
       var state = me ? (me.status === 'passed' ? t('sesPassed') : me.status === 'failed' ? t('sesFailed') : me.status === 'premium' ? t('fitPremium') : me.status === 'no_show' ? t('sesNoShow') : me.status === 'waitlist' ? t('sesWaitlisted') : t('sesIn')) : (full ? t('sesFull') : (x.capacity ? t('sesSpots').replace('{n}', x.capacity - n) : ''));
@@ -634,6 +636,7 @@
         (fit ? '<br><span class="hint">' + esc(stdLine(x)) + '</span><br><a href="fitness.html" class="chip-btn small" style="display:inline-block;margin-top:6px;text-decoration:none">' + esc(t('fitOpen')) + '</a>' : '') + join + '</div>' +
         (me && ['signed', 'waitlist'].indexOf(me.status) >= 0 ? '<button class="btn outline small" data-ses-out="' + me.id + '">' + esc(t('sesWithdraw')) + '</button>' : '') + '</div>';
     }).join('') + '<div class="msg" id="sesMsg" hidden></div></div>';
+    return reregisterHtml() + fold('signup', t('sesTitle'), list.length, inner, false);
   }
   function wireSignup(root) {
     root.querySelectorAll('[data-waiver]').forEach(function (c) { c.onchange = function () { var b = root.querySelector('[data-ses-in="' + c.getAttribute('data-waiver') + '"]'); if (b) b.disabled = !c.checked; }; });

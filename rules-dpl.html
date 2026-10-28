@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DPL rules · Colorado Referees</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="app.css?v=2026.10.28-f">
+<style>
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 20px 0; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .tile b { display: block; font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 30px; line-height: 1; }
+  .tile i { font-style: normal; font-size: 13px; color: var(--muted); }
+  .rule { margin: 10px 20px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+  .rule.gold { border-color: var(--gold); border-width: 2px; }
+  .rule.red { border-color: var(--red); border-width: 2px; }
+  .rule b { display: block; font-size: 17px; margin-bottom: 4px; }
+  .rule p { margin: 0; font-size: 15px; line-height: 1.45; }
+  .rules-h { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 26px; margin: 22px 20px 0; }
+  ul { margin: 8px 20px 0; padding-left: 20px; font-size: 15px; line-height: 1.5; }
+  li { margin-bottom: 6px; }
+  .jump { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 20px 0; }
+  .jump a { font-size: 14px; font-weight: 700; text-decoration: none; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <a class="backlink" href="index.html#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>Your day</a>
+    <div class="tools">
+      <button class="iconbtn" id="themeBtn" aria-label="Switch between light and dark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
+      <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+  </div>
+
+  <div class="pad" style="padding-top:16px">
+    <div class="lead">Development Player League</div>
+    <div class="disp" style="font-size:44px">RULES</div>
+    <div class="lead" style="margin-top:6px">IFAB Laws of the Game apply except where noted below, from the DPL Match Day Checklist for Referees (October 2026).</div>
+  </div>
+
+  <div class="tiles">
+    <div class="tile"><b>3 × 20</b><i>U11 and U12: three 20-minute periods, 10-minute break</i></div>
+    <div class="tile"><b>2 × 40</b><i>U13, U14, U15: 10-minute halftime</i></div>
+    <div class="tile"><b>2 × 45</b><i>U16, U17, U19: 15-minute halftime</i></div>
+    <div class="tile"><b>18</b><i>Maximum players on the match card. No write-ins.</i></div>
+  </div>
+
+  <div class="jump"><a href="#pregame">Before kickoff</a><a href="#subs">Substitutions</a><a href="#after">After the game</a></div>
+
+  <div class="rules-h" id="pregame">BEFORE KICKOFF</div>
+  <div class="rule gold"><b>Check in every player and staff member with the Match Card, with photos.</b><p>Sign the roster and hand it back to the team. No player write-ins are permitted; a maximum of 18 players can participate.</p></div>
+  <ul>
+    <li><b>Meet the Certified Athletic Trainer on site</b> and introduce yourself before the game.</li>
+    <li><b>DPL Field Standards met:</b> confirm and check off on the match card.</li>
+    <li><b>Match balls:</b> the home team provides 3.</li>
+  </ul>
+
+  <div class="rules-h" id="subs">SUBSTITUTIONS</div>
+  <div class="rule gold"><b>Five substitution moments per team per game.</b><p>Halftime is NOT a moment. Within a moment, substitutions and re-entry are unlimited at any stoppage, and a player can re-enter after being substituted at any time.</p></div>
+  <ul>
+    <li><b>Temporary head injury substitution</b> uses 1 substitution moment.</li>
+    <li><b>Substitution sheets MUST be used</b> during all matches.</li>
+  </ul>
+
+  <div class="rules-h" id="after">AFTER THE GAME</div>
+  <div class="rule"><b>Fill out the standard match card</b><p>and give a copy to both teams.</p></div>
+  <div class="rule red"><b>Every red card needs a supplemental report.</b><p>Send it to the DPL league office at <a href="mailto:cameron@thedpl.com">cameron@thedpl.com</a>, the same day.</p></div>
+
+  <div class="pad hint" style="margin-top:18px">From the DPL Match Day Checklist for Referees, October 2026. The full DPL Rules and Frameworks: <a href="https://dpleague.org/frameworks/" target="_blank" rel="noopener">dpleague.org/frameworks</a>.</div>
+  <div class="foot" style="flex-direction:column"><a class="btn help" href="index.html#help">I NEED HELP</a></div>
+  <div class="credit"><span class="chip"><img src="assets/jareferee-mark.png" alt=""></span><a href="https://jareferee.com">Built with JAReferee</a><span class="ver">v2026.10.28-f</span></div>
+</div>
+<script>
+(function () {
+  try { var th = localStorage.getItem('hub-theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}
+  document.getElementById('themeBtn').onclick = function () {
+    var cur = document.documentElement.getAttribute('data-theme');
+    var dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var next = dark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('hub-theme', next); } catch (e) {}
+  };
+})();
+</script>
+</body>
+</html>
