@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.28-i';
+  var VERSION = '2026.10.28-j';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -104,8 +104,8 @@
   async function loadSchedule() { return load(loadSchedule_()); }
   function show(id) {
     document.querySelectorAll('.screen').forEach(function (s) { s.classList.toggle('on', s.id === id); });
-    // The State view is read on a desktop; it gets the width. Everything else is a phone.
-    document.body.classList.toggle('wide', id === 's-state' || id === 's-setup');
+    // State, Setup and the board are read on desktops too; they get the width.
+    document.body.classList.toggle('wide', id === 's-state' || id === 's-setup' || id === 's-ops');
     window.scrollTo(0, 0);
   }
 
@@ -2132,9 +2132,11 @@
       sb.from('staff_messages').select('id,from_name,to_venue,date,body,created_at').eq('date', OPS.date).order('created_at', { ascending: false }).limit(100),
       sb.from('alerts').select('id,kind,game_id,ref_name,position,game_date,venue,field,kickoff,age_group,detail,status,seen_by').gte('game_date', todayStr()).order('game_date').order('kickoff').limit(300),
       sb.from('late_notices').select('id,game_id,ref_name,venue,field,eta_min,created_at,ack_by,ack_at').eq('date', OPS.date),
-      iCan('command_center') ? sb.rpc('unreported_games', { p_days: 7 }) : Promise.resolve({ data: null })
+      iCan('command_center') ? sb.rpc('unreported_games', { p_days: 7 }) : Promise.resolve({ data: null }),
+      (iCan('command_center') || iCan('scheduling')) ? sb.rpc('assignr_pending') : Promise.resolve({ data: null })
     ]);
     OPS.unreported = r[7] && r[7].data || null;
+    OPS.e5 = r[8] && r[8].data || null;
     if (r[0].error) { OPS.error = r[0].error.message || String(r[0].error); return; }   // keep what we have, say why
     OPS.late = r[6].data || [];
     OPS.error = '';
@@ -2267,6 +2269,12 @@
       var open = OPS.help.filter(function (h) { return h.status === 'open'; }).length;
       var un = OPS.unreported;
       var unCard = (un && un.total) ? fold('unrep', t('unrepTitle'), un.total, '<div class="hint">' + esc(t('unrepHint')) + '</div>' + (un.rows || []).map(function (u) { return '<div class="rowline"><div><b>' + esc(dayShort(u.date)) + ', ' + esc(u.venue || '') + '</b><br><span class="hint">' + esc(u.competition || '') + '</span></div><span class="pill bad">' + u.missing + '</span></div>'; }).join('')) : '';
+      // E5: Hub edits to Assignr games wait here until someone confirms they
+      // were typed into Assignr too. The API is read-only; hands are the sync.
+      var e5Card = (OPS.e5 && OPS.e5.length) ? fold('e5', t('e5Title'), OPS.e5.length, '<div class="hint">' + esc(t('e5Hint')) + '</div>' + OPS.e5.map(function (g) {
+        var crew = ['cr', 'ar1', 'ar2', 'fourth'].map(function (k) { return g[k]; }).filter(Boolean).join(', ');
+        return '<div class="rowline"><div><b>' + esc(dayShort(g.date)) + ', ' + clock(g.kickoff) + ', ' + esc(g.venue || '') + (g.field ? ' ' + esc(g.field) : '') + '</b>' + (String(g.status || '') === 'C' ? ' <span class="pill bad">' + esc(t('asgCanceledBadge')) + '</span>' : '') + '<br><span class="hint">' + esc(g.game_num || '') + (g.competition ? ', ' + esc(g.competition) : '') + (crew ? '. ' + esc(crew) : '') + (g.edited_at ? '. ' + esc(t('e5Edited')) + ' ' + esc(ago(g.edited_at)) : '') + '</span></div><button class="btn outline small" data-e5="' + g.game_id + '">' + esc(t('e5Mark')) + '</button></div>';
+      }).join('')) : '';
       body = (OPS.error ? '<div class="msg bad" style="margin:10px 20px 0">' + esc(t('loadFailed')) + ' ' + esc(OPS.error) + '</div>' : '') + '<div class="datebar"><button class="iconbtn" data-day="-1" aria-label="Previous day">&#8249;</button><div class="d">' + esc(dayLong(OPS.date)) + '</div><button class="iconbtn" data-day="1" aria-label="Next day">&#8250;</button></div>' +
         '<div class="stats" style="grid-template-columns:repeat(4,1fr)"><div class="stat"><b>' + vlist.length + '</b><i>' + esc(t('stVenues')) + '</i></div><div class="stat"><b>' + realGames + '</b><i>' + esc(t('stGames')) + '</i></div><div class="stat green"><b>' + totIn + '</b><i>' + esc(t('stCheckedIn')) + ' / ' + totSlots + '</i></div><div class="stat' + (open ? ' red' : '') + '"><b>' + open + '</b><i>' + esc(t('stHelpOpen')) + '</i></div></div>';
       var attnCount = vlist.length ? attentionItems(OPS.games, ins).length : 0;
@@ -2306,7 +2314,7 @@
             return '<div class="item" style="flex-direction:column;align-items:stretch;gap:2px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div class="when"><div class="disp">' + esc(clock(g.kickoff)) + '</div><div class="sub">' + esc(g.field || '') + ', ' + esc(g.age_group || '') + (g.game_num ? ', ' + esc(g.game_num) : '') + '</div></div>' + (iCan('scheduling') && !edit ? '<button class="linkbtn" data-switch="' + esc(g.game_id) + '">' + esc(t('change')) + '</button>' : '') + '</div><div class="crewline">' + crew + '</div>' + (warn.length ? '<div class="hint" style="color:#8A6A00;font-weight:700">' + esc(t('alertOnGame').replace('{n}', warn.length)) + '</div>' : '') + form + '</div>';
           }).join('') + '</div>';
       }
-          body += unCard;
+          body += unCard + e5Card;
     } else if (OPS.tab === 'staff') {
       var venuesToday = {}; OPS.games.forEach(function (g) { if (g.venue) venuesToday[g.venue] = 1; });
       body = '<div class="pad lead" style="padding-top:12px">' + esc(t('staffLead2')) + '</div>' +
@@ -2374,6 +2382,13 @@
     }; });
     $('opsBody').querySelectorAll('[data-day]').forEach(function (b) { b.onclick = function () { OPS.date = shiftDate(OPS.date, parseInt(b.getAttribute('data-day'), 10)); OPS.venue = null; loadOps().then(renderOps); }; });
     $('opsBody').querySelectorAll('[data-focus]').forEach(function (b) { b.onclick = function () { OPS.focus = b.getAttribute('data-focus') === '1'; try { localStorage.setItem('hub-focus', OPS.focus ? '1' : '0'); } catch (e) {} renderOps(); }; });
+    $('opsBody').querySelectorAll('[data-e5]').forEach(function (b) { b.onclick = async function () {
+      b.disabled = true;
+      var r = await sb.rpc('assignr_mark', { p_game: parseInt(b.getAttribute('data-e5'), 10) });
+      if (r.error || r.data !== true) { b.disabled = false; return; }
+      OPS.e5 = (OPS.e5 || []).filter(function (g) { return String(g.game_id) !== b.getAttribute('data-e5'); });
+      renderOps();
+    }; });
     var osd = $('opsSnd'); if (osd) osd.onclick = function () {
       OPS.sound = !OPS.sound;
       try { localStorage.setItem('hub-ops-sound', OPS.sound ? '1' : '0'); } catch (e) {}

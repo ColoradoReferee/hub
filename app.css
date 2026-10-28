@@ -372,12 +372,15 @@ details.fold > .fold-body > .list { padding-top: 8px; }
 }
 
 /* The Hub on a desktop (2026.10.28-g): every screen gets a wider centered
-   column instead of the phone's 480. State and Setup go wider still above.
-   The .app .tiles selector outranks each rules page's own 2-column .tiles.
-   Phones are untouched. */
+   column instead of the phone's 480. State, Setup and the board go wider
+   still above (body.wide). The .app .tiles selector outranks each rules
+   page's own 2-column .tiles. Phones are untouched. */
 @media (min-width: 900px) {
   .app { max-width: 760px; }
   .app .tiles { grid-template-columns: repeat(4, 1fr); }
+}
+@media (min-width: 1100px) {
+  body.wide .fields { grid-template-columns: repeat(4, 1fr); }
 }
 
 /* Needs attention cards on the board */
