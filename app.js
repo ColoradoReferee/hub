@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.28-b';
+  var VERSION = '2026.10.28-c';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -858,6 +858,13 @@
   function asgSlotWord(s) { return s === 'cr' ? 'CR' : s === 'ar1' ? 'AR1' : s === 'ar2' ? 'AR2' : s === 'coach' ? t('asgCoachWord') : '4TH'; }
   function asgGameLine(o) { return dayShort(o.date) + ', ' + clock(o.kickoff) + ', ' + (o.venue || '') + (o.field ? ', ' + fieldShort(o.field) : ''); }
   var AV = { day: null, from: '', to: '' };
+  // Grade shorthand beside a picker name. The codes read the same in both languages.
+  function licTag(x) {
+    var L = String(x.license || '');
+    var s = L === 'International' ? 'INT' : L === 'Pro' ? 'PRO' : L === 'National' ? 'NAT'
+          : L === 'Regional' ? 'REG' : L === 'Digital' ? 'DRL' : L === 'Grassroots' ? 'GR' : '';
+    return (s ? ' · ' + s : '') + (x.drl && s !== 'DRL' ? ' · DRL' : '');
+  }
   function minClock(m) { if (m === 1440) return t('avMidnight'); var h = Math.floor(m / 60), mm = m % 60, h12 = h % 12 === 0 ? 12 : h % 12; return h12 + (mm ? ':' + (mm < 10 ? '0' : '') + mm : '') + ' ' + (h < 12 ? 'AM' : 'PM'); }
   function dayWins(ds) { return ((S.asg && S.asg.availability) || []).filter(function (x) { return x.date === ds; }).sort(function (a, b) { return a.from_min - b.from_min; }); }
   function asgAvailHtml() {
@@ -1006,7 +1013,7 @@
       return '<div style="padding-top:8px"><div class="hint">' + esc(t('asgPickWho').replace('{slot}', asgSlotWord(ASG.pick.slot))) + '</div>' +
         (quick ? '<div class="chips" style="padding-top:8px">' + quick + '</div>' : '') +
         '<input id="asgQ" value="' + esc(ASG.q) + '" placeholder="' + esc(t('asgPickOther')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink);margin-top:6px">' +
-        '<div class="chips" style="padding-top:8px">' + (ASG.cand || []).map(function (x) { return '<button class="chip-btn small' + (ASG.sel && ASG.sel.person_id === x.person_id ? ' on' : '') + '" data-asg-cand="' + x.person_id + '" data-asg-nm="' + esc(x.name) + '">' + esc(x.name) + (x.minor ? ' ●' : '') + '</button>'; }).join('') + '</div>' +
+        '<div class="chips" style="padding-top:8px">' + (ASG.cand || []).map(function (x) { return '<button class="chip-btn small' + (ASG.sel && ASG.sel.person_id === x.person_id ? ' on' : '') + '" data-asg-cand="' + x.person_id + '" data-asg-nm="' + esc(x.name) + '">' + esc(x.name) + (x.minor ? ' ●' : '') + esc(licTag(x)) + '</button>'; }).join('') + '</div>' +
         (ASG.sel ? '<div style="padding-top:6px">' + (warns && warns.length ? warns.map(function (w) { return '<div class="hint" style="color:var(--gold)">⚠ ' + esc(t('asgWarn.' + w)) + '</div>'; }).join('') : '<div class="hint" style="color:var(--green, #3DBA63)">' + esc(t('asgNoWarn')) + '</div>') +
           '<div class="actions" style="padding:8px 0 0"><button class="btn primary small" id="asgSend">' + esc(t('asgSend').replace('{name}', ASG.sel.name)) + '</button></div></div>' : '') +
         '<div class="msg" id="asgPickMsg" hidden></div></div>';
@@ -1050,7 +1057,7 @@
     var roster = fold('asgroster', t('asgRoster'), (ASG.roster || []).length,
       '<div class="hint">' + esc(t('asgRosterHint')) + '</div><div class="chips" style="padding-top:6px">' + (ASG.roster || []).map(function (p) { return '<button class="chip-btn small" data-asg-drop="' + p.id + '" data-asg-nm="' + esc(p.first_name + ' ' + p.last_name) + '">' + esc(p.first_name + ' ' + p.last_name) + ' ✕</button>'; }).join('') + '</div>' +
       '<input id="asgRq" value="' + esc(ASG.rq) + '" placeholder="' + esc(t('coachSearch')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink);margin-top:8px">' +
-      '<div class="chips" style="padding-top:8px">' + (ASG.rcand || []).map(function (x) { return '<button class="chip-btn small" data-asg-addp="' + x.person_id + '">+ ' + esc(x.name) + '</button>'; }).join('') + '</div><div class="msg" id="asgRMsg" hidden></div>', false);
+      '<div class="chips" style="padding-top:8px">' + (ASG.rcand || []).map(function (x) { return '<button class="chip-btn small" data-asg-addp="' + x.person_id + '">+ ' + esc(x.name) + (x.minor ? ' ●' : '') + esc(licTag(x)) + '</button>'; }).join('') + '</div><div class="msg" id="asgRMsg" hidden></div>', false);
     // Slots that opened back up after a decline or turnback, reasons attached.
     var attn = [];
     (ASG.board || []).forEach(function (g) {
