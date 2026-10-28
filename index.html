@@ -7,12 +7,12 @@
 <meta name="theme-color" content="#142850" media="(prefers-color-scheme: dark)">
 <title>Colorado Referees</title>
 <link rel="stylesheet" href="fonts.css">
-<link rel="stylesheet" href="app.css?v=2026.10.28-m">
+<link rel="stylesheet" href="app.css?v=2026.10.28-n">
 </head>
 <body>
 <div id="busy" style="display:none" aria-live="polite"><span class="ball">&#9917;</span></div>
 <div class="app" id="app">
-  <div id="previewBar" style="display:none;background:var(--gold);color:#1B1F2A;padding:10px 20px;font-size:14px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:10px"><span id="previewText"></span><button class="linkbtn" id="previewStop" style="min-height:36px;color:#1B1F2A"></button></div>
+  <div id="previewBar" style="display:none;background:var(--gold);color:#1B1F2A;padding:10px 20px;font-size:14px;font-weight:700;justify-content:space-between;align-items:center;gap:10px"><span id="previewText"></span><button class="linkbtn" id="previewStop" style="min-height:36px;color:#1B1F2A"></button></div>
 
   <!-- ── Sign in ─────────────────────────────────────────────── -->
   <section class="screen" id="s-signin">
@@ -26,6 +26,7 @@
     <div class="signin">
       <div class="disp" style="font-size:44px" data-t="signinTitle"></div>
       <div class="lead" data-t="signinLead"></div>
+      <div id="signinBuls"></div>
       <div id="stepEmail">
         <label for="email" data-t="email"></label>
         <input id="email" type="email" autocomplete="email" inputmode="email">
@@ -308,9 +309,9 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="lang.js?v=2026.10.28-m"></script>
-<script src="pacer.js?v=2026.10.28-m"></script>
-<script src="fieldmap.js?v=2026.10.28-m"></script>
-<script src="app.js?v=2026.10.28-m"></script>
+<script src="lang.js?v=2026.10.28-n"></script>
+<script src="pacer.js?v=2026.10.28-n"></script>
+<script src="fieldmap.js?v=2026.10.28-n"></script>
+<script src="app.js?v=2026.10.28-n"></script>
 </body>
 </html>

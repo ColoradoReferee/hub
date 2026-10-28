@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.28-m';
+  var VERSION = '2026.10.28-n';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -102,8 +102,25 @@
   async function loadReview() { return load(loadReview_()); }
   async function loadCoach() { return load(loadCoach_()); }
   async function loadSchedule() { return load(loadSchedule_()); }
+  // E6: bulletins flagged for the sign-in page show to everyone before they
+  // sign in. Fetched once per session with the anonymous key.
+  var SIB = { done: false };
+  async function signinBuls() {
+    var el = $('signinBuls'); if (!el || SIB.done) return;
+    SIB.done = true;
+    try {
+      var r = await sb.rpc('signin_bulletins');
+      var rows = r.data || [];
+      if (!rows.length) return;
+      el.innerHTML = rows.map(function (b) {
+        var hot = b.severity && b.severity !== 'info';
+        return '<div class="card" style="gap:4px;text-align:left;margin:14px 0 0' + (hot ? ';border-color:var(--gold);border-width:2px' : '') + '"><b>' + esc(b.title || '') + '</b><div style="font-size:15px">' + esc(b.body || '') + '</div>' + (b.venue ? '<div class="hint">' + esc(b.venue) + '</div>' : '') + '</div>';
+      }).join('');
+    } catch (e) {}
+  }
   function show(id) {
     document.querySelectorAll('.screen').forEach(function (s) { s.classList.toggle('on', s.id === id); });
+    if (id === 's-signin') signinBuls();
     // State, Setup and the board are read on desktops too; they get the width.
     document.body.classList.toggle('wide', id === 's-state' || id === 's-setup' || id === 's-ops');
     window.scrollTo(0, 0);
@@ -1067,7 +1084,7 @@
           if (av) return av;
           var ma = milesTo(a.zip), mb = milesTo(b.zip);
           return (ma == null ? 9999 : ma) - (mb == null ? 9999 : mb);
-        }).map(function (x) { return '<button class="chip-btn small' + (ASG.sel && ASG.sel.person_id === x.person_id ? ' on' : '') + '" data-asg-cand="' + x.person_id + '" data-asg-nm="' + esc(x.name) + '">' + esc(x.name) + (x.minor ? ' ●' : '') + esc(licTag(x)) + esc(here(x.person_id) || far(x.zip)) + '</button>'; }).join('') + '</div>' +
+        }).map(function (x) { return '<button class="chip-btn small' + (ASG.sel && ASG.sel.person_id === x.person_id ? ' on' : '') + '" data-asg-cand="' + x.person_id + '" data-asg-nm="' + esc(x.name) + '">' + esc(x.name) + (x.minor ? ' ●' : '') + esc(licTag(x)) + esc(here(x.person_id) || far(x.zip)) + (x.cleared === false ? ' ⚠' : '') + '</button>'; }).join('') + '</div>' +
         (ASG.sel ? '<div style="padding-top:6px">' + (warns && warns.length ? warns.map(function (w) { return '<div class="hint" style="color:var(--gold)">⚠ ' + esc(t('asgWarn.' + w)) + '</div>'; }).join('') : '<div class="hint" style="color:var(--green, #3DBA63)">' + esc(t('asgNoWarn')) + '</div>') +
           '<div class="actions" style="padding:8px 0 0;flex-wrap:wrap"><button class="btn primary small" id="asgSend">' + esc(t(ASG.draftMode ? 'asgHold' : 'asgSend').replace('{name}', ASG.sel.name)) + '</button><button class="chip-btn small' + (ASG.draftMode ? ' on' : '') + '" id="asgDraftTog">' + esc(t('asgDraftMode')) + '</button></div></div>' : '') +
         '<div class="msg" id="asgPickMsg" hidden></div></div>';
@@ -2171,7 +2188,7 @@
       fetchAll(function () { return sb.from('games').select('game_id,site_id,kickoff,field,age_group,competition,cr,ar1,ar2,fourth,venue,status,game_num,hq_role,hq_staff,home,away').eq('date', OPS.date).not('status', 'in', '(C,X,canceled_no_pay)').order('venue').order('kickoff'); }),
       fetchAll(function () { return sb.from('checkins').select('ref_name,game_id,created_at').eq('date', OPS.date).order('created_at'); }),
       sb.from('emergencies').select('id,src_key,created_at,ref_name,venue,field,reason,status,ack_by').gte('created_at', OPS.date + 'T00:00:00').lte('created_at', OPS.date + 'T23:59:59').order('created_at', { ascending: false }),
-      sb.from('announcements').select('id,src_key,created_at,start_date,end_date,venue,event_id,title,body,severity,active,posted_by').order('created_at', { ascending: false }).limit(40),
+      sb.from('announcements').select('id,src_key,created_at,start_date,end_date,venue,event_id,title,body,severity,active,posted_by,on_signin').order('created_at', { ascending: false }).limit(40),
       sb.from('staff_messages').select('id,from_name,to_venue,date,body,created_at').eq('date', OPS.date).order('created_at', { ascending: false }).limit(100),
       sb.from('alerts').select('id,kind,game_id,ref_name,position,game_date,venue,field,kickoff,age_group,detail,status,seen_by').gte('game_date', todayStr()).order('game_date').order('kickoff').limit(300),
       sb.from('late_notices').select('id,game_id,ref_name,venue,field,eta_min,created_at,ack_by,ack_at').eq('date', OPS.date),
@@ -2418,7 +2435,7 @@
     function bulCard(b) {
           var today = todayStr();
           var state = !b.active ? 'over' : (b.end_date && b.end_date < today) ? 'over' : (b.start_date && b.start_date > today) ? 'future' : 'live';
-          return '<div class="card" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + esc(b.title || '') + '</b><span class="pill' + (state === 'live' ? ' ok' : '') + '">' + esc(t(state === 'live' ? 'bulletinLive' : state === 'future' ? 'bulletinFuture' : 'bulletinOver')) + '</span></div><div style="font-size:15px">' + esc(b.body || '') + '</div><div class="hint">' + esc(b.start_date || '') + (b.end_date && b.end_date !== b.start_date ? ' to ' + esc(b.end_date) : '') + (b.venue ? ', ' + esc(b.venue) : '') + (b.posted_by ? ', ' + esc(b.posted_by) : '') + '</div>' + (b.active && state !== 'over' ? '<button class="btn outline small" data-clear="' + esc(b.src_key) + '">' + esc(t('bulClear')) + '</button>' : '') + '</div>';
+          return '<div class="card" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + esc(b.title || '') + '</b><span class="pill' + (state === 'live' ? ' ok' : '') + '">' + esc(t(state === 'live' ? 'bulletinLive' : state === 'future' ? 'bulletinFuture' : 'bulletinOver')) + '</span></div><div style="font-size:15px">' + esc(b.body || '') + '</div><div class="hint">' + esc(b.start_date || '') + (b.end_date && b.end_date !== b.start_date ? ' to ' + esc(b.end_date) : '') + (b.venue ? ', ' + esc(b.venue) : '') + (b.posted_by ? ', ' + esc(b.posted_by) : '') + '</div>' + (b.active && state !== 'over' ? '<div class="chips no-print"><button class="chip-btn small' + (b.on_signin ? ' on' : '') + '" data-bul-signin="' + b.id + '|' + (b.on_signin ? 0 : 1) + '">' + esc(t('bulSignin')) + '</button><button class="btn outline small" data-clear="' + esc(b.src_key) + '">' + esc(t('bulClear')) + '</button></div>' : '') + '</div>';
     }
     $('opsBody').innerHTML = head + body;
     $('opsBody').querySelectorAll('[data-otab]').forEach(function (b) { b.onclick = function () { OPS.tab = b.getAttribute('data-otab'); if (OPS.tab === 'retain' && !CC.cov.length) { loadCenter().then(renderOps); return; } if (OPS.tab === 'premium' && OPS.prem == null) { renderOps(); sb.rpc('premium_queue').then(function (r) { OPS.prem = r.data || []; renderOps(); }); return; } renderOps(); }; });
@@ -2437,6 +2454,14 @@
     }; });
     $('opsBody').querySelectorAll('[data-day]').forEach(function (b) { b.onclick = function () { OPS.date = shiftDate(OPS.date, parseInt(b.getAttribute('data-day'), 10)); OPS.venue = null; loadOps().then(renderOps); }; });
     $('opsBody').querySelectorAll('[data-focus]').forEach(function (b) { b.onclick = function () { OPS.focus = b.getAttribute('data-focus') === '1'; try { localStorage.setItem('hub-focus', OPS.focus ? '1' : '0'); } catch (e) {} renderOps(); }; });
+    $('opsBody').querySelectorAll('[data-bul-signin]').forEach(function (b) { b.onclick = async function () {
+      var p = b.getAttribute('data-bul-signin').split('|'), id = parseInt(p[0], 10), on = p[1] === '1';
+      b.disabled = true;
+      var r = await sb.rpc('bulletin_signin', { p_id: id, p_on: on });
+      if (r.error || r.data !== true) { b.disabled = false; return; }
+      (OPS.bulletins || []).forEach(function (x) { if (x.id === id) x.on_signin = on; });
+      renderOps();
+    }; });
     $('opsBody').querySelectorAll('[data-ogroup]').forEach(function (b) { b.onclick = function () {
       var v = b.getAttribute('data-ogroup');
       OPS.group = v ? parseInt(v, 10) : null;
@@ -3639,8 +3664,6 @@
     // sms timestamps are full timestamptz, which dayLong cannot take.
     var tsDay = function (ts) { return new Date(ts).toLocaleDateString(S.lang === 'es' ? 'es-US' : 'en-US', { month: 'short', day: 'numeric' }); };
     var fb = $('famBack'); if (fb) fb.style.display = S.me ? '' : 'none';
-    // The preview banner defaults visible until staff code hides it; guardians never run that code.
-    if (!S.me) { var pb = $('previewBar'); if (pb) pb.style.display = 'none'; }
     var so = $('famSignOut'); if (so) so.onclick = async function (e) {
       e.preventDefault(); await sb.auth.signOut(); S.fam = null; S.me = null; location.hash = ''; show('s-signin');
     };
