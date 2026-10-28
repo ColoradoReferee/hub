@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.28-l';
+  var VERSION = '2026.10.28-m';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -2168,7 +2168,7 @@
     if (!OPS.date) OPS.date = todayStr();
     if (OPS.focus == null) { try { OPS.focus = localStorage.getItem('hub-focus') === '1'; } catch (e) { OPS.focus = false; } }
     var r = await Promise.all([
-      fetchAll(function () { return sb.from('games').select('game_id,kickoff,field,age_group,competition,cr,ar1,ar2,fourth,venue,status,game_num,hq_role,hq_staff,home,away').eq('date', OPS.date).not('status', 'in', '(C,X,canceled_no_pay)').order('venue').order('kickoff'); }),
+      fetchAll(function () { return sb.from('games').select('game_id,site_id,kickoff,field,age_group,competition,cr,ar1,ar2,fourth,venue,status,game_num,hq_role,hq_staff,home,away').eq('date', OPS.date).not('status', 'in', '(C,X,canceled_no_pay)').order('venue').order('kickoff'); }),
       fetchAll(function () { return sb.from('checkins').select('ref_name,game_id,created_at').eq('date', OPS.date).order('created_at'); }),
       sb.from('emergencies').select('id,src_key,created_at,ref_name,venue,field,reason,status,ack_by').gte('created_at', OPS.date + 'T00:00:00').lte('created_at', OPS.date + 'T23:59:59').order('created_at', { ascending: false }),
       sb.from('announcements').select('id,src_key,created_at,start_date,end_date,venue,event_id,title,body,severity,active,posted_by').order('created_at', { ascending: false }).limit(40),
@@ -2183,7 +2183,10 @@
     if (r[0].error) { OPS.error = r[0].error.message || String(r[0].error); return; }   // keep what we have, say why
     OPS.late = r[6].data || [];
     OPS.error = '';
-    OPS.games = r[0].data || [];
+    // The whole day, then the view the chosen assigning group leaves. Every
+    // consumer reads OPS.games, so one filter covers the entire screen.
+    OPS.gamesAll = r[0].data || [];
+    OPS.games = OPS.group ? OPS.gamesAll.filter(function (g) { return g.site_id === OPS.group; }) : OPS.gamesAll;
     OPS.checkins = r[1].data || [];
     OPS.help = r[2].data || [];
     OPS.bulletins = r[3].data || [];
@@ -2294,6 +2297,15 @@
     var tabs = iCan('people') ? ['board', 'staff', 'protection', 'retain', 'premium', 'bulletins'] : ['board', 'staff', 'protection', 'retain', 'bulletins'];
     var openAlerts = OPS.alerts.filter(function (a) { return a.status === 'open'; }).length, msgCount = (OPS.msgs || []).length;
     var head = '<div class="tabs">' + tabs.map(function (k) { return '<button class="chip-btn' + (OPS.tab === k ? ' on' : '') + '" data-otab="' + k + '">' + esc(t('tab' + k.charAt(0).toUpperCase() + k.slice(1))) + (k === 'protection' && openAlerts ? ' ' + openAlerts : '') + (k === 'staff' && msgCount ? ' ' + msgCount : '') + '</button>'; }).join('') + '</div>';
+    // Her A4: filter the whole screen to one assigning group when the day
+    // mixes several (a three event weekend). Hidden when only one group plays.
+    var SITE_NAMES = { 20901: 'CSA', 21036: 'MLS NEXT', 23484: 'Elite', 23652: 'EAL', 25138: 'WPSL', 90000: 'Hub' };
+    var sites = {}; (OPS.gamesAll || []).forEach(function (g) { if (g.site_id != null) sites[g.site_id] = (sites[g.site_id] || 0) + 1; });
+    var siteIds = Object.keys(sites).map(Number).sort(function (a, b) { return sites[b] - sites[a]; });
+    if (siteIds.length > 1) {
+      head += '<div class="chips" style="padding:0 20px 8px"><button class="chip-btn small' + (!OPS.group ? ' on' : '') + '" data-ogroup="">' + esc(t('opsAllGroups')) + '</button>' +
+        siteIds.map(function (id) { return '<button class="chip-btn small' + (OPS.group === id ? ' on' : '') + '" data-ogroup="' + id + '">' + esc(SITE_NAMES[id] || String(id)) + ' ' + sites[id] + '</button>'; }).join('') + '</div>';
+    }
     var body = '';
     if (OPS.tab === 'board') {
       var ins = inSet(), venues = {};
@@ -2425,6 +2437,13 @@
     }; });
     $('opsBody').querySelectorAll('[data-day]').forEach(function (b) { b.onclick = function () { OPS.date = shiftDate(OPS.date, parseInt(b.getAttribute('data-day'), 10)); OPS.venue = null; loadOps().then(renderOps); }; });
     $('opsBody').querySelectorAll('[data-focus]').forEach(function (b) { b.onclick = function () { OPS.focus = b.getAttribute('data-focus') === '1'; try { localStorage.setItem('hub-focus', OPS.focus ? '1' : '0'); } catch (e) {} renderOps(); }; });
+    $('opsBody').querySelectorAll('[data-ogroup]').forEach(function (b) { b.onclick = function () {
+      var v = b.getAttribute('data-ogroup');
+      OPS.group = v ? parseInt(v, 10) : null;
+      OPS.games = OPS.group ? (OPS.gamesAll || []).filter(function (g) { return g.site_id === OPS.group; }) : (OPS.gamesAll || []);
+      OPS.venue = ''; OPS._lastAttn = null;
+      renderOps();
+    }; });
     $('opsBody').querySelectorAll('[data-e5]').forEach(function (b) { b.onclick = async function () {
       b.disabled = true;
       var r = await sb.rpc('assignr_mark', { p_game: parseInt(b.getAttribute('data-e5'), 10) });
