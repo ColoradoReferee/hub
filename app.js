@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.28-j';
+  var VERSION = '2026.10.28-k';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1019,12 +1019,26 @@
     var pickBox = function (g) {
       if (!ASG.pick || ASG.pick.game_id !== g.game_id) return '';
       var warns = ASG.warns ? (ASG.warns.warnings || []) : null;
+      // Who is already working this venue today, on any system. The cheapest
+      // fill is standing right there, so they are tagged and float first.
+      if (!ASG.atv || ASG.atv.game_id !== g.game_id) {
+        ASG.atv = { game_id: g.game_id, ids: null };
+        sb.rpc('asg_at_venue', { p_game: g.game_id }).then(function (r) {
+          if (ASG.atv && ASG.atv.game_id === g.game_id) {
+            ASG.atv.ids = {};
+            (r.data || []).forEach(function (id) { ASG.atv.ids[id] = 1; });
+            renderAssign();
+          }
+        });
+      }
+      var atv = ASG.atv && ASG.atv.game_id === g.game_id ? ASG.atv.ids : null;
+      var here = function (id) { return atv && atv[id] ? ' · ' + t('asgAtVenue') : ''; };
       // The demo group first: most offers go to them, one tap, no typing.
-      var quick = (ASG.roster || []).map(function (p) { return '<button class="chip-btn small' + (ASG.sel && ASG.sel.person_id === p.id ? ' on' : '') + '" data-asg-cand="' + p.id + '" data-asg-nm="' + esc(p.first_name + ' ' + p.last_name) + '">' + esc(p.first_name + ' ' + p.last_name) + '</button>'; }).join('');
+      var quick = (ASG.roster || []).map(function (p) { return '<button class="chip-btn small' + (ASG.sel && ASG.sel.person_id === p.id ? ' on' : '') + '" data-asg-cand="' + p.id + '" data-asg-nm="' + esc(p.first_name + ' ' + p.last_name) + '">' + esc(p.first_name + ' ' + p.last_name) + esc(here(p.id)) + '</button>'; }).join('');
       return '<div style="padding-top:8px"><div class="hint">' + esc(t('asgPickWho').replace('{slot}', asgSlotWord(ASG.pick.slot))) + '</div>' +
         (quick ? '<div class="chips" style="padding-top:8px">' + quick + '</div>' : '') +
         '<input id="asgQ" value="' + esc(ASG.q) + '" placeholder="' + esc(t('asgPickOther')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink);margin-top:6px">' +
-        '<div class="chips" style="padding-top:8px">' + (ASG.cand || []).map(function (x) { return '<button class="chip-btn small' + (ASG.sel && ASG.sel.person_id === x.person_id ? ' on' : '') + '" data-asg-cand="' + x.person_id + '" data-asg-nm="' + esc(x.name) + '">' + esc(x.name) + (x.minor ? ' ●' : '') + esc(licTag(x)) + '</button>'; }).join('') + '</div>' +
+        '<div class="chips" style="padding-top:8px">' + (ASG.cand || []).slice().sort(function (a, b) { return ((atv && atv[b.person_id]) ? 1 : 0) - ((atv && atv[a.person_id]) ? 1 : 0); }).map(function (x) { return '<button class="chip-btn small' + (ASG.sel && ASG.sel.person_id === x.person_id ? ' on' : '') + '" data-asg-cand="' + x.person_id + '" data-asg-nm="' + esc(x.name) + '">' + esc(x.name) + (x.minor ? ' ●' : '') + esc(licTag(x)) + esc(here(x.person_id)) + '</button>'; }).join('') + '</div>' +
         (ASG.sel ? '<div style="padding-top:6px">' + (warns && warns.length ? warns.map(function (w) { return '<div class="hint" style="color:var(--gold)">⚠ ' + esc(t('asgWarn.' + w)) + '</div>'; }).join('') : '<div class="hint" style="color:var(--green, #3DBA63)">' + esc(t('asgNoWarn')) + '</div>') +
           '<div class="actions" style="padding:8px 0 0;flex-wrap:wrap"><button class="btn primary small" id="asgSend">' + esc(t(ASG.draftMode ? 'asgHold' : 'asgSend').replace('{name}', ASG.sel.name)) + '</button><button class="chip-btn small' + (ASG.draftMode ? ' on' : '') + '" id="asgDraftTog">' + esc(t('asgDraftMode')) + '</button></div></div>' : '') +
         '<div class="msg" id="asgPickMsg" hidden></div></div>';
