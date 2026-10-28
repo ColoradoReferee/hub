@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.28-k';
+  var VERSION = '2026.10.28-l';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -994,7 +994,7 @@
     ASG.board = r[0].data || [];
     var ids = (r[1].data || []).map(function (x) { return x.person_id; });
     ASG.roster = [];
-    if (ids.length) { var p = await sb.from('people').select('id,first_name,last_name').in('id', ids).order('last_name'); ASG.roster = p.data || []; }
+    if (ids.length) { var p = await sb.from('people').select('id,first_name,last_name,zip').in('id', ids).order('last_name'); ASG.roster = p.data || []; }
   }
   function asgSlotChip(g, slot) {
     var off = (g.offers || []).filter(function (o) { return o.slot === slot && (o.status === 'draft' || o.status === 'offered' || o.status === 'accepted'); })[0];
@@ -1033,12 +1033,41 @@
       }
       var atv = ASG.atv && ASG.atv.game_id === g.game_id ? ASG.atv.ids : null;
       var here = function (id) { return atv && atv[id] ? ' · ' + t('asgAtVenue') : ''; };
+      // Distance from each person's home zip to this venue, computed on the
+      // phone from zips.json and the venues table. A Hub game whose venue is
+      // not in the venues table simply shows no distances.
+      if (!ASG.geo) {
+        ASG.geo = { zips: null, ven: null };
+        Promise.all([
+          fetch('zips.json?v=' + VERSION).then(function (x) { return x.json(); }).catch(function () { return {}; }),
+          loadVenues_()
+        ]).then(function (rr) {
+          ASG.geo.zips = rr[0] || {};
+          ASG.geo.ven = {};
+          (rr[1] || []).forEach(function (v) { if (v.lat != null && v.lon != null) ASG.geo.ven[String(v.name || '').trim().toLowerCase()] = [v.lat, v.lon]; });
+          renderAssign();
+        });
+      }
+      var vxy = ASG.geo && ASG.geo.ven ? ASG.geo.ven[String(g.venue || '').trim().toLowerCase()] : null;
+      var milesTo = function (zip) {
+        if (!vxy || !ASG.geo || !ASG.geo.zips || !zip) return null;
+        var z = ASG.geo.zips[String(zip).slice(0, 5)];
+        if (!z) return null;
+        var dLat = (z[0] - vxy[0]) * 69, dLon = (z[1] - vxy[1]) * 69 * Math.cos(z[0] * Math.PI / 180);
+        return Math.round(Math.sqrt(dLat * dLat + dLon * dLon));
+      };
+      var far = function (zip) { var m = milesTo(zip); return m == null ? '' : ' · ' + m + ' mi'; };
       // The demo group first: most offers go to them, one tap, no typing.
-      var quick = (ASG.roster || []).map(function (p) { return '<button class="chip-btn small' + (ASG.sel && ASG.sel.person_id === p.id ? ' on' : '') + '" data-asg-cand="' + p.id + '" data-asg-nm="' + esc(p.first_name + ' ' + p.last_name) + '">' + esc(p.first_name + ' ' + p.last_name) + esc(here(p.id)) + '</button>'; }).join('');
+      var quick = (ASG.roster || []).map(function (p) { return '<button class="chip-btn small' + (ASG.sel && ASG.sel.person_id === p.id ? ' on' : '') + '" data-asg-cand="' + p.id + '" data-asg-nm="' + esc(p.first_name + ' ' + p.last_name) + '">' + esc(p.first_name + ' ' + p.last_name) + esc(here(p.id) || far(p.zip)) + '</button>'; }).join('');
       return '<div style="padding-top:8px"><div class="hint">' + esc(t('asgPickWho').replace('{slot}', asgSlotWord(ASG.pick.slot))) + '</div>' +
         (quick ? '<div class="chips" style="padding-top:8px">' + quick + '</div>' : '') +
         '<input id="asgQ" value="' + esc(ASG.q) + '" placeholder="' + esc(t('asgPickOther')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink);margin-top:6px">' +
-        '<div class="chips" style="padding-top:8px">' + (ASG.cand || []).slice().sort(function (a, b) { return ((atv && atv[b.person_id]) ? 1 : 0) - ((atv && atv[a.person_id]) ? 1 : 0); }).map(function (x) { return '<button class="chip-btn small' + (ASG.sel && ASG.sel.person_id === x.person_id ? ' on' : '') + '" data-asg-cand="' + x.person_id + '" data-asg-nm="' + esc(x.name) + '">' + esc(x.name) + (x.minor ? ' ●' : '') + esc(licTag(x)) + esc(here(x.person_id)) + '</button>'; }).join('') + '</div>' +
+        '<div class="chips" style="padding-top:8px">' + (ASG.cand || []).slice().sort(function (a, b) {
+          var av = ((atv && atv[b.person_id]) ? 1 : 0) - ((atv && atv[a.person_id]) ? 1 : 0);
+          if (av) return av;
+          var ma = milesTo(a.zip), mb = milesTo(b.zip);
+          return (ma == null ? 9999 : ma) - (mb == null ? 9999 : mb);
+        }).map(function (x) { return '<button class="chip-btn small' + (ASG.sel && ASG.sel.person_id === x.person_id ? ' on' : '') + '" data-asg-cand="' + x.person_id + '" data-asg-nm="' + esc(x.name) + '">' + esc(x.name) + (x.minor ? ' ●' : '') + esc(licTag(x)) + esc(here(x.person_id) || far(x.zip)) + '</button>'; }).join('') + '</div>' +
         (ASG.sel ? '<div style="padding-top:6px">' + (warns && warns.length ? warns.map(function (w) { return '<div class="hint" style="color:var(--gold)">⚠ ' + esc(t('asgWarn.' + w)) + '</div>'; }).join('') : '<div class="hint" style="color:var(--green, #3DBA63)">' + esc(t('asgNoWarn')) + '</div>') +
           '<div class="actions" style="padding:8px 0 0;flex-wrap:wrap"><button class="btn primary small" id="asgSend">' + esc(t(ASG.draftMode ? 'asgHold' : 'asgSend').replace('{name}', ASG.sel.name)) + '</button><button class="chip-btn small' + (ASG.draftMode ? ' on' : '') + '" id="asgDraftTog">' + esc(t('asgDraftMode')) + '</button></div></div>' : '') +
         '<div class="msg" id="asgPickMsg" hidden></div></div>';
