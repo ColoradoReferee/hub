@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.23-f';
+  var VERSION = '2026.10.28-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1370,31 +1370,16 @@
     if (!b) return;
     b.onclick = async function () {
       b.disabled = true; b.textContent = t('checkingIn');
-      // Hub games check in straight to the database; the backend has never heard of them.
-      if (Number(g.game_id) >= 900000000) {
-        var hr = await sb.rpc('asg_checkin', { p_game: g.game_id });
-        if (hr.error || !hr.data) {
-          b.disabled = false; b.textContent = t('checkIn');
-          var hm = root.querySelector('#ci-msg-' + g.game_id); if (hm) { hm.hidden = false; hm.textContent = hr.error ? hr.error.message : t('checkinFailed'); }
-          return;
-        }
-        var hnow = new Date().toISOString();
-        S.games.forEach(function (x) { if (key(x.venue) === key(g.venue) && Number(x.game_id) >= 900000000) S.checkins[String(x.game_id)] = hnow; });
-        renderAll();
+      // Straight to the database, every game. DbPull keeps the sheet in step.
+      var hr = await sb.rpc('hub_checkin', { p_game: g.game_id });
+      if (hr.error || !hr.data) {
+        b.disabled = false; b.textContent = t('checkIn');
+        var hm = root.querySelector('#ci-msg-' + g.game_id); if (hm) { hm.hidden = false; hm.textContent = hr.error ? hr.error.message : t('checkinFailed'); }
         return;
       }
-      var ev = eventFor(g);
-      try {
-        var r = await fetch(C.backend, { method: 'POST', body: JSON.stringify({ action: 'checkinVenue', event: ev ? ev.id : '', refName: myNameOn(g), venue: g.venue, date: g.date }) });
-        var j = await r.json();
-        if (!j || j.status !== 'ok') throw new Error(j && j.message || 'error');
-        var now = new Date().toISOString();
-        S.games.forEach(function (x) { if (key(x.venue) === key(g.venue)) S.checkins[String(x.game_id)] = now; });
-        renderAll();
-      } catch (e) {
-        b.disabled = false; b.textContent = t('checkIn');
-        var m = root.querySelector('#ci-msg-' + g.game_id); if (m) { m.hidden = false; m.textContent = t('checkinFailed'); }
-      }
+      var hnow = new Date().toISOString();
+      S.games.forEach(function (x) { if (key(x.venue) === key(g.venue)) S.checkins[String(x.game_id)] = hnow; });
+      renderAll();
     };
   }
 
@@ -3190,14 +3175,14 @@
       var h = $('scHome').value.trim(), a = $('scAway').value.trim();
       if (h === '' || a === '') { say('scMsg', t('scoreBoth'), 'bad'); return; }
       b.disabled = true; b.textContent = t('sending');
-      var ev = eventFor(g);
       try {
-        var res = await fetch(C.backend, { method: 'POST', body: JSON.stringify({ action: 'refPostScore', event: ev ? ev.id : '', gameId: g.game_id, date: g.date, homeScore: Number(h), awayScore: Number(a), refName: myNameOn(g) }) });
-        var j = await res.json();
-        if (!j || j.status !== 'ok') throw new Error(j && j.message || 'error');
+        var res = await sb.rpc('hub_post_score', { p_game: g.game_id, p_home: Number(h), p_away: Number(a) });
+        if (res.error) throw new Error(res.error.message);
+        var j = res.data || {};
+        if (!j.ok) throw new Error(j.err === 'final' ? t('scoreFinalLocked') : j.err === 'crew_only' ? t('scoreCrewOnly') : t('scoreFailed'));
         S.scores[String(g.game_id)] = { game_id: g.game_id, home_score: Number(h), away_score: Number(a), status: 'Reported', entered_by: myNameOn(g) };
         renderGame(g.game_id);
-      } catch (e) { b.disabled = false; b.textContent = t('scoreSend'); say('scMsg', t('scoreFailed') + ' ' + (e.message || ''), 'bad'); }
+      } catch (e) { b.disabled = false; b.textContent = t('scoreSend'); say('scMsg', (e.message || t('scoreFailed')), 'bad'); }
     };
   }
   function renderNotes() {
