@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.28-d';
+  var VERSION = '2026.10.28-e';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1088,6 +1088,29 @@
       }
       return fold('asgbyref', t('asgByRef'), ASG.brSel ? '' : '', inner, false);
     };
+    var bcFold = function () {
+      var dates = [], seenD = {};
+      (ASG.board || []).forEach(function (g) { if (g.status !== 'C' && !seenD[g.date]) { seenD[g.date] = 1; dates.push(g.date); } });
+      if (!dates.length) return '';
+      var bc = ASG.bc || (ASG.bc = { date: dates[0], venue: '', why: '' });
+      if (dates.indexOf(bc.date) < 0) bc.date = dates[0];
+      var vens = [], seenV = {};
+      (ASG.board || []).forEach(function (g) { if (g.status !== 'C' && g.date === bc.date && g.venue && !seenV[g.venue]) { seenV[g.venue] = 1; vens.push(g.venue); } });
+      var n = (ASG.board || []).filter(function (g) { return g.status !== 'C' && g.date === bc.date && (!bc.venue || g.venue === bc.venue); }).length;
+      var sel = function (id, opts, cur, allWord) {
+        return '<select id="' + id + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' +
+          (allWord != null ? '<option value=""' + (cur ? '' : ' selected') + '>' + esc(allWord) + '</option>' : '') +
+          opts.map(function (o) { return '<option value="' + esc(o) + '"' + (o === cur ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>';
+      };
+      var inner = '<div class="hint">' + esc(t('asgBatchHint')) + '</div>' +
+        '<div class="grid2" style="padding-top:8px"><div><label class="hint">' + esc(t('eodDate')) + '</label>' + sel('bcDate', dates, bc.date, null) + '</div>' +
+        '<div><label class="hint">' + esc(t('eodVenue')) + '</label>' + sel('bcVenue', vens, bc.venue, t('asgFiltAll')) + '</div></div>' +
+        '<label class="hint" for="bcWhy" style="display:block;padding-top:8px">' + esc(t('asgBatchWhy')) + '</label>' +
+        '<input id="bcWhy" value="' + esc(bc.why) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' +
+        '<div class="actions" style="padding:8px 0 0"><button class="btn outline small" id="bcGo" style="border-color:var(--red);color:var(--red)"' + (n ? '' : ' disabled') + '>' + esc(t('asgBatchBtn').replace('{n}', n)) + '</button></div>' +
+        '<div class="msg" id="bcMsg" hidden></div>';
+      return fold('asgbatch', t('asgBatchTitle'), '', inner, false);
+    };
     var editBox = function (g) {
       var e = ASG.edit;
       if (!e || e.game_id !== g.game_id) {
@@ -1141,7 +1164,7 @@
     var totalDrafts = 0;
     (ASG.board || []).forEach(function (g) { (g.offers || []).forEach(function (o) { if (o.status === 'draft') totalDrafts++; }); });
     var pubAll = totalDrafts ? '<div class="pad" style="padding-top:8px"><button class="btn primary" id="asgPubAll" style="width:100%">' + esc(t('asgPublishAll').replace('{n}', totalDrafts)) + '</button></div>' : '';
-    return form + pubAll + attnFold + brFold() + '<div class="disp h2">' + esc(t('asgGamesTitle')) + '</div>' + filters +
+    return form + pubAll + attnFold + brFold() + bcFold() + '<div class="disp h2">' + esc(t('asgGamesTitle')) + '</div>' + filters +
       (shown.length ? shown.map(gameCard).join('') : '<div class="pad hint">' + esc(t('asgNone')) + '</div>') + roster;
   }
   function wireAssign(root) {
@@ -1271,6 +1294,18 @@
     };
     var bo = $('asgBrOffer'); if (bo) bo.onclick = function () { bo.disabled = true; brGo(false); };
     var bd = $('asgBrDraft'); if (bd) bd.onclick = function () { bd.disabled = true; brGo(true); };
+    var bcd = $('bcDate'); if (bcd) bcd.onchange = function () { ASG.bc.date = bcd.value; ASG.bc.venue = ''; renderAssign(); };
+    var bcv = $('bcVenue'); if (bcv) bcv.onchange = function () { ASG.bc.venue = bcv.value; var w = $('bcWhy'); if (w) ASG.bc.why = w.value; renderAssign(); };
+    var bcw = $('bcWhy'); if (bcw) bcw.oninput = function () { ASG.bc.why = bcw.value; };
+    var bcg = $('bcGo'); if (bcg) bcg.onclick = async function () {
+      var why = (ASG.bc.why || '').trim();
+      if (!why) { say('bcMsg', t('asgTurnNeedsWhy'), 'bad'); return; }
+      if (!window.confirm(t('asgBatchConfirm'))) return;
+      bcg.disabled = true;
+      var r = await sb.rpc('asg_cancel_batch', { p_date: ASG.bc.date, p_venue: ASG.bc.venue || null, p_reason: why });
+      if (r.error) { bcg.disabled = false; say('bcMsg', r.error.message, 'bad'); return; }
+      ASG.bc = null; await loadAssign(); renderAssign();
+    };
     var rq = $('asgRq');
     if (rq) {
       var rt = null;
@@ -2066,7 +2101,22 @@
   }
 
   // ── Command Center: operations (the board) ───────────────────────
-  var OPS = { tab: 'board', date: '', venue: null, edit: null, games: [], checkins: [], help: [], bulletins: [], alerts: [] };
+  var OPS = { tab: 'board', date: '', venue: null, edit: null, games: [], checkins: [], help: [], bulletins: [], alerts: [], sound: false, _lastAttn: null };
+  try { OPS.sound = localStorage.getItem('hub-ops-sound') === '1'; } catch (e) {}
+  // Two short tones. Needs a tap first (the toggle) so the browser allows audio.
+  function opsBeep() {
+    try {
+      var ac = opsBeep._ac || (opsBeep._ac = new (window.AudioContext || window.webkitAudioContext)());
+      [0, 0.22].forEach(function (at, i) {
+        var o = ac.createOscillator(), g = ac.createGain();
+        o.frequency.value = i ? 660 : 880; o.connect(g); g.connect(ac.destination);
+        g.gain.setValueAtTime(0.0001, ac.currentTime + at);
+        g.gain.exponentialRampToValueAtTime(0.3, ac.currentTime + at + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + at + 0.18);
+        o.start(ac.currentTime + at); o.stop(ac.currentTime + at + 0.2);
+      });
+    } catch (e) {}
+  }
   function shiftDate(iso, n) { var d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return iso.length ? iso.slice(0, 0) + d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') : iso; }
   async function loadOps_() {
     if (!OPS.date) OPS.date = todayStr();
@@ -2217,7 +2267,12 @@
       body = (OPS.error ? '<div class="msg bad" style="margin:10px 20px 0">' + esc(t('loadFailed')) + ' ' + esc(OPS.error) + '</div>' : '') + '<div class="datebar"><button class="iconbtn" data-day="-1" aria-label="Previous day">&#8249;</button><div class="d">' + esc(dayLong(OPS.date)) + '</div><button class="iconbtn" data-day="1" aria-label="Next day">&#8250;</button></div>' +
         '<div class="stats" style="grid-template-columns:repeat(4,1fr)"><div class="stat"><b>' + vlist.length + '</b><i>' + esc(t('stVenues')) + '</i></div><div class="stat"><b>' + realGames + '</b><i>' + esc(t('stGames')) + '</i></div><div class="stat green"><b>' + totIn + '</b><i>' + esc(t('stCheckedIn')) + ' / ' + totSlots + '</i></div><div class="stat' + (open ? ' red' : '') + '"><b>' + open + '</b><i>' + esc(t('stHelpOpen')) + '</i></div></div>';
       var attnCount = vlist.length ? attentionItems(OPS.games, ins).length : 0;
-      if (vlist.length) body += '<div class="pad" style="padding-top:12px"><div class="chips"><button class="chip-btn' + (OPS.focus ? ' on' : '') + '" data-focus="1">' + esc(t('attnTab')) + (attnCount ? ' ' + attnCount : '') + '</button><button class="chip-btn' + (!OPS.focus ? ' on' : '') + '" data-focus="0">' + esc(t('attnAll')) + '</button></div></div>';
+      if (vlist.length) {
+        // A new item needing attention can ring the tablet at Referee HQ.
+        if (OPS.sound && OPS._lastAttn != null && attnCount > OPS._lastAttn) opsBeep();
+        OPS._lastAttn = attnCount;
+        body += '<div class="pad" style="padding-top:12px"><div class="chips"><button class="chip-btn' + (OPS.focus ? ' on' : '') + '" data-focus="1">' + esc(t('attnTab')) + (attnCount ? ' ' + attnCount : '') + '</button><button class="chip-btn' + (!OPS.focus ? ' on' : '') + '" data-focus="0">' + esc(t('attnAll')) + '</button><button class="chip-btn' + (OPS.sound ? ' on' : '') + '" id="opsSnd">\uD83D\uDD14 ' + esc(t(OPS.sound ? 'opsSndOn' : 'opsSndOff')) + '</button></div></div>';
+      }
       if (!vlist.length) body += '<div class="card"><div class="hint">' + esc(t('noGamesDay')) + '</div></div>';
       else if (OPS.focus) body += attentionHtml(OPS.venue ? OPS.games.filter(function (g) { return g.venue === OPS.venue; }) : OPS.games, ins, !OPS.venue) + (OPS.venue ? '<div class="pad" style="padding-top:12px"><button class="btn outline small" data-venue="">' + esc(t('allVenues')) + '</button></div>' : '');
       else if (!OPS.venue && vlist.length > 4) {
@@ -2316,6 +2371,12 @@
     }; });
     $('opsBody').querySelectorAll('[data-day]').forEach(function (b) { b.onclick = function () { OPS.date = shiftDate(OPS.date, parseInt(b.getAttribute('data-day'), 10)); OPS.venue = null; loadOps().then(renderOps); }; });
     $('opsBody').querySelectorAll('[data-focus]').forEach(function (b) { b.onclick = function () { OPS.focus = b.getAttribute('data-focus') === '1'; try { localStorage.setItem('hub-focus', OPS.focus ? '1' : '0'); } catch (e) {} renderOps(); }; });
+    var osd = $('opsSnd'); if (osd) osd.onclick = function () {
+      OPS.sound = !OPS.sound;
+      try { localStorage.setItem('hub-ops-sound', OPS.sound ? '1' : '0'); } catch (e) {}
+      if (OPS.sound) opsBeep();
+      renderOps();
+    };
     $('opsBody').querySelectorAll('[data-late-ack]').forEach(function (b) { b.onclick = async function (e) { e.stopPropagation(); b.disabled = true; var r = await sb.from('late_notices').update({ ack_by: S.me.first_name + ' ' + S.me.last_name, ack_at: new Date().toISOString() }).eq('id', parseInt(b.getAttribute('data-late-ack'), 10)); if (r.error) { b.disabled = false; return; } loadOps().then(renderOps); }; });
     $('opsBody').querySelectorAll('[data-attn] a.refname').forEach(function (a) { a.onclick = function () { REF.venue = a.closest('[data-attn]').getAttribute('data-attn-venue'); REF.from = '#ops'; }; });
     $('opsBody').querySelectorAll('[data-attn]').forEach(function (b) { b.onclick = function (e) { if (e.target.closest && e.target.closest('a,button')) return; OPS.focus = false; OPS.venue = b.getAttribute('data-attn-venue') || null; OPS.edit = b.getAttribute('data-attn'); OPS.editForm = false; renderOps(); var el = $('opsBody').querySelector('[data-fcard="' + OPS.edit + '"]'); if (el) el.scrollIntoView({ block: 'center' }); }; });
@@ -2731,7 +2792,10 @@
       S.events.forEach(function (x) { if (!ev && (x.venues || []).some(function (v) { return key(v) === key(venue); })) ev = x; });
       var who = EOD.edit && canEditAny ? EOD.edit.staff_name : (S.me.first_name + ' ' + S.me.last_name);
       try {
-        var j = await post({ action: 'scReport', event: ev ? ev.id : '', date: $('eodDate').value, venue: venue, scName: who, role: EOD.role, timeIn: tin, timeOut: tout, notes: $('eodNotes').value.trim() });
+        var jr = await sb.rpc('hub_eod', { p: { event: ev ? ev.id : '', date: $('eodDate').value, venue: venue, staff_name: who, role: EOD.role, time_in: tin, time_out: tout, notes: $('eodNotes').value.trim() } });
+        if (jr.error) throw new Error(jr.error.message);
+        var j = jr.data || {};
+        if (!j.ok) throw new Error('error');
         var wasEdit = !!EOD.edit; EOD.edit = null; EOD.date = '';
         await loadEod(); renderEod();
         say('eodMsg', t(wasEdit || j.updated ? 'eodUpdated' : 'eodFiled') + (j.hours != null ? ' ' + j.hours + ' ' + t('eodHours') + '.' : ''), 'good');
