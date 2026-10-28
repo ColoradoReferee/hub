@@ -1,0 +1,259 @@
+<!doctype html>
+<!-- scoreboard.html v2026.10.28-b · 2026-10-28 · Colorado Referees public scoreboard
+     Reads the database directly (scoreboard_day, anonymous key). No backend, no
+     sign-in, no names: times, teams, scores. Refreshes itself every minute. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scoreboard · Colorado Referees</title>
+<link rel="icon" href="assets/logo.png">
+<style>
+  :root { --navy:#1E3A73; --navy2:#142850; --gold:#F2B800; --red:#C8102E; --paper:#F6F3EC;
+          --ink:#1B1F2A; --muted:#6B7280; --line:#E2DED4; --card:#FFFFFF; --grn:#1E8E4C; }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  body { font-family:-apple-system, 'Segoe UI', Roboto, Arial, sans-serif; background:var(--paper); color:var(--ink); }
+  .top { background:var(--navy); color:#fff; padding:14px 84px 12px; text-align:center; }
+  @media (max-width:480px) { .top .mark { font-size:11px; letter-spacing:.1em; } }
+  .top .mark { font-size:13px; font-weight:800; letter-spacing:.14em; }
+  .top .sub { font-size:11px; color:#BFC9E0; margin-top:2px; }
+  .goldbar { height:4px; background:var(--gold); }
+  .wrap { max-width:760px; margin:0 auto; padding:14px 14px 40px; }
+  h1 { font-size:26px; line-height:1.1; margin:6px 2px 2px; }
+  .evline { color:var(--muted); font-size:13px; margin:0 2px 10px; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0; }
+  .chip { border:1.5px solid var(--navy); color:var(--navy); background:var(--card); border-radius:999px;
+          padding:8px 14px; font-size:14px; font-weight:700; cursor:pointer; }
+  .chip.on { background:var(--navy); color:#fff; }
+  .divh { font-size:13px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--navy);
+          margin:18px 2px 8px; border-bottom:2px solid var(--gold); padding-bottom:4px; }
+  .g { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px;
+       display:grid; grid-template-columns:1fr auto; gap:4px 10px; align-items:center; }
+  .teams { font-size:15px; font-weight:600; line-height:1.35; }
+  .meta { color:var(--muted); font-size:12px; grid-column:1 / -1; }
+  .score { font-size:22px; font-weight:800; text-align:right; white-space:nowrap; }
+  .score .st { display:block; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+  .st.final { color:var(--grn); } .st.rep { color:var(--gold); }
+  .nos { color:var(--muted); font-weight:600; font-size:16px; }
+  .cx { text-decoration:line-through; opacity:.55; }
+  .cxtag { color:var(--red); font-weight:800; font-size:11px; letter-spacing:.06em; text-transform:uppercase; }
+  .empty { color:var(--muted); text-align:center; padding:40px 10px; font-size:15px; }
+  .foot { text-align:center; color:var(--muted); font-size:11px; padding:18px 10px 30px; }
+  .langbtn { position:absolute; right:12px; top:12px; background:transparent; color:#fff; border:1px solid rgba(255,255,255,.5);
+             border-radius:8px; padding:6px 10px; font-size:12px; font-weight:700; cursor:pointer; }
+  .topwrap { position:relative; }
+  @media (max-width:420px) { h1 { font-size:22px; } .score { font-size:19px; } }
+</style>
+</head>
+<body>
+<div class="topwrap">
+  <div class="top">
+    <div class="mark">COLORADO SOCCER REFEREE PROGRAM</div>
+    <div class="sub">Colorado Soccer Association</div>
+  </div>
+  <button class="langbtn" id="langBtn">Español</button>
+</div>
+<div class="goldbar"></div>
+<div class="wrap">
+  <h1 id="title">Scoreboard</h1>
+  <div class="evline" id="evline"></div>
+  <div class="chips" id="dayChips"></div>
+  <div class="chips" id="evChips"></div>
+  <div class="chips" id="venChips"></div>
+  <div id="board"><div class="empty" id="loading">Loading…</div></div>
+</div>
+<div class="foot">
+  <span id="footAuto"></span><br>
+  Colorado Referees · Built with JAReferee · v2026.10.28-b
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(function () {
+  'use strict';
+  var C = window.HUB;
+  var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
+
+  var T = {
+    en: { title: 'Scoreboard', loading: 'Loading…', none: 'No games on this day.',
+          offline: 'Could not load. Check your signal and pull to refresh.',
+          final: 'Final', rep: 'Reported', canceled: 'Canceled', all: 'All',
+          auto: 'Scores update automatically about every minute.',
+          lang: 'Español', updated: 'Updated' },
+    es: { title: 'Marcadores', loading: 'Cargando…', none: 'No hay partidos este día.',
+          offline: 'No se pudo cargar. Revisa tu señal y desliza para actualizar.',
+          final: 'Final', rep: 'Reportado', canceled: 'Cancelado', all: 'Todos',
+          auto: 'Los marcadores se actualizan automáticamente cada minuto.',
+          lang: 'English', updated: 'Actualizado' }
+  };
+  var LANG = 'en';
+  try { LANG = localStorage.getItem('hub-lang') === 'es' ? 'es' : 'en'; } catch (e) {}
+  function t(k) { return T[LANG][k] || k; }
+
+  var S = { date: null, data: null, event: null, venue: null };
+
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  var qs = new URLSearchParams(location.search);
+  S.date = /^\d{4}-\d{2}-\d{2}$/.test(qs.get('date') || '') ? qs.get('date') : todayStr();
+  S.event = qs.get('event') || null;
+
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  function clock(iso) {
+    var d = new Date(iso); if (isNaN(d)) return '';
+    return d.toLocaleTimeString(LANG === 'es' ? 'es-US' : 'en-US', { hour: 'numeric', minute: '2-digit' });
+  }
+  function dayLabel(ds) {
+    var d = new Date(ds + 'T12:00:00');
+    return d.toLocaleDateString(LANG === 'es' ? 'es-US' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+  }
+
+  // A short public division label from the game type, the same way the Hub
+  // reads it: drop birth-year ranges, keep the bracket, drop the stage.
+  function division(g) {
+    var s = String(g.game_type || '').trim();
+    if (!s) {
+      var ag = String(g.age_group || '').trim();
+      var gen = String(g.gender || '').trim();
+      return (ag + ' ' + gen).trim() || 'Games';
+    }
+    s = s.replace(/\(\s*\d{1,2}\/\d{4}\s*-\s*\d{1,2}\/\d{4}\s*\)/g, '')
+         .replace(/\(\s*\d{1,2}\/\d{1,2}\/\d{4}\s*-\s*\d{1,2}\/\d{1,2}\/\d{4}\s*\)/g, '');
+    var bracket = '';
+    var bm = s.match(/\((Gold|Silver|Bronze|Premier)\)/i);
+    if (bm) { bracket = bm[1]; s = s.replace(bm[0], ''); }
+    if (!bracket) {
+      var bm2 = s.match(/\b(Gold|Silver|Bronze|Premier)\b/i);
+      if (bm2) { bracket = bm2[1]; s = s.replace(bm2[0], ' '); }
+    }
+    s = s.replace(/\bHS\s*Aged\b/i, '')
+         .replace(/\bBracket\s+[A-Z0-9]+\b/ig, ' ')
+         .replace(/\b(group\s*play|semi[-\s]*finals?|quarter[-\s]*finals?|consolation|finals?|championship|playoffs?)\b/ig, ' ')
+         .replace(/\b(U\d{1,2})(Boys|Girls)\b/gi, function (m, a, b) { return a + ' ' + b; })
+         .replace(/\s{2,}/g, ' ').trim();
+    if (bracket) bracket = bracket.charAt(0).toUpperCase() + bracket.slice(1).toLowerCase();
+    return (bracket ? s + ' ' + bracket : s) || 'Games';
+  }
+  function stage(g) {
+    var s = String(g.game_type || '');
+    if (/\bsemi[-\s]*finals?\b/i.test(s)) return 'Semi-final';
+    if (/\bquarter[-\s]*finals?\b/i.test(s)) return 'Quarter-final';
+    if (/\bconsolation\b/i.test(s)) return 'Consolation';
+    if (/\b(final|championship)\b/i.test(s)) return 'Final';
+    return '';
+  }
+
+  function chipRow(el, items, sel, onPick, allWord) {
+    if (items.length < 2) { el.innerHTML = ''; return; }
+    var h = '<button class="chip' + (sel == null ? ' on' : '') + '" data-v="">' + esc(allWord) + '</button>';
+    items.forEach(function (x) {
+      h += '<button class="chip' + (sel === x.v ? ' on' : '') + '" data-v="' + esc(x.v) + '">' + esc(x.label) + '</button>';
+    });
+    el.innerHTML = h;
+    el.querySelectorAll('.chip').forEach(function (b) {
+      b.onclick = function () { onPick(b.getAttribute('data-v') || null); };
+    });
+  }
+
+  function render() {
+    var d = S.data;
+    document.getElementById('title').textContent = t('title');
+    document.getElementById('footAuto').textContent = t('auto') + '  ·  ' + t('updated') + ' ' +
+      new Date().toLocaleTimeString(LANG === 'es' ? 'es-US' : 'en-US', { hour: 'numeric', minute: '2-digit' });
+    document.getElementById('langBtn').textContent = t('lang');
+    if (!d) return;
+
+    var events = d.events || [], games = d.games || [];
+    var ev = S.event ? events.filter(function (e) { return e.id === S.event; })[0] : null;
+    document.getElementById('evline').textContent = ev ? ev.name
+      : events.map(function (e) { return e.name; }).join(' · ');
+
+    // Day chips span the selected event's dates, or the union of all.
+    var days = {};
+    events.forEach(function (e) {
+      if (S.event && e.id !== S.event) return;
+      var a = new Date(e.start + 'T12:00:00'), z = new Date(e.end + 'T12:00:00'), guard = 0;
+      while (a <= z && guard++ < 14) {
+        var ds = a.getFullYear() + '-' + String(a.getMonth() + 1).padStart(2, '0') + '-' + String(a.getDate()).padStart(2, '0');
+        days[ds] = 1; a.setDate(a.getDate() + 1);
+      }
+    });
+    days[S.date] = 1;
+    chipRow(document.getElementById('dayChips'),
+      Object.keys(days).sort().map(function (ds) { return { v: ds, label: dayLabel(ds) }; }),
+      S.date, function (v) { if (v) { S.date = v; load(); } }, t('all'));
+    // The day row never needs an All chip; hide it by marking selection always set.
+    var dc = document.getElementById('dayChips').querySelector('.chip[data-v=""]');
+    if (dc) dc.remove();
+
+    chipRow(document.getElementById('evChips'),
+      events.map(function (e) { return { v: e.id, label: e.name }; }),
+      S.event, function (v) { S.event = v; S.venue = null; render(); }, t('all'));
+
+    var shown = games.filter(function (g) { return !S.event || g.event === S.event; });
+    var vens = {};
+    shown.forEach(function (g) { if (g.venue) vens[g.venue] = 1; });
+    chipRow(document.getElementById('venChips'),
+      Object.keys(vens).sort().map(function (v) { return { v: v, label: v }; }),
+      S.venue, function (v) { S.venue = v; render(); }, t('all'));
+    if (S.venue) shown = shown.filter(function (g) { return g.venue === S.venue; });
+
+    if (!shown.length) {
+      document.getElementById('board').innerHTML = '<div class="empty">' + esc(t('none')) + '</div>';
+      return;
+    }
+    var byDiv = {};
+    shown.forEach(function (g) {
+      var k = division(g);
+      (byDiv[k] = byDiv[k] || []).push(g);
+    });
+    var h = '';
+    Object.keys(byDiv).sort().forEach(function (dv) {
+      h += '<div class="divh">' + esc(dv) + '</div>';
+      byDiv[dv].forEach(function (g) {
+        var has = g.home_score != null && g.away_score != null;
+        var st = String(g.score_status || '').toLowerCase();
+        var sg = stage(g);
+        h += '<div class="g' + (g.canceled ? ' cx' : '') + '">' +
+          '<div class="teams">' + esc(g.home || '') + '<br>' + esc(g.away || '') + '</div>' +
+          '<div class="score">' + (g.canceled ? '<span class="cxtag">' + esc(t('canceled')) + '</span>'
+            : has ? esc(g.home_score) + '<br>' + esc(g.away_score)
+            : '<span class="nos">–<br>–</span>') +
+          (has && !g.canceled ? '<span class="st ' + (st === 'final' ? 'final' : 'rep') + '">' +
+            esc(st === 'final' ? t('final') : t('rep')) + '</span>' : '') + '</div>' +
+          '<div class="meta">' + esc(clock(g.kickoff)) +
+          (g.venue ? ' · ' + esc(g.venue) : '') + (g.field ? ', ' + esc(g.field) : '') +
+          (g.game_num ? ' · #' + esc(g.game_num) : '') + (sg ? ' · ' + esc(sg) : '') + '</div>' +
+          '</div>';
+      });
+    });
+    document.getElementById('board').innerHTML = h;
+  }
+
+  async function load() {
+    try {
+      var r = await sb.rpc('scoreboard_day', { p_date: S.date });
+      if (r.error) throw r.error;
+      S.data = r.data || { events: [], games: [] };
+      if (S.event && !(S.data.events || []).some(function (e) { return e.id === S.event; })) S.event = null;
+      render();
+    } catch (e) {
+      document.getElementById('board').innerHTML = '<div class="empty">' + esc(t('offline')) + '</div>';
+    }
+  }
+
+  document.getElementById('langBtn').onclick = function () {
+    LANG = LANG === 'es' ? 'en' : 'es';
+    try { localStorage.setItem('hub-lang', LANG); } catch (e) {}
+    render();
+  };
+
+  load();
+  setInterval(load, 60000);
+})();
+</script>
+</body>
+</html>
