@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.28-h';
+  var VERSION = '2026.10.28-i';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -3552,8 +3552,58 @@
   }
 
   // ── Routing ──────────────────────────────────────────────────────
+  // ── The Guardian Hub: a minor's guardian signs in with the email on the
+  // minor's record, sees every program text, and holds the texting switch.
+  function famLinkCard() {
+    return '<a class="item" href="#family"><div><b>' + esc(t('famTitle')) + '</b><br><span class="hint">' + esc(t('famLink')) + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
+  }
+  function renderFamily() {
+    var d = S.fam || { wards: [] };
+    // sms timestamps are full timestamptz, which dayLong cannot take.
+    var tsDay = function (ts) { return new Date(ts).toLocaleDateString(S.lang === 'es' ? 'es-US' : 'en-US', { month: 'short', day: 'numeric' }); };
+    var fb = $('famBack'); if (fb) fb.style.display = S.me ? '' : 'none';
+    // The preview banner defaults visible until staff code hides it; guardians never run that code.
+    if (!S.me) { var pb = $('previewBar'); if (pb) pb.style.display = 'none'; }
+    var so = $('famSignOut'); if (so) so.onclick = async function (e) {
+      e.preventDefault(); await sb.auth.signOut(); S.fam = null; S.me = null; location.hash = ''; show('s-signin');
+    };
+    $('famBody').innerHTML = ((d.wards || []).map(function (w) {
+      var ok = w.consent && w.consent.ok;
+      var msgs = w.messages || [];
+      var pLabel = function (p) { var k = 'famP.' + p, v = t(k); return v === k ? p : v; };
+      return '<div class="card" style="gap:8px">' +
+        '<div class="disp" style="font-size:28px">' + esc(w.name) + '</div>' +
+        (ok ? '<span class="pill ok" style="align-self:flex-start">' + esc(t('famOk')) + (w.consent.at ? ', ' + esc(tsDay(w.consent.at)) : '') + '</span>'
+            : '<span class="pill" style="align-self:flex-start">' + esc(t('famNo')) + '</span>') +
+        '<div class="hint">' + esc(t('famWhat')) + '</div>' +
+        '<div class="actions no-print" style="padding:0">' + (ok
+          ? '<button class="btn outline" data-fam-rev="' + w.person_id + '">' + esc(t('famRevoke')) + '</button>'
+          : '<button class="btn primary" data-fam-ok="' + w.person_id + '">' + esc(t('famApprove')) + '</button>') + '</div>' +
+        fold('fam-' + w.person_id, t('famMsgs'), msgs.length, msgs.length ? msgs.map(function (m) {
+          return '<div class="note"><div class="who">' + esc(tsDay(m.at)) + ', ' + esc(clock(m.at)) + ', ' + esc(pLabel(m.purpose)) + (m.by ? ', ' + esc(m.by) : '') + '</div><div class="text">' + esc(m.body || '') + '</div></div>';
+        }).join('') : '<div class="pad hint">' + esc(t('famNone')) + '</div>', false) +
+        '<div class="msg" id="famMsg' + w.person_id + '" hidden></div></div>';
+    }).join('')) || '<div class="card"><div class="hint">' + esc(t('famEmpty')) + '</div></div>';
+    $('famBody').querySelectorAll('[data-fam-ok],[data-fam-rev]').forEach(function (b) {
+      b.onclick = async function () {
+        var grant = b.hasAttribute('data-fam-ok');
+        var pid = parseInt(b.getAttribute(grant ? 'data-fam-ok' : 'data-fam-rev'), 10);
+        if (!grant && !window.confirm(t('famRevokeConfirm'))) return;
+        b.disabled = true;
+        var r = await sb.rpc('guardian_consent', { p_person: pid, p_grant: grant });
+        if (r.error || r.data !== true) { b.disabled = false; say('famMsg' + pid, (r.error && r.error.message) || t('opsTextFail'), 'bad'); return; }
+        var g = await sb.rpc('guardian_overview');
+        if (g.data) S.fam = g.data;
+        renderFamily();
+      };
+    });
+  }
   function route() {
-    if (!S.me) { show('s-signin'); return; }
+    if (!S.me) {
+      // A guardian has no referee record: their whole Hub is the family screen.
+      if (S.fam && (S.fam.wards || []).length) { show('s-family'); renderFamily(); } else show('s-signin');
+      return;
+    }
     var h = location.hash.replace(/^#/, '') || 'day';
     if (h.indexOf('coach') === 0 && !iCan('coaching')) { location.hash = '#day'; return; }
     if (h.indexOf('coachcard/') === 0) { if (!iCan('review')) { location.hash = '#day'; return; } show('s-ref'); renderCoachCard(decodeURIComponent(h.slice(10))); return; }
@@ -3561,6 +3611,7 @@
     if (h.indexOf('eval/') === 0) { if (!(iCan('evaluations') || iCan('review'))) { location.hash = '#day'; return; } show('s-eval'); renderEval(parseInt(h.slice(5), 10)); return; }
     if (h === 'upgrade' || h.indexOf('upgrade/') === 0) { show('s-upgrade'); renderUpgrade(h === 'upgrade' ? null : parseInt(h.slice(8), 10)); return; }
     if (h.indexOf('map/') === 0) { var mp = h.slice(4).split('/'); show('s-map'); renderMap(decodeURIComponent(mp[0] || ''), decodeURIComponent(mp[1] || '')); return; }
+    if (h === 'family') { if (S.fam && (S.fam.wards || []).length) { show('s-family'); renderFamily(); } else location.hash = '#day'; return; }
     if (h === 'eod') { if (!canEod()) { location.hash = '#day'; return; } $('eodBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-eod'); loadEod().then(renderEod).catch(function (e) { $('eodBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'assign') { if (!iCan('assigning')) { location.hash = '#day'; return; } $('assignBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-assign'); loadAssign().then(renderAssign).catch(function (e) { $('assignBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'setup') { if (!iCan('setup')) { location.hash = '#day'; return; } $('setupBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-setup'); SU.ev = null; loadSetup().then(renderSetup).catch(function (e) { $('setupBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
@@ -3578,7 +3629,7 @@
     else if (h === 'help') { renderHelp(); show('s-help'); }
     else { renderDay(); show('s-day'); }
   }
-  function renderAll() { if (S.me) route(); }
+  function renderAll() { if (S.me) route(); else if (S.fam && (S.fam.wards || []).length) renderFamily(); }
   window.addEventListener('hashchange', function () { if (location.hash !== '#help') S.reason = null; });
   var LAST_HASH = '';
   window.addEventListener('hashchange', function (e) { var old = (e.oldURL || '').split('#')[1]; if (old != null && old.indexOf('ref/') !== 0 && old.indexOf('coachcard/') !== 0) REF.from = '#' + old; });
@@ -3586,10 +3637,19 @@
 
   async function start() {
     S.me = await loadMe();
-    if (!S.me) { show('s-signin'); return; }
+    if (!S.me) {
+      // No referee record: a guardian email lands on the family screen.
+      var g0 = await sb.rpc('guardian_overview');
+      if (g0.data && (g0.data.wards || []).length) { S.fam = g0.data; show('s-family'); renderFamily(); return; }
+      show('s-signin'); return;
+    }
     if (S.me.language === 'es' && S.lang !== 'es') { S.lang = 'es'; applyWords(); }
     await loadDay();
     route();
+    // A referee or staff member who is also a guardian gets the family card on Your day.
+    sb.rpc('guardian_overview').then(function (g) {
+      if (g.data && (g.data.wards || []).length) { S.fam = g.data; var el = $('familyLine'); if (el) el.innerHTML = '<div class="list">' + famLinkCard() + '</div>'; }
+    });
     liveSync();
     var ticks = 0;
     setInterval(function () {
@@ -3621,10 +3681,10 @@
       }
     } catch (e) {}
     ['themeBtn0', 'themeBtn1', 'themeBtn2'].forEach(function (id) { $(id).onclick = toggleTheme; });
-    ['langBtn0', 'langBtn1'].forEach(function (id) { $(id).onclick = function () { setLang(S.lang === 'es' ? 'en' : 'es'); }; });
+    ['langBtn0', 'langBtn1', 'langBtn2'].forEach(function (id) { $(id).onclick = function () { setLang(S.lang === 'es' ? 'en' : 'es'); }; });
     $('markSignin').src = C.marks.csa; $('markDay').src = C.marks.csa;
-    ['markGame', 'markNotes', 'markHelp', 'markCoach', 'markCoachGame', 'markMyNotes', 'markReview', 'markCenter', 'markOps', 'markPeople', 'markSetup', 'markEod', 'markRef', 'markState', 'markMap', 'markEval', 'markUpgrade', 'markAssign'].forEach(function (id) { $(id).src = C.marks.program; });
-    ['ja0', 'ja1', 'ja2', 'ja3', 'ja4', 'ja5', 'ja6', 'ja7', 'ja8', 'ja9', 'ja10', 'ja11', 'ja12', 'ja13', 'ja14', 'ja15', 'ja16', 'ja17', 'ja18', 'ja19'].forEach(function (id) { $(id).src = C.marks.ja; });
+    ['markGame', 'markNotes', 'markHelp', 'markCoach', 'markCoachGame', 'markMyNotes', 'markReview', 'markCenter', 'markOps', 'markPeople', 'markSetup', 'markEod', 'markRef', 'markState', 'markMap', 'markEval', 'markUpgrade', 'markAssign', 'markFamily'].forEach(function (id) { $(id).src = C.marks.program; });
+    ['ja0', 'ja1', 'ja2', 'ja3', 'ja4', 'ja5', 'ja6', 'ja7', 'ja8', 'ja9', 'ja10', 'ja11', 'ja12', 'ja13', 'ja14', 'ja15', 'ja16', 'ja17', 'ja18', 'ja19', 'ja20'].forEach(function (id) { $(id).src = C.marks.ja; });
     $('peopleQ').oninput = function () { var q = $('peopleQ').value.trim(); clearTimeout(PP.timer); PP.timer = setTimeout(function () { searchPeople(q); }, 300); };
     $('peopleQ').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); } };
     $('staffBtn').onclick = function () { renderStaff(); };
