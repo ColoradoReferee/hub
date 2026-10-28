@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.28-g';
+  var VERSION = '2026.10.28-h';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -2957,6 +2957,14 @@
     var tile = function (big, label, sub) { return '<div class="stat"><b>' + big + '</b><i>' + esc(label) + '</i>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>'; };
     var html = '<div class="stats two">' + tile(fmtN(tot), t('stReferees').replace('{y}', latest), arrow(tot, totP)) + tile(ret == null ? '' : ret + '%', t('stRetention'), pctArrow(ret, retP)) + tile(u18 == null ? '' : u18 + '%', t('stUnder18'), pctArrow(u18, u18P)) + tile(fmtN(nw), t('stNew'), arrow(nw, nwP)) + '</div>' +
       '<div class="pad hint" style="padding-top:8px">' + esc(stNote(latest)) + '</div>';
+    // Official US Soccer State Referee Report, RY 25-26 Colorado page, received
+    // 28 Oct 2026. Static by design; replace when the next annual report lands.
+    html += '<div class="card" style="border-color:var(--gold);gap:6px"><b>' + esc(t('ussfTitle').replace('{y}', '25-26')) + '</b>' +
+      '<div class="stats" style="margin:0">' +
+      '<div class="stat"><b>54%</b><i>' + esc(t('ussfRet')) + '</i><div class="sub"><span class="delta down">' + esc(t('ussfNat').replace('{n}', '60')) + '</span></div></div>' +
+      '<div class="stat"><b>3,066</b><i>' + esc(t('ussfLic')) + '</i><div class="sub"><span class="delta up">+0.2%</span></div></div>' +
+      '<div class="stat"><b>1,559</b><i>' + esc(t('ussfYouth')) + '</i><div class="sub"><span class="delta down">-2.5%</span></div></div>' +
+      '</div><div class="hint">' + esc(t('ussfSrc')) + '</div></div>';
     if (open) html += '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('stOpenTitle').replace('{y}', open)) + '</b><div>' + esc(t('stOpenBody').replace('{n}', fmtN(stVal(open, 'referees'))).replace('{r}', fmtN(stVal(open, 'retained_from_prev'))).replace('{f}', fmtN(stVal(open, 'new')))) + '</div><div class="hint">' + esc(stNote(open)) + '</div></div>';
     // 1. Referees by year
     var trendYears = allYears.filter(function (y) { return y !== open; });
@@ -3092,6 +3100,24 @@
     $('refBody').querySelectorAll('[data-scarea]').forEach(function (b) { b.onclick = function () { REF.scArea = b.getAttribute('data-scarea'); var x = $('scText'); REF.scText = x ? x.value : REF.scText; renderRef(name); }; });
     $('refBody').querySelectorAll('[data-scsave]').forEach(function (b) { b.onclick = async function () { var x = $('scText'); var txt = (x && x.value || '').trim(); if (!txt || !REF.scArea) return; b.disabled = true; await sb.rpc('co90_set_point', { p_person: pid, p_slot: parseInt(b.getAttribute('data-scsave'), 10), p_area: REF.scArea, p_point: txt }); REF.scSlot = null; renderRef(name); }; });
   }
+  // ── One-to-one text from the program number (A7). The database enforces the
+  // guardian rule for minors; this only decides what the card shows.
+  function opsTextHtml(ct) {
+    if (!iCan('command_center') && !iCan('people')) return '';
+    var ok = !ct.minor || ct.guardian_ok;
+    var h = '<div class="no-print" style="display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:8px">';
+    if (ct.minor) {
+      h += ct.guardian_ok
+        ? '<span class="pill ok" style="align-self:flex-start">' + esc(t('opsGuardianOk')) + (ct.guardian_at ? ', ' + esc(dayLong(ct.guardian_at)) : '') + '</span>'
+        : '<div class="hint" style="color:var(--red);font-weight:700">' + esc(t('opsNeedGuardian')) + '</div>' +
+          (iCan('people') ? '<button class="btn outline small" id="opsConsent">' + esc(t('opsConsentBtn')) + '</button>' : '');
+    }
+    if (ok && iCan('command_center')) {
+      h += '<textarea id="opsTxt" maxlength="320" placeholder="' + esc(t('opsTextPh')) + '" style="min-height:56px"></textarea>' +
+        '<button class="btn primary small" id="opsSend">' + esc(t('opsTextBtn')) + '</button>';
+    }
+    return h + '<div class="msg" id="opsMsg" hidden></div></div>';
+  }
   async function renderRef(name) {
     $('refBack').href = REF.from || '#day';
     $('refBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>';
@@ -3111,7 +3137,7 @@
       (ct.phone ? '<div class="actions" style="padding:0"><a class="btn primary" href="sms:' + esc(String(ct.phone).replace(/[^\d+]/g, '')) + '?&body=' + encodeURIComponent(t('smsBody').replace('{venue}', REF.venue || '').replace('{who}', S.me.first_name)) + '">' + esc(t('contactText')) + '</a><a class="btn outline" href="tel:' + esc(String(ct.phone).replace(/[^\d+]/g, '')) + '">' + esc(t('contactCall')) + '</a></div><div class="hint">' + esc(ct.phone) + '</div>' : '<div class="hint">' + esc(t('contactNoPhone')) + '</div>') +
       (ct.email ? '<div class="hint"><a href="mailto:' + esc(ct.email) + '">' + esc(ct.email) + '</a></div>' : '') +
       (ct.guardian_email ? '<div class="hint">' + esc(t('contactGuardian')) + ' <a href="mailto:' + esc(ct.guardian_email) + '">' + esc(ct.guardian_email) + '</a></div>' : '') +
-      (ct.minor ? '<div class="hint" style="color:var(--red);font-weight:700">' + esc(t('contactMinorRule')) + '</div>' : '') + '</div>';
+      (ct.minor ? '<div class="hint" style="color:var(--red);font-weight:700">' + esc(t('contactMinorRule')) + '</div>' : '') + opsTextHtml(ct) + '</div>';
     if (!c) { $('refBody').innerHTML = '<div class="pad" style="padding-top:16px"><div class="disp" style="font-size:40px">' + esc(name) + '</div></div><div class="card"><div class="hint">' + esc(t('refNoRecord')) + '</div></div>'; return; }
     var titles = (c.titles || []).map(function (x) { return '<span class="pill' + (x.source === 'manual' ? ' ok' : '') + '" style="margin:4px 4px 0 0">' + esc(x.label) + '</span>'; }).join('');
     var stat = function (n, l, cls) { return '<div class="stat' + (cls ? ' ' + cls : '') + '"><b>' + (n == null ? '0' : esc(n)) + '</b><i>' + esc(l) + '</i></div>'; };
@@ -3127,6 +3153,25 @@
       '<div class="disp h2">' + esc(t('refNotes')) + '</div>' + ((notes.data || []).length ? (notes.data || []).map(function (n) {
         return '<div class="note"><div class="who">' + esc(n.observer || '') + (n.rater_role ? ', ' + esc(n.rater_role) : '') + ', ' + esc(dayLong(n.date)) + (n.field ? ', ' + esc(n.field) : '') + (n.area ? ', ' + esc(t('areas.' + n.area)) : '') + '</div><div class="text">' + esc(n.final_note || n.cleaned_note || '') + '</div></div>';
       }).join('') : '<div class="card"><div class="hint">' + esc(t('refNoNotes')) + '</div></div>');
+    var osb = $('opsSend'); if (osb) osb.onclick = async function () {
+      var ta = $('opsTxt'), v = (ta.value || '').trim();
+      if (v.length < 2) { say('opsMsg', t('opsTextEmpty'), 'bad'); return; }
+      if (!c.person_id) { say('opsMsg', t('opsTextFail'), 'bad'); return; }
+      osb.disabled = true;
+      var r = await sb.rpc('ops_text', { p_person: c.person_id, p_body: v });
+      osb.disabled = false;
+      var d = r.data || {};
+      if (r.error || !d.ok) { say('opsMsg', d.err === 'minor' ? t('opsNeedGuardian') : d.err === 'hours' ? t('opsMinorHours') : d.err === 'no_phone' ? t('contactNoPhone') : (r.error && r.error.message) || t('opsTextFail'), 'bad'); return; }
+      ta.value = ''; say('opsMsg', t('opsTextSent'), 'ok');
+    };
+    var ocb = $('opsConsent'); if (ocb) ocb.onclick = async function () {
+      var note = window.prompt(t('opsConsentPrompt')); if (note == null) return;
+      if (!note.trim() || !c.person_id) return;
+      ocb.disabled = true;
+      var r = await sb.rpc('ops_consent', { p_person: c.person_id, p_note: note.trim() });
+      if (r.error || r.data !== true) { ocb.disabled = false; say('opsMsg', (r.error && r.error.message) || t('opsTextFail'), 'bad'); return; }
+      renderRef(name);
+    };
     wireSeasonCard(name, c.person_id);
     Promise.all([upcomingFor(name, 90), loadCoachNames()]).then(function (x) { var list = x[0]; var el = $('refUpcoming'); if (el) el.innerHTML = upcomingHtml(list, name); }).catch(function (e) { var el = $('refUpcoming'); if (el) el.innerHTML = '<div class="msg bad">' + esc(e.message || '') + '</div>'; });
   }
