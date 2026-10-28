@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.28-c';
+  var VERSION = '2026.10.28-d';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -854,7 +854,7 @@
   }
   // ── Assigning: the quiet build. Referee side renders only for the demo
   //    roster; the assignor board only behind the assigning unlock. ─────
-  var ASG = { board: null, from: null, to: null, form: null, pick: null, q: '', cand: null, sel: null, warns: null, roster: null, rq: '', rcand: null, edit: null, filt: {} };
+  var ASG = { board: null, from: null, to: null, form: null, pick: null, q: '', cand: null, sel: null, warns: null, roster: null, rq: '', rcand: null, edit: null, filt: {}, draftMode: false, brQ: '', brCand: null, brSel: null, br: null, brPick: null };
   function asgSlotWord(s) { return s === 'cr' ? 'CR' : s === 'ar1' ? 'AR1' : s === 'ar2' ? 'AR2' : s === 'coach' ? t('asgCoachWord') : '4TH'; }
   function asgGameLine(o) { return dayShort(o.date) + ', ' + clock(o.kickoff) + ', ' + (o.venue || '') + (o.field ? ', ' + fieldShort(o.field) : ''); }
   var AV = { day: null, from: '', to: '' };
@@ -903,8 +903,15 @@
     if (!a || !a.demo) return '';
     var offered = (a.offers || []).filter(function (o) { return o.status === 'offered'; });
     var accepted = (a.offers || []).filter(function (o) { return o.status === 'accepted'; });
+    var expWhen = function (o) {
+      var off = new Date(o.offered_at).getTime(), ko = new Date(o.kickoff).getTime();
+      var e = Math.min(isNaN(off) ? Infinity : off + 48 * 3600000, isNaN(ko) ? Infinity : ko);
+      if (!isFinite(e)) return '';
+      return new Date(e).toLocaleString(S.lang === 'es' ? 'es-US' : 'en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+    };
     var offCards = offered.map(function (o) {
-      return '<div class="card" style="border-color:var(--gold);gap:6px"><b>' + esc(t('asgOfferTitle')) + '</b><div>' + esc(asgGameLine(o)) + '. ' + esc(o.competition || '') + (o.age_group ? ', ' + esc(o.age_group) : '') + '. <b>' + asgSlotWord(o.slot) + '</b></div>' + (o.note ? '<div class="hint">' + esc(o.note) + '</div>' : '') +
+      var ew = expWhen(o);
+      return '<div class="card" style="border-color:var(--gold);gap:6px"><b>' + esc(t('asgOfferTitle')) + '</b><div>' + esc(asgGameLine(o)) + '. ' + esc(o.competition || '') + (o.age_group ? ', ' + esc(o.age_group) : '') + '. <b>' + asgSlotWord(o.slot) + '</b></div>' + (o.note ? '<div class="hint">' + esc(o.note) + '</div>' : '') + (ew ? '<div class="hint">' + esc(t('asgExpires').replace('{t}', ew)) + '</div>' : '') +
         '<div class="actions" style="padding:0"><button class="btn primary" data-asg-resp="accept" data-oid="' + o.id + '">' + esc(t('asgAccept')) + '</button><button class="btn outline" data-asg-resp="decline" data-oid="' + o.id + '">' + esc(t('asgDecline')) + '</button></div></div>';
     }).join('');
     var accList = accepted.length ? fold('asgacc', t('asgAccepted'), accepted.length, accepted.map(function (o) {
@@ -987,9 +994,10 @@
     if (ids.length) { var p = await sb.from('people').select('id,first_name,last_name').in('id', ids).order('last_name'); ASG.roster = p.data || []; }
   }
   function asgSlotChip(g, slot) {
-    var off = (g.offers || []).filter(function (o) { return o.slot === slot && (o.status === 'offered' || o.status === 'accepted'); })[0];
+    var off = (g.offers || []).filter(function (o) { return o.slot === slot && (o.status === 'draft' || o.status === 'offered' || o.status === 'accepted'); })[0];
     var filled = slot === 'coach' ? (off && off.status === 'accepted' ? off.name : '') : g[slot];
     if (filled) return '<span class="chip-btn small on" style="pointer-events:none">' + asgSlotWord(slot) + ' ' + esc(filled) + '</span>';
+    if (off && off.status === 'draft') return '<button class="chip-btn small" style="border-style:dashed;color:var(--muted)" data-asg-wd="' + off.id + '">' + asgSlotWord(slot) + ' ' + esc(off.name || '') + ' · ' + esc(t('asgDraftWord')) + ' ✕</button>';
     if (off && off.status === 'offered') return '<button class="chip-btn small" style="border-color:var(--gold)" data-asg-wd="' + off.id + '">' + asgSlotWord(slot) + ' ' + esc(off.name || '') + ' · ' + esc(t('asgOfferedChip')) + ' ✕</button>';
     var picking = ASG.pick && ASG.pick.game_id === g.game_id && ASG.pick.slot === slot;
     return '<button class="chip-btn small' + (picking ? ' on' : '') + '" data-asg-slot="' + g.game_id + '|' + slot + '">' + asgSlotWord(slot) + ' · ' + esc(t('asgOpen')) + '</button>';
@@ -1015,7 +1023,7 @@
         '<input id="asgQ" value="' + esc(ASG.q) + '" placeholder="' + esc(t('asgPickOther')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink);margin-top:6px">' +
         '<div class="chips" style="padding-top:8px">' + (ASG.cand || []).map(function (x) { return '<button class="chip-btn small' + (ASG.sel && ASG.sel.person_id === x.person_id ? ' on' : '') + '" data-asg-cand="' + x.person_id + '" data-asg-nm="' + esc(x.name) + '">' + esc(x.name) + (x.minor ? ' ●' : '') + esc(licTag(x)) + '</button>'; }).join('') + '</div>' +
         (ASG.sel ? '<div style="padding-top:6px">' + (warns && warns.length ? warns.map(function (w) { return '<div class="hint" style="color:var(--gold)">⚠ ' + esc(t('asgWarn.' + w)) + '</div>'; }).join('') : '<div class="hint" style="color:var(--green, #3DBA63)">' + esc(t('asgNoWarn')) + '</div>') +
-          '<div class="actions" style="padding:8px 0 0"><button class="btn primary small" id="asgSend">' + esc(t('asgSend').replace('{name}', ASG.sel.name)) + '</button></div></div>' : '') +
+          '<div class="actions" style="padding:8px 0 0;flex-wrap:wrap"><button class="btn primary small" id="asgSend">' + esc(t(ASG.draftMode ? 'asgHold' : 'asgSend').replace('{name}', ASG.sel.name)) + '</button><button class="chip-btn small' + (ASG.draftMode ? ' on' : '') + '" id="asgDraftTog">' + esc(t('asgDraftMode')) + '</button></div></div>' : '') +
         '<div class="msg" id="asgPickMsg" hidden></div></div>';
     };
     var crewOf = function (g) {
@@ -1035,12 +1043,59 @@
         return x.game_id !== g.game_id && x.status !== 'C' && x.venue === g.venue && new Date(x.kickoff) > new Date(g.kickoff);
       }).sort(function (x, y) { return new Date(x.kickoff) - new Date(y.kickoff); })[0] || null;
     };
+    var brFold = function () {
+      var inner = '<div class="hint">' + esc(t('asgByRefHint')) + '</div>' +
+        '<input id="asgBrQ" value="' + esc(ASG.brQ) + '" placeholder="' + esc(t('coachSearch')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink);margin-top:8px">' +
+        '<div class="chips" style="padding-top:8px">' + (ASG.brCand || []).map(function (x) { return '<button class="chip-btn small' + (ASG.brSel && ASG.brSel.person_id === x.person_id ? ' on' : '') + '" data-asg-brsel="' + x.person_id + '" data-asg-nm="' + esc(x.name) + '">' + esc(x.name) + (x.minor ? ' ●' : '') + esc(licTag(x)) + '</button>'; }).join('') + '</div>';
+      if (ASG.brSel && ASG.br) {
+        var br = ASG.br;
+        var byDay = {};
+        (br.availability || []).forEach(function (w) { (byDay[w.date] = byDay[w.date] || { w: [], g: [], o: [] }).w.push(w); });
+        (br.games || []).forEach(function (g) { (byDay[g.date] = byDay[g.date] || { w: [], g: [], o: [] }).g.push(g); });
+        (br.offers || []).forEach(function (o) { (byDay[o.date] = byDay[o.date] || { w: [], g: [], o: [] }).o.push(o); });
+        // Open hub slots by day, from the board already in hand.
+        var openBy = {};
+        (ASG.board || []).forEach(function (g) {
+          if (g.status === 'C') return;
+          ['cr', 'ar1', 'ar2', 'fourth'].forEach(function (s) {
+            if (!slotOpen(g, s)) return;
+            (openBy[g.date] = openBy[g.date] || []).push({ g: g, s: s });
+          });
+        });
+        Object.keys(openBy).forEach(function (d) { byDay[d] = byDay[d] || { w: [], g: [], o: [] }; });
+        var days = Object.keys(byDay).sort();
+        inner += days.map(function (d) {
+          var x = byDay[d];
+          var h = '<div style="padding-top:10px"><b>' + esc(dayLong(d)) + '</b>';
+          h += '<div class="hint">' + (x.w.length ? x.w.map(function (w) { return esc(minClock(w.from_min) + ' - ' + minClock(w.to_min)); }).join(', ') : esc(t('asgNoAvail'))) + '</div>';
+          x.g.forEach(function (g) { h += '<div class="hint">' + esc(clock(g.kickoff)) + ' <b>' + esc(g.role) + '</b> · ' + esc(g.competition || '') + ' · ' + esc(g.venue || '') + (g.hub ? ' · Hub' : '') + '</div>'; });
+          x.o.forEach(function (o) { h += '<div class="hint">' + esc(clock(o.kickoff)) + ' ' + asgSlotWord(o.slot) + ' · ' + esc(t('brSt.' + o.status)) + ' · ' + esc(o.venue || '') + '</div>'; });
+          var opens = openBy[d] || [];
+          if (opens.length) {
+            h += '<div class="chips" style="padding-top:6px">' + opens.map(function (p) {
+              var on = ASG.brPick && ASG.brPick.game_id === p.g.game_id && ASG.brPick.slot === p.s;
+              return '<button class="chip-btn small' + (on ? ' on' : '') + '" data-asg-bro="' + p.g.game_id + '|' + p.s + '">' + esc(clock(p.g.kickoff)) + ' ' + asgSlotWord(p.s) + ' · ' + esc(p.g.venue || '') + '</button>';
+            }).join('') + '</div>';
+            if (ASG.brPick && opens.some(function (p) { return p.g.game_id === ASG.brPick.game_id && p.s === ASG.brPick.slot; })) {
+              var warns = (ASG.brPick.warns && ASG.brPick.warns.warnings) || [];
+              h += '<div style="padding-top:6px">' + (warns.length ? warns.map(function (w) { return '<div class="hint" style="color:var(--gold)">⚠ ' + esc(t('asgWarn.' + w)) + '</div>'; }).join('') : '<div class="hint" style="color:var(--green, #3DBA63)">' + esc(t('asgNoWarn')) + '</div>') +
+                '<div class="actions" style="padding:6px 0 0"><button class="btn primary small" id="asgBrOffer">' + esc(t('asgBrOffer')) + '</button><button class="btn outline small" id="asgBrDraft">' + esc(t('asgBrDraft')) + '</button></div></div>';
+            }
+          }
+          return h + '</div>';
+        }).join('');
+        inner += '<div class="msg" id="asgBrMsg" hidden></div>';
+      }
+      return fold('asgbyref', t('asgByRef'), ASG.brSel ? '' : '', inner, false);
+    };
     var editBox = function (g) {
       var e = ASG.edit;
       if (!e || e.game_id !== g.game_id) {
-        var nx = nextGameFor(g), copy = '';
+        var nx = nextGameFor(g), copy = '', pub = '';
         if (nx && crewOf(g).some(function (c) { return slotOpen(nx, c.slot); })) copy = '<button class="chip-btn small" data-asg-copy="' + g.game_id + '">' + esc(t('asgCopyCrew')) + '</button>';
-        return '<div class="chips" style="padding-top:4px"><button class="chip-btn small" data-asg-edit="' + g.game_id + '">' + esc(t('asgChangeBtn')) + '</button>' + copy + '<button class="chip-btn small" data-asg-cxl="' + g.game_id + '" style="border-color:var(--red)">' + esc(t('asgCxlBtn')) + '</button></div>';
+        var nd = (g.offers || []).filter(function (o) { return o.status === 'draft'; }).length;
+        if (nd) pub = '<button class="chip-btn small" style="border-color:var(--gold);font-weight:700" data-asg-pub="' + g.game_id + '">' + esc(t('asgPublishGame').replace('{n}', nd)) + '</button>';
+        return '<div class="chips" style="padding-top:4px">' + pub + '<button class="chip-btn small" data-asg-edit="' + g.game_id + '">' + esc(t('asgChangeBtn')) + '</button>' + copy + '<button class="chip-btn small" data-asg-cxl="' + g.game_id + '" style="border-color:var(--red)">' + esc(t('asgCxlBtn')) + '</button></div>';
       }
       return '<div style="padding-top:8px">' +
         '<div class="grid2"><div><label class="hint">' + esc(t('eodDate')) + '</label>' + inp('aeDate', e.date, 'date') + '</div><div><label class="hint">' + esc(t('asgKick')) + '</label>' + inp('aeTime', e.time, 'time') + '</div></div>' +
@@ -1083,7 +1138,10 @@
     var shown = (ASG.board || []).filter(function (g) {
       return ['venue', 'competition', 'age_group'].every(function (k) { return !ASG.filt[k] || (g[k] || '').trim() === ASG.filt[k]; });
     });
-    return form + attnFold + '<div class="disp h2">' + esc(t('asgGamesTitle')) + '</div>' + filters +
+    var totalDrafts = 0;
+    (ASG.board || []).forEach(function (g) { (g.offers || []).forEach(function (o) { if (o.status === 'draft') totalDrafts++; }); });
+    var pubAll = totalDrafts ? '<div class="pad" style="padding-top:8px"><button class="btn primary" id="asgPubAll" style="width:100%">' + esc(t('asgPublishAll').replace('{n}', totalDrafts)) + '</button></div>' : '';
+    return form + pubAll + attnFold + brFold() + '<div class="disp h2">' + esc(t('asgGamesTitle')) + '</div>' + filters +
       (shown.length ? shown.map(gameCard).join('') : '<div class="pad hint">' + esc(t('asgNone')) + '</div>') + roster;
   }
   function wireAssign(root) {
@@ -1165,10 +1223,54 @@
     }; });
     var sd = $('asgSend'); if (sd) sd.onclick = async function () {
       sd.disabled = true;
-      var r = await sb.rpc('asg_offer', { p_game: ASG.pick.game_id, p_slot: ASG.pick.slot, p_person: ASG.sel.person_id });
+      var r = await sb.rpc('asg_offer', { p_game: ASG.pick.game_id, p_slot: ASG.pick.slot, p_person: ASG.sel.person_id, p_note: null, p_draft: ASG.draftMode });
       if (r.error) { sd.disabled = false; say('asgPickMsg', r.error.message, 'bad'); return; }
       ASG.pick = null; ASG.sel = null; ASG.cand = null; await loadAssign(); renderAssign();
     };
+    var dtg = $('asgDraftTog'); if (dtg) dtg.onclick = function () { ASG.draftMode = !ASG.draftMode; renderAssign(); };
+    var pa = $('asgPubAll'); if (pa) pa.onclick = async function () {
+      if (!window.confirm(t('asgPublishConfirm'))) return;
+      pa.disabled = true;
+      await sb.rpc('asg_publish', {});
+      await loadAssign(); renderAssign();
+    };
+    root.querySelectorAll('[data-asg-pub]').forEach(function (b) { b.onclick = async function () {
+      if (!window.confirm(t('asgPublishConfirm'))) return;
+      b.disabled = true;
+      await sb.rpc('asg_publish', { p_game: parseInt(b.getAttribute('data-asg-pub'), 10) });
+      await loadAssign(); renderAssign();
+    }; });
+    var brq = $('asgBrQ');
+    if (brq) {
+      var brt;
+      brq.oninput = function () { clearTimeout(brt); brt = setTimeout(async function () { ASG.brQ = brq.value.trim(); if (ASG.brQ.length < 2) { ASG.brCand = null; return; } var r = await sb.rpc('co90_find_person', { p_q: ASG.brQ }); ASG.brCand = r.data || []; renderAssign(); var n = $('asgBrQ'); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 350); };
+    }
+    root.querySelectorAll('[data-asg-brsel]').forEach(function (b) { b.onclick = async function () {
+      var pid = parseInt(b.getAttribute('data-asg-brsel'), 10);
+      ASG.brSel = { person_id: pid, name: b.getAttribute('data-asg-nm') || '' };
+      ASG.brPick = null;
+      var r = await sb.rpc('asg_person_week', { p_person: pid });
+      ASG.br = r.data || null;
+      renderAssign();
+    }; });
+    root.querySelectorAll('[data-asg-bro]').forEach(function (b) { b.onclick = async function () {
+      var p = b.getAttribute('data-asg-bro').split('|');
+      ASG.brPick = { game_id: parseInt(p[0], 10), slot: p[1], warns: null };
+      var r = await sb.rpc('asg_check', { p_person: ASG.brSel.person_id, p_game: ASG.brPick.game_id });
+      ASG.brPick.warns = r.data || { warnings: [] };
+      renderAssign();
+    }; });
+    var brGo = async function (draft) {
+      var r = await sb.rpc('asg_offer', { p_game: ASG.brPick.game_id, p_slot: ASG.brPick.slot, p_person: ASG.brSel.person_id, p_note: null, p_draft: draft });
+      if (r.error) { say('asgBrMsg', r.error.message, 'bad'); return; }
+      ASG.brPick = null;
+      await loadAssign();
+      var rw = await sb.rpc('asg_person_week', { p_person: ASG.brSel.person_id });
+      ASG.br = rw.data || null;
+      renderAssign();
+    };
+    var bo = $('asgBrOffer'); if (bo) bo.onclick = function () { bo.disabled = true; brGo(false); };
+    var bd = $('asgBrDraft'); if (bd) bd.onclick = function () { bd.disabled = true; brGo(true); };
     var rq = $('asgRq');
     if (rq) {
       var rt = null;
