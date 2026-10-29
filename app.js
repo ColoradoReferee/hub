@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.29-a';
+  var VERSION = '2026.10.29-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -300,14 +300,87 @@
     return '<a class="card" href="#upgrade' + (pid ? '/' + pid : '') + '" style="gap:6px;text-decoration:none;color:inherit;border-color:' + (done ? 'var(--green)' : 'var(--gold)') + '"><b>' + esc(line) + '</b><div class="bar"><i style="width:' + Math.min(100, Math.round(100 * (up || mt) / (up ? Number(p.upgrade_need) : Number(p.maintenance_need)))) + '%"></i></div>' + (p.items || []).map(function (it) { return '<div class="hint">' + esc(dayLong(it.date)) + ', ' + esc(it.coach || '') + (it.competition ? ', ' + esc(it.competition) : '') + '</div>'; }).join('') + '<div class="hint" style="font-weight:700">' + esc(t('upOpen')) + ' &rsaquo;</div></a>';
   }
 
+  // ── CEUs: continuing education, a staff-entered ledger (087) ──
+  // No source system tracks these, so staff record them the way they record
+  // upgrade-log games. The referee reads their own on the upgrade screen;
+  // staff read and write everyone's from the referee card. RLS holds the
+  // gates; the page only decides what to draw.
+  function ceuCanWrite() { return iCan('review') || iCan('people') || iCan('command_center'); }
+  async function ceuFetch(personId) {
+    if (!personId) return [];
+    try {
+      var r = await sb.from('ceu').select('id,date,title,category,units,notes,recorded_by').eq('org_id', S.me.org_id).eq('person_id', personId).order('date', { ascending: false }).limit(200);
+      return r.data || [];
+    } catch (e) { return []; }
+  }
+  function ceuBlock(rows, open) {
+    rows = rows || [];
+    var canW = ceuCanWrite();
+    if (!rows.length && !canW) return '';
+    var yr = String(new Date().getFullYear());
+    var tot = 0; rows.forEach(function (r) { if (String(r.date).slice(0, 4) === yr) tot += Number(r.units) || 0; });
+    tot = Math.round(tot * 100) / 100;
+    var one = function (r) {
+      var ck = 'ceuCat.' + (r.category || 'other');
+      var cat = t(ck); if (cat === ck) cat = r.category || '';
+      return '<div class="rowline"><div><b>' + esc(dayLong(r.date)) + '</b>, ' + esc(r.title || '') + ', ' + esc(cat) +
+        (r.notes ? '<div class="hint">' + esc(r.notes) + '</div>' : '') +
+        (r.recorded_by ? '<div class="hint">' + esc(r.recorded_by) + '</div>' : '') + '</div>' +
+        '<span class="pill ok" style="white-space:nowrap;flex-shrink:0">' + esc(String(Number(r.units))) + '</span>' +
+        (canW ? '<button class="linkbtn" style="color:var(--red)" data-ceu-del="' + r.id + '">' + esc(t('remove')) + '</button>' : '') + '</div>';
+    };
+    var inp = 'style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"';
+    var cats = ['clinic', 'classroom', 'video', 'field', 'fitness', 'other'];
+    var addForm = !canW ? '' : (open ? '<div class="card" style="gap:8px">' +
+        '<input id="ceuDateIn" type="date" ' + inp + ' value="' + todayStr() + '">' +
+        '<input id="ceuTitleIn" placeholder="' + esc(t('ceuTitlePh')) + '" ' + inp + '>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+          '<select id="ceuCatIn" ' + inp + '>' + cats.map(function (k) { return '<option value="' + k + '">' + esc(t('ceuCat.' + k)) + '</option>'; }).join('') + '</select>' +
+          '<input id="ceuUnitsIn" type="number" min="0.5" max="40" step="0.5" placeholder="' + esc(t('ceuUnitsPh')) + '" ' + inp + '></div>' +
+        '<input id="ceuNotesIn" placeholder="' + esc(t('ceuNotesPh')) + '" ' + inp + '>' +
+        '<div class="actions" style="padding:0"><button class="btn primary" id="ceuSave">' + esc(t('ceuSaveBtn')) + '</button><button class="btn outline" id="ceuCancel">' + esc(t('neverMind')) + '</button></div><div class="msg bad" id="ceuMsg" hidden></div></div>'
+      : '<div class="pad" style="padding-top:0"><button class="btn outline" id="ceuAddBtn" style="width:100%">' + esc(t('ceuAdd')) + '</button></div>');
+    return '<div class="disp h2">' + esc(t('ceuTitle')) + (rows.length ? ' · ' + esc(String(tot)) + ' ' + esc(t('ceuThisYear')) : '') + '</div>' +
+      (rows.length
+        ? '<div class="pad" style="padding-top:0">' + rows.slice(0, 6).map(one).join('') + '</div>' +
+          (rows.length > 6 ? fold('ceu-older', t('olderNotes'), rows.length - 6, '<div class="pad" style="padding-top:0">' + rows.slice(6).map(one).join('') + '</div>', false) : '')
+        : '<div class="card"><div class="hint">' + esc(t('ceuNone')) + '</div></div>') +
+      addForm;
+  }
+  function wireCeu(container, personId, st, rerender) {
+    var ab = container.querySelector('#ceuAddBtn'); if (ab) ab.onclick = function () { st.ceuAdd = true; rerender(); };
+    var cb = container.querySelector('#ceuCancel'); if (cb) cb.onclick = function () { st.ceuAdd = false; rerender(); };
+    var sv = container.querySelector('#ceuSave'); if (sv) sv.onclick = async function () {
+      var ttl = container.querySelector('#ceuTitleIn').value.trim();
+      var un = parseFloat(container.querySelector('#ceuUnitsIn').value);
+      if (!ttl || !(un > 0)) { say('ceuMsg', t('ceuNeed'), 'bad'); return; }
+      sv.disabled = true;
+      var ins = await sb.from('ceu').insert({ org_id: S.me.org_id, person_id: personId, date: container.querySelector('#ceuDateIn').value || todayStr(), title: ttl, category: container.querySelector('#ceuCatIn').value, units: un, notes: container.querySelector('#ceuNotesIn').value.trim() || null, recorded_by: S.me.first_name + ' ' + S.me.last_name });
+      if (ins.error) { sv.disabled = false; say('ceuMsg', ins.error.message, 'bad'); return; }
+      st.ceuAdd = false; rerender();
+    };
+    container.querySelectorAll('[data-ceu-del]').forEach(function (b) {
+      b.onclick = async function () {
+        if (!window.confirm(t('ceuRemoveConfirm'))) return;
+        await sb.from('ceu').delete().eq('id', b.getAttribute('data-ceu-del'));
+        rerender();
+      };
+    });
+  }
   // ── The upgrade tracker: every Regional requirement, with the game log the sync cannot see ──
-  var UP = { pid: null, data: null, add: false, role: '' };
+  var UP = { pid: null, data: null, add: false, role: '', ceuAdd: false };
   function renderUpgradeFromData(pid) { renderUpgrade(pid); }
   async function renderUpgrade(pid) {
     UP.pid = pid || null;
     var body = $('upgradeBody'); body.innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>';
     $('upBack').href = pid ? (REF.from || '#center') : '#day';
-    busy(true); var r = await sb.rpc('upgrade_tracker', { p_person: pid, p_season: null }); busy(false);
+    busy(true);
+    var rr2 = await Promise.all([
+      sb.rpc('upgrade_tracker', { p_person: pid, p_season: null }),
+      ceuFetch(pid || (S.me && S.me.person_id))
+    ]);
+    busy(false);
+    var r = rr2[0], ceuRows = rr2[1];
     var d = r.data; UP.data = d;
     if (!d) { body.innerHTML = '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>'; return; }
     var mine = !pid || pid === S.me.person_id, canEdit = mine || iCan('review');
@@ -348,7 +421,9 @@
       '</div>' +
       (Number(d.maint_coaches) ? '<div class="pad hint">' + esc(t('upMaint').replace('{c}', d.maint_coaches).replace('{avg}', d.maint_avg == null ? '–' : d.maint_avg)) + '</div>' : '') +
       '<div class="disp h2">' + esc(t('upEvalsTitle')) + '</div>' + evList +
-      '<div class="disp h2">' + esc(t('upLogTitle')) + '</div><div class="pad hint" style="padding-top:0">' + esc(t('upLogHint')) + '</div>' + addForm + (logAll.length ? '<div class="pad">' + roleChips + logRows + '</div>' : '');
+      '<div class="disp h2">' + esc(t('upLogTitle')) + '</div><div class="pad hint" style="padding-top:0">' + esc(t('upLogHint')) + '</div>' + addForm + (logAll.length ? '<div class="pad">' + roleChips + logRows + '</div>' : '') +
+      ceuBlock(ceuRows, UP.ceuAdd);
+    wireCeu(body, pid || (S.me && S.me.person_id), UP, function () { renderUpgrade(pid); });
     body.querySelectorAll('[data-uprole]').forEach(function (c) { c.onclick = function () { UP.role = c.getAttribute('data-uprole'); renderUpgradeFromData(pid); }; });
     var ab = $('upAddBtn'); if (ab) ab.onclick = function () { UP.add = true; renderUpgrade(pid); };
     var cb = $('upCancel'); if (cb) cb.onclick = function () { UP.add = false; renderUpgrade(pid); };
@@ -3231,8 +3306,18 @@
       staff ? sb.rpc('ref_contact', { p_name: name }) : Promise.resolve({ data: null })
     ]);
     var card = rr[0], notes = rr[1], ct = rr[2].data;
-    var prog = null; try { if (card.data && card.data.person_id) { var pr = await sb.rpc('eval_progress', { p_person: card.data.person_id }); prog = pr.data; } } catch (e) {}
-    var co90 = null; try { if (card.data && card.data.person_id) { var cr = await sb.rpc('co90_card', { p_person: card.data.person_id }); co90 = cr.data; } } catch (e) {}
+    // One round trip for everything that needs the person id, not three.
+    var prog = null, co90 = null, ceuRows = [];
+    try {
+      if (card.data && card.data.person_id) {
+        var xr = await Promise.all([
+          sb.rpc('eval_progress', { p_person: card.data.person_id }),
+          sb.rpc('co90_card', { p_person: card.data.person_id }),
+          ceuFetch(card.data.person_id)
+        ]);
+        prog = xr[0].data; co90 = xr[1].data; ceuRows = xr[2];
+      }
+    } catch (e) {}
     busy(false);
     var c = card.data;
     var contact = !ct ? '' : '<div class="card" style="gap:6px;border-color:var(--gold)"><b>' + esc(t('contactTitle')) + (ct.minor ? ' <span class="pill">' + esc(t('contactMinor')) + '</span>' : '') + '</b>' +
@@ -3263,7 +3348,9 @@
           return '<div class="note"><div class="who">' + esc(n.observer || '') + (n.rater_role ? ', ' + esc(n.rater_role) : '') + ', ' + esc(dayLong(n.date)) + (n.field ? ', ' + esc(n.field) : '') + (n.area ? ', ' + esc(t('areas.' + n.area)) : '') + (n.released === false ? ' <span class="pill">' + esc(stLabel) + '</span>' : '') + '</div><div class="text">' + esc(n.text || '') + '</div></div>';
         };
         return list.slice(0, 8).map(one).join('') + (list.length > 8 ? fold('refnotes-older', t('olderNotes'), list.length - 8, list.slice(8).map(one).join(''), false) : '');
-      })();
+      })() +
+      (c.person_id ? ceuBlock(ceuRows, REF.ceuAdd) : '');
+    if (c.person_id) wireCeu($('refBody'), c.person_id, REF, function () { renderRef(name); });
     var osb = $('opsSend'); if (osb) osb.onclick = async function () {
       var ta = $('opsTxt'), v = (ta.value || '').trim();
       if (v.length < 2) { say('opsMsg', t('opsTextEmpty'), 'bad'); return; }
