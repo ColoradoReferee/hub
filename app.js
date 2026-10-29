@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.28-n';
+  var VERSION = '2026.10.29-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -3227,7 +3227,7 @@
     var staff = iCan('command_center') || iCan('scheduling') || iCan('people');
     var rr = await Promise.all([
       sb.rpc('ref_card', { p_name: name }),
-      sb.from('observations').select('date,observer,rater_role,final_note,cleaned_note,field,cleanup_status,area').eq('ref_name', name).in('cleanup_status', ['approved', 'edited']).order('date', { ascending: false }).limit(20),
+      sb.rpc('ref_notes', { p_name: name }),
       staff ? sb.rpc('ref_contact', { p_name: name }) : Promise.resolve({ data: null })
     ]);
     var card = rr[0], notes = rr[1], ct = rr[2].data;
@@ -3252,9 +3252,18 @@
       '<div class="pad hint" style="padding-top:8px">' + (c.first_game ? esc(t('refFirst')) + ' ' + esc(dayLong(c.first_game)) + ', ' : '') + (c.last_game ? esc(t('refLast')) + ' ' + esc(dayLong(c.last_game)) : '') + (c.last_seen ? '. ' + esc(t('refLastSeen')) + ' ' + esc(dayLong(c.last_seen)) : '') + '</div>' +
       (c.next_game ? '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('refNext')) + '</b><div>' + esc(dayLong(c.next_game)) + ', ' + esc(clock(c.next_kickoff)) + ', ' + esc(c.next_venue || '') + (c.next_field ? ', ' + esc(c.next_field) : '') + '</div><div class="hint">' + esc(t('refNextHint')) + '</div></div>' : '') +
       '<div class="disp h2">' + esc(t('upTitle')) + '</div><div id="refUpcoming"><div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div></div>' +
-      '<div class="disp h2">' + esc(t('refNotes')) + '</div>' + ((notes.data || []).length ? (notes.data || []).map(function (n) {
-        return '<div class="note"><div class="who">' + esc(n.observer || '') + (n.rater_role ? ', ' + esc(n.rater_role) : '') + ', ' + esc(dayLong(n.date)) + (n.field ? ', ' + esc(n.field) : '') + (n.area ? ', ' + esc(t('areas.' + n.area)) : '') + '</div><div class="text">' + esc(n.final_note || n.cleaned_note || '') + '</div></div>';
-      }).join('') : '<div class="card"><div class="hint">' + esc(t('refNoNotes')) + '</div></div>');
+      '<div class="disp h2">' + esc(t('refNotes')) + ((notes.data || []).length ? ' · ' + (notes.data || []).length : '') + '</div>' + (function () {
+        // Every note on the PERSON, every name spelling, newest first (085).
+        // Unreleased notes reach reviewers and their own coach with a status pill.
+        var list = notes.data || [];
+        if (!list.length) return '<div class="card"><div class="hint">' + esc(t('refNoNotes')) + '</div></div>';
+        var one = function (n) {
+          var st = n.status || 'pending';
+          var stLabel = t('status.' + st); if (stLabel === 'status.' + st) stLabel = t('status.pending');
+          return '<div class="note"><div class="who">' + esc(n.observer || '') + (n.rater_role ? ', ' + esc(n.rater_role) : '') + ', ' + esc(dayLong(n.date)) + (n.field ? ', ' + esc(n.field) : '') + (n.area ? ', ' + esc(t('areas.' + n.area)) : '') + (n.released === false ? ' <span class="pill">' + esc(stLabel) + '</span>' : '') + '</div><div class="text">' + esc(n.text || '') + '</div></div>';
+        };
+        return list.slice(0, 8).map(one).join('') + (list.length > 8 ? fold('refnotes-older', t('olderNotes'), list.length - 8, list.slice(8).map(one).join(''), false) : '');
+      })();
     var osb = $('opsSend'); if (osb) osb.onclick = async function () {
       var ta = $('opsTxt'), v = (ta.value || '').trim();
       if (v.length < 2) { say('opsMsg', t('opsTextEmpty'), 'bad'); return; }
