@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.29-b';
+  var VERSION = '2026.10.30-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -346,6 +346,20 @@
           (rows.length > 6 ? fold('ceu-older', t('olderNotes'), rows.length - 6, '<div class="pad" style="padding-top:0">' + rows.slice(6).map(one).join('') + '</div>', false) : '')
         : '<div class="card"><div class="hint">' + esc(t('ceuNone')) + '</div></div>') +
       addForm;
+  }
+  async function loadCeuRecent() {
+    // The last few recorded sessions, grouped by day and title, so whoever
+    // is about to record one can see it is not already in.
+    try {
+      var r = await sb.from('ceu').select('date,title,units,created_at').order('created_at', { ascending: false }).limit(400);
+      var rows = r.data || [], by = {}, order = [];
+      rows.forEach(function (x) {
+        var k = x.date + '|' + (x.title || '');
+        if (!by[k]) { by[k] = { date: x.date, title: x.title || '', units: Number(x.units), n: 0 }; order.push(k); }
+        by[k].n++;
+      });
+      CC.ceuRecent = order.slice(0, 12).map(function (k) { return by[k]; });
+    } catch (e) { CC.ceuRecent = []; }
   }
   function wireCeu(container, personId, st, rerender) {
     var ab = container.querySelector('#ceuAddBtn'); if (ab) ab.onclick = function () { st.ceuAdd = true; rerender(); };
@@ -1493,7 +1507,22 @@
     return fold('premium', t('premTitle').replace('{y}', p.season || ''), a ? 1 : '', '<div class="hint">' + esc(t('premLead')) + ' <a href="' + (C.library || 'library.html') + '#career-premium" target="_blank" rel="noopener">' + esc(t('premFaq')) + '</a></div>' + inner, false);
   }
   function wirePremium(root) {
-    root.querySelectorAll('[data-prem-tier]').forEach(function (b) { b.onclick = function () { var ed = $('premEdu'); if (ed) PREM.edu = ed.value; var dg = $('premDgIn'); if (dg) PREM.dg = dg.value; PREM.tier = parseInt(b.getAttribute('data-prem-tier'), 10); $('premiumLine').innerHTML = premiumHtml(); wirePremium($('premiumLine')); }; });
+    root.querySelectorAll('[data-prem-tier]').forEach(function (b) { b.onclick = async function () {
+      var ed = $('premEdu'); if (ed) PREM.edu = ed.value;
+      var dg = $('premDgIn'); if (dg) PREM.dg = dg.value;
+      PREM.tier = parseInt(b.getAttribute('data-prem-tier'), 10);
+      // The education lines start from the CEU ledger (088): what the
+      // program has recorded over the last twelve months, one per line,
+      // editable before submitting. Typed text is never overwritten.
+      if (!PREM.edu) {
+        try {
+          var cr2 = await ceuFetch(S.me.person_id);
+          var cut = shiftDate(todayStr(), -365);
+          PREM.edu = cr2.filter(function (r2) { return String(r2.date) >= cut; }).map(function (r2) { return r2.title + ', ' + Number(r2.units) + ' CEU, ' + r2.date; }).join('\n');
+        } catch (e2) {}
+      }
+      $('premiumLine').innerHTML = premiumHtml(); wirePremium($('premiumLine'));
+    }; });
     var go = $('premGo'); if (go) go.onclick = async function () {
       PREM.edu = $('premEdu') ? $('premEdu').value.trim() : '';
       PREM.dg = $('premDgIn') ? $('premDgIn').value.trim() : '';
@@ -2100,7 +2129,7 @@
     return '<input id="coQ" placeholder="' + esc(t('coachSearch')) + '" value="' + esc(CC.coQ || '') + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><div class="chips">' + hits + '</div>';
   }
   function renderCenter() {
-    var tabs = ['coverage', 'evals', 'schedule', 'coaches', 'co90', 'ai', 'queue'];
+    var tabs = ['coverage', 'evals', 'schedule', 'coaches', 'co90', 'ceu', 'ai', 'queue'];
     var openN = (CC.evalReqs || []).filter(function (q) { return q.status === 'requested'; }).length || (S.evalWaiting || []).length;
     var head = '<div class="tabs">' + tabs.map(function (k) { return '<button class="chip-btn' + (CC.tab === k ? ' on' : '') + (k === 'evals' && openN && CC.tab !== k ? ' warn' : '') + '" data-tab="' + k + '">' + esc(t('tab' + k.charAt(0).toUpperCase() + k.slice(1))) + (k === 'evals' && openN ? ' (' + openN + ')' : '') + '</button>'; }).join('') + '</div>';
     var body = '';
@@ -2160,6 +2189,29 @@
       body = '<div class="disp h2">' + esc(t('coachesTitle')) + '</div><div class="pad">' + (rows.length ? rows.map(function (b) {
         return '<div class="rowline"><div><a class="refname" href="#coachcard/' + encodeURIComponent(b.name) + '"><b>' + esc(b.name) + '</b></a>' + (b.role ? ' <span class="hint">' + esc(b.role) + '</span>' : '') + '<br><span class="hint">' + Object.keys(b.refs).length + ' ' + esc(t('coachRefs')) + ', ' + b.released + ' ' + esc(t('coachReleased')) + ', ' + b.read + ' ' + esc(t('coachRead')) + '</span></div><div class="n">' + b.notes + '</div></div>';
       }).join('') : '<div class="hint">' + esc(t('noCoachActivity')) + '</div>') + '</div>';
+    } else if (CC.tab === 'ceu') {
+      // One session, the whole roster (088). State survives re-renders the
+      // way the premium form's does: field values are captured before every
+      // redraw, because the candidate search redraws the screen.
+      var cs = CC.ceuS || (CC.ceuS = { date: todayStr(), title: '', cat: 'clinic', units: '', notes: '', q: '', cand: null, sel: [] });
+      var inp2 = 'style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"';
+      var cats2 = ['clinic', 'classroom', 'video', 'field', 'fitness', 'other'];
+      var selChips = cs.sel.map(function (p2, i2) { return '<button class="chip-btn on" data-ceu-unsel="' + i2 + '">' + esc(p2.name) + ' ✕</button>'; }).join('');
+      var candChips = (cs.cand || []).filter(function (p2) { return !cs.sel.some(function (x2) { return x2.id === p2.id; }); }).map(function (p2) { return '<button class="chip-btn" data-ceu-sel="' + p2.id + '">' + esc(p2.name) + (p2.city ? ' <small>' + esc(p2.city) + '</small>' : '') + '</button>'; }).join('');
+      body = '<div class="pad lead" style="padding-top:12px">' + esc(t('ceuSessionHint')) + '</div>' +
+        '<div class="card" style="gap:8px"><div class="hint" style="font-weight:700">' + esc(t('ceuSession')) + '</div>' +
+        '<input id="csDate" type="date" ' + inp2 + ' value="' + esc(cs.date) + '">' +
+        '<input id="csTitle" placeholder="' + esc(t('ceuTitlePh')) + '" ' + inp2 + ' value="' + esc(cs.title) + '">' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+          '<select id="csCat" ' + inp2 + '>' + cats2.map(function (k2) { return '<option value="' + k2 + '"' + (cs.cat === k2 ? ' selected' : '') + '>' + esc(t('ceuCat.' + k2)) + '</option>'; }).join('') + '</select>' +
+          '<input id="csUnits" type="number" min="0.5" max="40" step="0.5" placeholder="' + esc(t('ceuUnitsPh')) + '" ' + inp2 + ' value="' + esc(cs.units) + '"></div>' +
+        '<input id="csNotes" placeholder="' + esc(t('ceuNotesPh')) + '" ' + inp2 + ' value="' + esc(cs.notes) + '">' +
+        '<div class="hint" style="font-weight:700;padding-top:4px">' + esc(t('ceuWho')) + (cs.sel.length ? ' · ' + cs.sel.length : '') + '</div>' +
+        (selChips ? '<div class="chips">' + selChips + '</div>' : '') +
+        '<input id="csQ" placeholder="' + esc(t('ceuSearchPh')) + '" ' + inp2 + ' value="' + esc(cs.q) + '" autocomplete="off">' +
+        (candChips ? '<div class="chips">' + candChips + '</div>' : '') +
+        '<div class="actions" style="padding:0"><button class="btn primary" id="csGo"' + (cs.sel.length ? '' : ' disabled') + '>' + esc(t('ceuSaveN').replace('{n}', cs.sel.length)) + '</button></div><div class="msg" id="csMsg" hidden></div></div>' +
+        (CC.ceuRecent && CC.ceuRecent.length ? '<div class="disp h2">' + esc(t('ceuRecent')) + '</div><div class="pad">' + CC.ceuRecent.map(function (s2) { return '<div class="rowline"><div><b>' + esc(dayLong(s2.date)) + '</b>, ' + esc(s2.title) + '<div class="hint">' + esc(String(Number(s2.units))) + ' ' + esc(t('ceuUnitsPh')) + '</div></div><div class="n">' + s2.n + '</div></div>'; }).join('') + '</div>' : '');
     } else if (CC.tab === 'ai') {
       body = '<div class="card" style="gap:10px"><div style="font-size:15px;line-height:1.45">' + esc(t('aiLead')) + '</div>' +
         '<div class="grid2"><div><label for="aiFrom" class="hint" style="font-weight:700">' + esc(t('aiFrom')) + '</label><input id="aiFrom" type="date" value="' + esc(CC.from) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div><div><label for="aiTo" class="hint" style="font-weight:700">' + esc(t('aiTo')) + '</label><input id="aiTo" type="date" value="' + esc(CC.to) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div></div>' +
@@ -2169,7 +2221,7 @@
       body = '<div class="stats" style="grid-template-columns:1fr 1fr"><div class="stat' + (w ? ' red' : '') + '"><b>' + w + '</b><i>' + esc(t('queueWaiting')) + '</i></div><div class="stat' + (cl ? ' green' : '') + '"><b>' + cl + '</b><i>' + esc(t('queueCleaned')) + '</i></div></div><div class="pad" style="padding-top:12px"><a class="btn go" href="#review">' + esc(t('openReview')) + '</a></div>';
     }
     $('centerBody').innerHTML = head + body;
-    $('centerBody').querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { CC.tab = b.getAttribute('data-tab'); if (CC.tab === 'queue' && !REV.notes.length) loadReview().then(renderCenter); else if (CC.tab === 'schedule') loadSchedule().then(renderCenter); else if (CC.tab === 'co90') loadCo90().then(renderCenter); else if (CC.tab === 'evals') loadEvals().then(renderCenter); else renderCenter(); }; });
+    $('centerBody').querySelectorAll('[data-tab]').forEach(function (b) { b.onclick = function () { CC.tab = b.getAttribute('data-tab'); if (CC.tab === 'queue' && !REV.notes.length) loadReview().then(renderCenter); else if (CC.tab === 'schedule') loadSchedule().then(renderCenter); else if (CC.tab === 'co90') loadCo90().then(renderCenter); else if (CC.tab === 'evals') loadEvals().then(renderCenter); else if (CC.tab === 'ceu' && !CC.ceuRecent) loadCeuRecent().then(renderCenter); else renderCenter(); }; });
     $('centerBody').querySelectorAll('[data-evalpick]').forEach(function (b) { b.onclick = function () { CC.evalPick = parseInt(b.getAttribute('data-evalpick'), 10); CC.evalQ = ''; renderCenter(); }; });
     var cv = $('covVenue'); if (cv) cv.onchange = function () { CC.covVenue = cv.value; renderCenter(); };
     var sv = $('schedVenue'); if (sv) sv.onchange = function () { CC.pick = sv.value || null; CC.pickFields = []; renderCenter(); };
@@ -2177,6 +2229,32 @@
     $('centerBody').querySelectorAll('[data-evalassign]').forEach(function (b) { b.onclick = async function () { b.disabled = true; var coach = parseInt(b.getAttribute('data-evalassign'), 10), id = parseInt(b.getAttribute('data-req'), 10); var r = CC.evalReqs.filter(function (x) { return x.id === id; })[0]; var ok = await sb.rpc('may_evaluate', { p_coach: coach, p_purpose: r.purpose }); if (!ok.data) { b.disabled = false; return; } await sb.from('eval_requests').update({ status: 'assigned', coach_person_id: coach, assigned_by: S.me.person_id, assigned_at: new Date().toISOString() }).eq('id', id); CC.evalPick = null; await loadEvals(); renderCenter(); }; });
     $('centerBody').querySelectorAll('[data-evaldecline]').forEach(function (b) { b.onclick = async function () { b.disabled = true; await sb.from('eval_requests').update({ status: 'declined' }).eq('id', parseInt(b.getAttribute('data-evaldecline'), 10)); await loadEvals(); renderCenter(); }; });
     $('centerBody').querySelectorAll('[data-evaldone]').forEach(function (b) { b.onclick = async function () { b.disabled = true; await sb.from('eval_requests').update({ status: 'done' }).eq('id', parseInt(b.getAttribute('data-evaldone'), 10)); await loadEvals(); renderCenter(); }; });
+    if (CC.tab === 'ceu' && CC.ceuS) {
+      var cs2 = CC.ceuS;
+      var keep = function () { var g = function (id) { var e2 = $(id); return e2 ? e2.value : null; }; var v; v = g('csDate'); if (v != null) cs2.date = v; v = g('csTitle'); if (v != null) cs2.title = v; v = g('csCat'); if (v != null) cs2.cat = v; v = g('csUnits'); if (v != null) cs2.units = v; v = g('csNotes'); if (v != null) cs2.notes = v; };
+      var cq = $('csQ');
+      if (cq) {
+        var ct2 = null;
+        cq.oninput = function () { clearTimeout(ct2); ct2 = setTimeout(async function () { keep(); cs2.q = cq.value.trim(); if (cs2.q.length < 2) { cs2.cand = null; renderCenter(); return; } var r2 = await sb.rpc('ceu_find', { p_q: cs2.q }); cs2.cand = r2.data || []; renderCenter(); var n2 = $('csQ'); if (n2) { n2.focus(); n2.setSelectionRange(n2.value.length, n2.value.length); } }, 350); };
+      }
+      $('centerBody').querySelectorAll('[data-ceu-sel]').forEach(function (b) { b.onclick = function () { keep(); var id2 = parseInt(b.getAttribute('data-ceu-sel'), 10); var p2 = (cs2.cand || []).filter(function (x) { return x.id === id2; })[0]; if (p2 && !cs2.sel.some(function (x) { return x.id === id2; })) cs2.sel.push(p2); cs2.q = ''; cs2.cand = null; renderCenter(); }; });
+      $('centerBody').querySelectorAll('[data-ceu-unsel]').forEach(function (b) { b.onclick = function () { keep(); cs2.sel.splice(parseInt(b.getAttribute('data-ceu-unsel'), 10), 1); renderCenter(); }; });
+      var cgo = $('csGo'); if (cgo) cgo.onclick = async function () {
+        keep();
+        var un2 = parseFloat(cs2.units);
+        if (!cs2.title.trim() || !(un2 > 0)) { say('csMsg', t('ceuNeed'), 'bad'); return; }
+        if (!cs2.sel.length) { say('csMsg', t('ceuNobody'), 'bad'); return; }
+        cgo.disabled = true;
+        var r3 = await sb.rpc('ceu_bulk', { p_people: cs2.sel.map(function (x) { return x.id; }), p_date: cs2.date || todayStr(), p_title: cs2.title.trim(), p_category: cs2.cat, p_units: un2, p_notes: cs2.notes.trim() || null });
+        var d3 = r3.data || {};
+        if (r3.error || !d3.ok) { cgo.disabled = false; say('csMsg', (r3.error && r3.error.message) || t('ceuNeed'), 'bad'); return; }
+        CC.ceuS = { date: todayStr(), title: '', cat: 'clinic', units: '', notes: '', q: '', cand: null, sel: [] };
+        CC.ceuRecent = null;
+        await loadCeuRecent();
+        renderCenter();
+        say('csMsg', t('ceuSaved').replace('{n}', d3.n), 'ok');
+      };
+    }
     var cg = $('cgCreate');
     if (cg) cg.onclick = async function () { var nm = ($('cgName').value || '').trim(); if (!nm) return; cg.disabled = true; await sb.from('co90_groups').insert({ org_id: S.me.org_id, season: regSeason(), name: nm }); await loadCo90(); renderCenter(); };
     $('centerBody').querySelectorAll('[data-copick]').forEach(function (b) { b.onclick = function () { var p = b.getAttribute('data-copick').split('|'); CC.coPick = { g: parseInt(p[0], 10), kind: p[1] }; CC.coQ = ''; CC.coHits = []; renderCenter(); var q = $('coQ'); if (q) q.focus(); }; });
