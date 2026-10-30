@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Veterans Cup rules · Colorado Referees</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="app.css?v=2026.10.30-d">
+<style>
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 20px 0; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+  .tile b { display: block; font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 30px; line-height: 1; }
+  .tile i { font-style: normal; font-size: 13px; color: var(--muted); }
+  .rule { margin: 10px 20px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+  .rule.gold { border-color: var(--gold); border-width: 2px; }
+  .rule.red { border-color: var(--red); border-width: 2px; }
+  .rule b { display: block; font-size: 17px; margin-bottom: 4px; }
+  .rule p { margin: 0; font-size: 15px; line-height: 1.45; }
+  .rules-h { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 26px; margin: 22px 20px 0; }
+  ul { margin: 8px 20px 0; padding-left: 20px; font-size: 15px; line-height: 1.5; }
+  li { margin-bottom: 6px; }
+  .jump { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 20px 0; }
+  .jump a { font-size: 14px; font-weight: 700; text-decoration: none; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); }
+  table.fmt { margin: 14px 20px 0; border-collapse: collapse; width: calc(100% - 40px); font-size: 14px; }
+  table.fmt th, table.fmt td { border: 1px solid var(--line); padding: 7px 8px; text-align: center; }
+  table.fmt th { background: var(--surface); font-size: 12px; }
+  table.fmt td:first-child { font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <a class="backlink" href="index.html#day"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M12 4l-6 6 6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>Your day</a>
+    <div class="tools">
+      <button class="iconbtn" id="themeBtn" aria-label="Switch between light and dark"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button>
+      <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program" style="width:36px;height:40px;object-fit:contain">
+    </div>
+  </div>
+
+  <div class="pad" style="padding-top:16px">
+    <div class="lead">Veterans Cup 2026 · Pride Soccer Club, Colorado Springs</div>
+    <div class="disp" style="font-size:44px">RULES</div>
+    <div class="lead" style="margin-top:6px">November 7 and 8. FIFA Laws as modified by Colorado Youth Soccer except where noted below. Running clock. No protests.</div>
+  </div>
+
+  <div class="tiles">
+    <div class="tile"><b>5v5</b><i>U7: 2 × 20, size 3, no GK required, min 3 on the field</i></div>
+    <div class="tile"><b>6v6</b><i>U8: 2 × 20, size 3, min 4</i></div>
+    <div class="tile"><b>7v7</b><i>U9 and U10: 2 × 20, size 4, min 6, build-out line</i></div>
+    <div class="tile"><b>9v9</b><i>U11 to U14: 2 × 25, size 4 through U12 and size 5 from U13, min 6</i></div>
+  </div>
+
+  <div class="rule gold"><b>Ten minutes, or it is a forfeit.</b><p>A team not checked in 10 minutes before kickoff forfeits. The other team must still check in with you to be awarded the win, even when everyone knows the opponent is not coming.</p></div>
+  <div class="rule"><b>Halftime: 3 minutes through U10, 5 minutes from U11.</b><p>Group games can end tied. Championship ties go straight to kicks from the mark. No overtime at any age.</p></div>
+
+  <div class="jump"><a href="#before">Before kickoff</a><a href="#during">During</a><a href="#u10">U9-U10</a><a href="#cards">Discipline</a><a href="#after">After</a></div>
+
+  <div class="rules-h" id="before">BEFORE KICKOFF</div>
+  <ul>
+    <li><b>Check in both teams</b> for equipment and eligibility, and collect each team's approved tournament roster. Coaches get their rosters back at the end of the game.</li>
+    <li><b>Home is listed first and wears dark</b>; visitors wear light. A visitor without light changes to an alternate dark that does not conflict.</li>
+    <li><b>Equipment:</b> shin guards required. No jewelry; earrings come out, not taped over. Taped medical or religious items are fine. Casts and braces are your call once addressed to your satisfaction.</li>
+    <li><b>Sidelines:</b> both teams and the coaching staffs on one side, coaches inside their own technical area, spectators in the designated viewing areas. Enforcing this is yours.</li>
+    <li><b>The ball:</b> each team supplies one or more suitable balls; you choose the game ball.</li>
+  </ul>
+
+  <div class="rules-h" id="during">DURING THE MATCH</div>
+  <ul>
+    <li><b>Substitutions are unlimited</b>, at any dead ball, with your permission, entering at the halfway line after the replaced player has left.</li>
+    <li><b>Goalkeeper swap:</b> any properly registered player, you are told first, at a stoppage.</li>
+    <li><b>Sent-off players cannot be replaced.</b></li>
+    <li><b>Added time:</b> major delays only (severe injury or similar), and only in an amount that lets the game end at least 5 minutes before the next scheduled game on your field.</li>
+    <li><b>Free-kick distance:</b> 5 yards at U7 and U8, 8 yards from U9 up.</li>
+    <li><b>Age challenges:</b> an opposing team challenging a player's age must register it at tournament headquarters before the start of the second half. Birth certificates are not your job.</li>
+  </ul>
+
+  <div class="rules-h" id="u10">U9 AND U10: THE MODIFIED RULES</div>
+  <div class="rule gold"><b>Build-out line in effect.</b><p>When the goalkeeper has the ball, opponents retreat behind the line. A pass to a teammate inside the build-out area is live once the teammate touches it; a throw past the line is live immediately.</p></div>
+  <ul>
+    <li><b>Offside only from the build-out line</b>, not the halfway line.</li>
+    <li><b>No heading and no punting</b> at U10 and below. U11 and up play full FIFA rules, heading included.</li>
+    <li><b>No offside at U7 and U8.</b></li>
+  </ul>
+
+  <div class="rules-h" id="cards">DISCIPLINE</div>
+  <div class="rule red"><b>Referee assault: expelled from the tournament, police report filed.</b><p>Every report goes to Colorado Soccer Association or the team's home state association. The tournament abides by US Soccer's referee abuse prevention policy.</p></div>
+  <ul>
+    <li><b>Red card, or a second yellow in the same match:</b> off, cannot be replaced, and out for the team's next tournament game. A suspended player may sit on the bench out of uniform; a suspended coach may not be at the site during that match.</li>
+    <li><b>Violent conduct or fighting:</b> out for the rest of the tournament. Anyone who enters the field during a fight is out of the tournament too, whatever their reason.</li>
+    <li><b>Dismissed coaches and spectators:</b> 100 yards away within 2 minutes, silent, no electronic devices used to keep coaching. If they do not comply, terminate the match; a termination caused by one team's behavior is recorded as an abandonment by that team.</li>
+    <li><b>A suspended person who plays or coaches anyway</b> forfeits that game for their team automatically.</li>
+  </ul>
+
+  <div class="rules-h" id="after">RESULTS AND AFTER THE MATCH</div>
+  <ul>
+    <li><b>Complete the game card:</b> score, plus every caution and send-off with the player's name and number, or the coach's name.</li>
+    <li><b>Hand the card to the field marshal</b>, who gets it to the tournament site director tent, and report every send-off to tournament staff before you leave the field.</li>
+    <li><b>Weather and stopped games are the Tournament Director's call.</b> A group game stands once one half is done; a championship game may stand after one half, the Tournament Director decides.</li>
+  </ul>
+  <div class="rule gold"><b>Supplemental report, and the Assignr game report.</b><p>A supplemental report is required for any send-off, termination, fight or referee assault. The game report goes in Assignr for every game, and there is no pay until it is submitted.</p></div>
+
+  <div class="pad hint" style="margin-top:18px">From the Veterans Cup 2026 Rules of Competition and the referee one-page guide, confirmed with the tournament October 30, 2026. Tournament Director for reports: jluhrs@pridesoccer.com. Questions on the day go to the site director tent at your field.</div>
+  <div class="foot" style="flex-direction:column"><a class="btn help" href="index.html#help">I NEED HELP</a></div>
+  <div class="credit"><span class="chip"><img src="assets/jareferee-mark.png" alt=""></span><a href="https://jareferee.com">Built with JAReferee</a><span class="ver">v2026.10.30-d</span></div>
+</div>
+<script>
+(function () {
+  try { var th = localStorage.getItem('hub-theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}
+  document.getElementById('themeBtn').onclick = function () {
+    var cur = document.documentElement.getAttribute('data-theme');
+    var dark = cur ? cur === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var next = dark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('hub-theme', next); } catch (e) {}
+  };
+})();
+</script>
+</body>
+</html>
