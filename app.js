@@ -193,6 +193,32 @@
     S.lateOpen = iCan('command_center') ? (r[9].data || []).filter(function (l) { return !l.ack_at; }) : [];
     // For the Director of Referee Development: requests nobody has assigned a coach to yet.
     S.evalWaiting = iCan('review') ? (ER.mine || []).filter(function (q) { return q.status === 'requested'; }) : [];
+    snapSave();
+  }
+  // The app opens on what it knew, then refreshes behind. The snapshot is
+  // only ever painted on Your day, only for the same person on the same
+  // date, and never from or into a preview session. A stale check-in or
+  // offer acts against the server, which answers with the truth.
+  function snapSave() {
+    if (!S.me || S.me.previewing) return;
+    try {
+      var snap = { date: todayStr(), me: S.me, games: S.games, events: S.events, checkins: S.checkins, notes: S.notes, bulletins: S.bulletins, scores: S.scores, co90: S.co90, asg: S.asg, prem: S.prem, coachedVenues: S.coachedVenues, late: S.late, staffMsgs: [], lateOpen: [], evalWaiting: [] };
+      var j = JSON.stringify(snap);
+      if (j.length < 400000) localStorage.setItem('hub-snap', j);
+    } catch (e) {}
+  }
+  function snapPaint() {
+    try {
+      if (location.hash && location.hash !== '#day') return false;
+      var j = localStorage.getItem('hub-snap'); if (!j) return false;
+      var snap = JSON.parse(j);
+      if (!snap || snap.date !== todayStr() || !snap.me || snap.me.previewing) return false;
+      S.me = snap.me;
+      ['games', 'events', 'checkins', 'notes', 'bulletins', 'scores', 'co90', 'asg', 'prem', 'coachedVenues', 'late', 'staffMsgs', 'lateOpen', 'evalWaiting'].forEach(function (k) { S[k] = snap[k]; });
+      if (S.me.language === 'es' && S.lang !== 'es') { S.lang = 'es'; applyWords(); }
+      show('s-day'); renderDay();
+      return true;
+    } catch (e) { return false; }
   }
   function myLate(g) { return (S.late || []).filter(function (l) { return String(l.game_id) === String(g.game_id) || (l.venue === g.venue && !l.game_id); })[0]; }
 
@@ -241,7 +267,7 @@
     var body = $('evalBody'); body.innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>';
     var r = await sb.from('evaluations').select('id,coach_person_id,coach_name,ref_name,ref_person_id,game_id,game_date,venue,competition,purpose,license,status,session,final_scores,report,report_at,report_status,review_note,reviewed_at,score,level').eq('id', id).limit(1);
     var e = (r.data || [])[0]; EV.row = e;
-    if (!e) { body.innerHTML = '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>'; return; }
+    if (!e) { body.innerHTML = '<div class="card"><div class="hint">' + esc(t('evalGone')) + '</div></div>'; return; }
     var S_ = e.session || {}, md = S_.MD || {}, ratings = S_.ratings || e.final_scores || {}, sessions = S_.sessions || [];
     var areas = { MC: t('evMC'), IP: t('evIP'), GM: t('evGM'), TW: t('evTW'), POS: t('evPOS'), MOV: t('evMOV'), OS: t('evOS'), IA: t('evIA') };
     var rated = Object.keys(ratings).map(function (k) { var p = k.replace(/^sg-/, '').split('-'); return '<div class="rowline"><div>' + esc((p[0] || '').toUpperCase() === 'REF' ? t('role.cr') : (p[0] || '').toUpperCase()) + ', ' + esc(areas[p[1]] || p[1]) + '</div><b>' + esc(ratings[k]) + '</b></div>'; }).join('');
@@ -398,7 +424,7 @@
     busy(false);
     var r = rr2[0], ceuRows = rr2[1];
     var d = r.data; UP.data = d;
-    if (!d) { body.innerHTML = '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>'; return; }
+    if (!d) { body.innerHTML = '<div class="card"><div class="hint">' + esc(t('upNoData')) + '</div></div>'; return; }
     var mine = !pid || pid === S.me.person_id, canEdit = mine || iCan('review');
     var ok = function (b) { return '<span class="pill' + (b ? ' ok' : '') + '" style="white-space:nowrap;flex-shrink:0">' + esc(b ? t('upDone') : t('upNot')) + '</span>'; };
     var row = function (label, state, detail) { return '<div class="rowline"><div><b>' + esc(label) + '</b>' + (detail ? '<div class="hint">' + detail + '</div>' : '') + '</div>' + ok(state) + '</div>'; };
@@ -550,8 +576,13 @@
     var stat = function (n, l) { return '<div class="stat"><b>' + esc(n == null ? '0' : String(n)) + '</b><i>' + esc(l) + '</i></div>'; };
     var mile = '';
     [10, 25, 50, 75, 100, 150, 200, 250, 300].some(function (ms) { if (ms > Number(m.games)) { if (ms - m.games <= 7) mile = t('seasonMile').replace('{d}', ms - m.games).replace('{m}', ms); return true; } return false; });
+    var hit = null;
+    [300, 250, 200, 150, 100, 75, 50, 25, 10].some(function (ms) { if (Number(m.games) >= ms) { hit = ms; return true; } return false; });
+    var badges = (hit ? '<span class="pill ok">' + esc(t('seasonBadgeGames').replace('{m}', hit)) + '</span> ' : '') +
+      (m.fitness_date ? '<span class="pill ok">' + esc(t('seasonBadgeFit')) + '</span>' : '');
     el.innerHTML = '<div class="pad" style="padding-top:16px"><div class="kicker">' + esc(t('seasonTitle').replace('{y}', y)) + '</div></div>' +
       '<div class="stats" style="margin-top:8px">' + stat(m.games, t('wrapGames')) + stat(m.as_center, t('refCenter')) + stat(m.venues, t('wrapVenues')) + '</div>' +
+      (badges ? '<div class="pad" style="padding-top:8px">' + badges + '</div>' : '') +
       ((m.place || mile) ? '<div class="pad hint" style="padding-top:6px">' + esc([m.place ? t('seasonPlace').replace('{p}', m.place) : '', mile].filter(Boolean).join(' ')) + '</div>' : '');
   }
   function wrapYear() { var d = new Date(), m = d.getMonth() + 1, day = d.getDate(); if (m === 1) return d.getFullYear() - 1; if (m > WRAP_FROM[0] || (m === WRAP_FROM[0] && day >= WRAP_FROM[1])) return d.getFullYear(); return null; }
@@ -2017,7 +2048,7 @@
         '<div class="msg bad" id="revmsg-' + n.rowNum + '" hidden></div>' +
         (st === 'rejected' ? '<div class="actions" style="padding:0"><button class="btn outline small" data-restore="' + n.rowNum + '">' + esc(t('restoreNote')) + '</button></div>' : '') +
         '</div>';
-    }).join('') + (listAll.length > list.length ? '<div class="pad"><button class="btn outline" id="revMore" style="width:100%">' + esc(t('showMore').replace('{n}', Math.min(20, listAll.length - list.length)).replace('{left}', listAll.length - list.length)) + '</button></div>' : '') : '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>';
+    }).join('') + (listAll.length > list.length ? '<div class="pad"><button class="btn outline" id="revMore" style="width:100%">' + esc(t('showMore').replace('{n}', Math.min(20, listAll.length - list.length)).replace('{left}', listAll.length - list.length)) + '</button></div>' : '') : '<div class="card"><div class="hint">' + esc(t('revEmpty')) + '</div></div>';
     var rm = $('revMore'); if (rm) rm.onclick = function () { REV.page = pageN + 20; renderReview(); };
     $('reviewList').querySelectorAll('[data-restore]').forEach(function (b) { b.onclick = function () { runOn([byRow(b.getAttribute('data-restore'))], 'restore', b); }; });
     $('reviewList').querySelectorAll('[data-clean]').forEach(function (b) { b.onclick = function () { runOn([byRow(b.getAttribute('data-clean'))], 'clean', b); }; });
@@ -2440,7 +2471,7 @@
       var k = clock(g.kickoff); if (!slots[k]) { slots[k] = []; order.push(k); }
       slots[k].push(g);
     });
-    if (!order.length) return '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>';
+    if (!order.length) return '<div class="card"><div class="hint">' + esc(t('opsNoGames')) + '</div></div>';
     var slotHtml = function (k) {
       var list = slots[k].sort(function (a, b) { return String(a.field).localeCompare(String(b.field), undefined, { numeric: true }); });
       return '<div class="slot"><div class="disp">' + esc(k) + '</div><div class="hint">' + list.length + ' ' + esc(t(list.length === 1 ? 'fieldOne' : 'fieldMany')) + '</div></div><div class="fields">' + list.map(function (g) {
@@ -3898,7 +3929,7 @@
     var tsDay = function (ts) { return new Date(ts).toLocaleDateString(S.lang === 'es' ? 'es-US' : 'en-US', { month: 'short', day: 'numeric' }); };
     var fb = $('famBack'); if (fb) fb.style.display = S.me ? '' : 'none';
     var so = $('famSignOut'); if (so) so.onclick = async function (e) {
-      e.preventDefault(); await sb.auth.signOut(); S.fam = null; S.me = null; location.hash = ''; show('s-signin');
+      e.preventDefault(); await sb.auth.signOut(); try { localStorage.removeItem('hub-snap'); } catch (e2) {} S.fam = null; S.me = null; location.hash = ''; show('s-signin');
     };
     $('famBody').innerHTML = ((d.wards || []).map(function (w) {
       var ok = w.consent && w.consent.ok;
@@ -3969,13 +4000,16 @@
   window.addEventListener('hashchange', route);
 
   async function start() {
+    var painted = snapPaint();
     S.me = await loadMe();
     if (!S.me) {
+      try { localStorage.removeItem('hub-snap'); } catch (e0) {}
       // No referee record: a guardian email lands on the family screen.
       var g0 = await sb.rpc('guardian_overview');
       if (g0.data && (g0.data.wards || []).length) { S.fam = g0.data; show('s-family'); renderFamily(); return; }
       show('s-signin'); return;
     }
+    void painted;
     if (S.me.language === 'es' && S.lang !== 'es') { S.lang = 'es'; applyWords(); }
     await loadDay();
     route();
@@ -4025,7 +4059,7 @@
     $('regBtn').onclick = function () { REG.rows = null; REG.lapsed = false; renderUnregistered(); };
     $('peopleGo').onclick = function () { clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); };
     document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('[data-tab="staff"]'); if (a && a.getAttribute('href') === '#ops') OPS.openStaff = true; });
-    $('signOut').onclick = async function (e) { e.preventDefault(); liveStop(); await sb.auth.signOut(); S.me = null; location.hash = ''; show('s-signin'); };
+    $('signOut').onclick = async function (e) { e.preventDefault(); liveStop(); await sb.auth.signOut(); try { localStorage.removeItem('hub-snap'); } catch (e2) {} S.me = null; location.hash = ''; show('s-signin'); };
     applyWords();
     document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v' + VERSION; });
     sb.auth.getSession().then(function (r) { if (r.data && r.data.session) start(); else show('s-signin'); });
