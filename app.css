@@ -3,7 +3,7 @@
 
 :root {
   --bg: #F6F3EC; --surface: #FFFFFF; --ink: #1B1F2A; --muted: #4A5060; --line: #DDD8CC;
-  --navy: #1E3A73; --red: #C8102E; --gold: #F2B800; --count: #1E3A73;
+  --navy: #1B2F55; --red: #C8102E; --gold: #C8921A; --goldlt: #F5C842; --count: #1B2F55;
   --green: #1E7B3A; --ongreen: #FFFFFF; --note: #FFFFFF; --focus: #1E3A73;
   --c1: #2F5AA8; --c2: #B88A00; --c3: #C8102E;
   --disp: 'Barlow Condensed', 'Arial Narrow', sans-serif;
@@ -14,14 +14,14 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #142850; --surface: #1E3A73; --ink: #FFFFFF; --muted: #BFC9E0; --line: #2E4A85;
-    --navy: #FFFFFF; --count: #F2B800; --green: #3DBA63; --ongreen: #0B2A14; --note: #0E1E3F; --focus: #F2B800;
+    --bg: #0D1525; --surface: #1B2F55; --ink: #FFFFFF; --muted: #BFC9E0; --line: #2E4A85;
+    --navy: #FFFFFF; --gold: #F5C842; --count: #F5C842; --green: #3DBA63; --ongreen: #0B2A14; --note: #0E1E3F; --focus: #F5C842;
   --c1: #5C8AE6; --c2: #B08A1A; --c3: #E0607A;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #142850; --surface: #1E3A73; --ink: #FFFFFF; --muted: #BFC9E0; --line: #2E4A85;
-  --navy: #FFFFFF; --count: #F2B800; --green: #3DBA63; --ongreen: #0B2A14; --note: #0E1E3F; --focus: #F2B800;
+  --bg: #0D1525; --surface: #1B2F55; --ink: #FFFFFF; --muted: #BFC9E0; --line: #2E4A85;
+  --navy: #FFFFFF; --gold: #F5C842; --count: #F5C842; --green: #3DBA63; --ongreen: #0B2A14; --note: #0E1E3F; --focus: #F5C842;
   --c1: #5C8AE6; --c2: #B08A1A; --c3: #E0607A;
 }
 
@@ -39,6 +39,20 @@ button { font-family: inherit; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 .disp { font-family: var(--disp); font-style: italic; font-weight: 800; line-height: 1; }
+
+/* CREST signature: the gold bar every program email carries, now on the app. */
+.app::before { content: ""; display: block; height: 4px; flex-shrink: 0; background: linear-gradient(90deg, var(--gold) 0%, var(--goldlt) 50%, var(--gold) 100%); }
+.disp.h2::after { content: ""; display: block; width: 44px; height: 3px; margin-top: 6px; border-radius: 2px; background: linear-gradient(90deg, var(--gold), var(--goldlt)); }
+.kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold); }
+.card.hero { border: 2px solid var(--gold); gap: 6px; }
+.skel { position: relative; overflow: hidden; background: var(--line); border-radius: 8px; min-height: 16px; }
+.skel::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent); animation: skel 1.1s infinite; }
+@keyframes skel { to { transform: translateX(100%); } }
+.devbar { display: flex; align-items: center; gap: 8px; }
+.devbar .lbl { width: 92px; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.devbar .tr { flex-grow: 1; height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.devbar .tr i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--gold), var(--goldlt)); }
+.devbar .n { font-size: 13px; font-weight: 700; color: var(--muted); width: 18px; text-align: right; }
 
 .app { max-width: 480px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; }
 .screen { display: none; flex-direction: column; flex-grow: 1; }

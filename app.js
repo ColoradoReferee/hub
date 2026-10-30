@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.30-b';
+  var VERSION = '2026.10.30-design';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -305,6 +305,8 @@
   // upgrade-log games. The referee reads their own on the upgrade screen;
   // staff read and write everyone's from the referee card. RLS holds the
   // gates; the page only decides what to draw.
+  // A loading screen that looks like the screen it becomes, not a sentence.
+  function skelCard() { return '<div class="card" aria-busy="true"><div class="skel" style="width:45%;height:22px"></div><div class="skel" style="width:90%;height:12px"></div><div class="skel" style="width:65%;height:12px"></div></div>'; }
   function ceuCanWrite() { return iCan('review') || iCan('people') || iCan('command_center'); }
   async function ceuFetch(personId) {
     if (!personId) return [];
@@ -386,7 +388,7 @@
   function renderUpgradeFromData(pid) { renderUpgrade(pid); }
   async function renderUpgrade(pid) {
     UP.pid = pid || null;
-    var body = $('upgradeBody'); body.innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>';
+    var body = $('upgradeBody'); body.innerHTML = skelCard() + skelCard();
     $('upBack').href = pid ? (REF.from || '#center') : '#day';
     busy(true);
     var rr2 = await Promise.all([
@@ -532,6 +534,26 @@
   // Shown from WRAP_FROM (month, day) through January of the next year. Everyone sees the
   // leaderboard; a club name filters it to games that club played, for club bonuses.
   var WRAP_FROM = [11, 15], WRAP = { me: null, board: null, club: '', year: null, open: false };
+  // The compact year-round version: three numbers, standing, and the next
+  // milestone. The full wrap with the leaderboard still arrives Nov 15.
+  var SEAS = { year: null, data: null, tried: false };
+  async function renderSeason() {
+    var el = $('seasonLine'); if (!el) return;
+    var y = new Date().getFullYear();
+    if (SEAS.year !== y) { SEAS.year = y; SEAS.data = null; SEAS.tried = false; }
+    if (!SEAS.data && !SEAS.tried) {
+      SEAS.tried = true;
+      try { var r = await sb.rpc('my_season', { p_year: y }); SEAS.data = r.data || null; } catch (e) { SEAS.data = null; }
+    }
+    var m = SEAS.data;
+    if (!m || !m.games) { el.innerHTML = ''; return; }
+    var stat = function (n, l) { return '<div class="stat"><b>' + esc(n == null ? '0' : String(n)) + '</b><i>' + esc(l) + '</i></div>'; };
+    var mile = '';
+    [10, 25, 50, 75, 100, 150, 200, 250, 300].some(function (ms) { if (ms > Number(m.games)) { if (ms - m.games <= 7) mile = t('seasonMile').replace('{d}', ms - m.games).replace('{m}', ms); return true; } return false; });
+    el.innerHTML = '<div class="pad" style="padding-top:16px"><div class="kicker">' + esc(t('seasonTitle').replace('{y}', y)) + '</div></div>' +
+      '<div class="stats" style="margin-top:8px">' + stat(m.games, t('wrapGames')) + stat(m.as_center, t('refCenter')) + stat(m.venues, t('wrapVenues')) + '</div>' +
+      ((m.place || mile) ? '<div class="pad hint" style="padding-top:6px">' + esc([m.place ? t('seasonPlace').replace('{p}', m.place) : '', mile].filter(Boolean).join(' ')) + '</div>' : '');
+  }
   function wrapYear() { var d = new Date(), m = d.getMonth() + 1, day = d.getDate(); if (m === 1) return d.getFullYear() - 1; if (m > WRAP_FROM[0] || (m === WRAP_FROM[0] && day >= WRAP_FROM[1])) return d.getFullYear(); return null; }
   async function renderWrap() {
     var el = $('wrapLine'); if (!el) return;
@@ -1544,6 +1566,16 @@
     };
   }
 
+  var DAYNEXT = { at: null, g: null };
+  function heroHtml(n) {
+    var days = Math.round((new Date(n.date + 'T12:00:00') - new Date(todayStr() + 'T12:00:00')) / 86400000);
+    var me = key(S.me.first_name + ' ' + S.me.last_name);
+    var role = ''; ['cr', 'ar1', 'ar2', 'fourth'].forEach(function (x) { if (!role && key(n[x] || '') === me) role = t('role.' + x); });
+    return '<div class="card hero"><div class="kicker">' + esc(t('nextUp')) + '</div>' +
+      '<div class="disp" style="font-size:32px">' + esc(dayLong(n.date)) + (n.kickoff ? ' · ' + esc(clock(n.kickoff)) : '') + '</div>' +
+      '<div>' + esc([n.venue, n.field].filter(Boolean).join(', ')) + (n.age_group ? ' · ' + esc(n.age_group) : '') + (role ? ' · ' + esc(role) : '') + '</div>' +
+      '<div class="hint">' + esc(days === 1 ? t('inOneDay') : t('inDays').replace('{n}', days)) + '</div></div>';
+  }
   function renderDay() {
     var me = S.me, h = new Date().getHours();
     var greet = t(h < 12 ? 'greeting.morning' : h < 17 ? 'greeting.afternoon' : 'greeting.evening');
@@ -1558,7 +1590,18 @@
       wireCheckin(g, $('nextCard')); wireLate($('nextCard'));
     } else {
       cd.style.display = 'none';
-      $('nextCard').innerHTML = '<div class="card"><div class="disp" style="font-size:28px">' + esc(t('noGamesToday')) + '</div><div class="hint">' + esc(t('noGamesHint')) + '</div></div>';
+      // No game today: the next one leads the screen instead of a shrug.
+      var plainNo = '<div class="card"><div class="disp" style="font-size:28px">' + esc(t('noGamesToday')) + '</div><div class="hint">' + esc(t('noGamesHint')) + '</div></div>';
+      if (DAYNEXT.at === todayStr() && DAYNEXT.g === null) { $('nextCard').innerHTML = plainNo; }
+      else if (DAYNEXT.at === todayStr() && DAYNEXT.g) { $('nextCard').innerHTML = heroHtml(DAYNEXT.g); }
+      else {
+        $('nextCard').innerHTML = '<div class="card hero"><div class="kicker">' + esc(t('nextUp')) + '</div><div class="skel" style="width:70%;height:26px"></div><div class="skel" style="width:50%;height:12px"></div></div>';
+        upcomingFor(S.me.first_name + ' ' + S.me.last_name, 90).then(function (list) {
+          DAYNEXT.at = todayStr();
+          DAYNEXT.g = (list || []).filter(function (x) { return x.date !== todayStr(); })[0] || null;
+          $('nextCard').innerHTML = DAYNEXT.g ? heroHtml(DAYNEXT.g) : plainNo;
+        }).catch(function () { DAYNEXT.at = todayStr(); DAYNEXT.g = null; $('nextCard').innerHTML = plainNo; });
+      }
     }
     var laterAll = S.games.filter(function (x) { return x !== g; });
     var done = laterAll.filter(function (x) { return gameState(x) === 'done'; }), later = laterAll.filter(function (x) { return gameState(x) !== 'done'; });
@@ -1569,6 +1612,7 @@
     };
     $('laterList').innerHTML = (later.length ? '<div class="hint" style="padding-bottom:8px;font-weight:700">' + esc(t('laterToday')) + '</div>' + later.map(rowOf).join('') : '') +
       (done.length ? fold('day-done', t('doneToday'), done.length, done.map(rowOf).join(''), false) : '');
+    renderSeason();
     var up = $('dayUpcoming');
     if (S.me.previewing) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div><div class="hint">' + esc(t('loadingReview')) + '</div>'; upcomingFor(S.me.first_name + ' ' + S.me.last_name, 90).then(function (list) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div>' + upcomingHtml(list.filter(function (g) { return g.date !== todayStr(); }), S.me.first_name + ' ' + S.me.last_name); }).catch(function () { up.innerHTML = ''; }); }
     else up.innerHTML = '';
@@ -2159,14 +2203,14 @@
           (r.status === 'requested' ? (picking ? '<input id="evalQ" placeholder="' + esc(t('coachSearch')) + '" value="' + esc(CC.evalQ || '') + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><div class="chips">' + eligible.filter(function (x) { return !q || (x.first_name + ' ' + x.last_name).toLowerCase().indexOf(q) >= 0; }).sort(function (a, b) { var fa = (CC.evalAvail[r.game_date] || {})[String(a.person_id)] ? 0 : 1, fb = (CC.evalAvail[r.game_date] || {})[String(b.person_id)] ? 0 : 1; return fa - fb || (a.last_name || '').localeCompare(b.last_name || ''); }).slice(0, 12).map(function (x) { var fr = (CC.evalAvail[r.game_date] || {})[String(x.person_id)]; return '<button class="chip-btn' + (fr ? ' avail' : '') + '" data-evalassign="' + x.person_id + '" data-req="' + r.id + '">' + (fr ? '\u2713 ' : '') + esc(x.first_name + ' ' + x.last_name) + ' <small>' + esc(x.coaching_title || '') + '</small></button>'; }).join('') + '</div>' + (r.purpose === 'upgrade_national' ? '<div class="hint">' + esc(t('evalNationalOnly')) + '</div>' : '') : '<div class="actions" style="padding:0"><button class="btn go small" data-evalpick="' + r.id + '">' + esc(t('evalAssign')) + '</button><button class="btn outline small" data-evaldecline="' + r.id + '">' + esc(t('evalDecline')) + '</button></div>') : '') +
           (r.status === 'assigned' ? '<button class="btn outline small" data-evaldone="' + r.id + '">' + esc(t('evalMarkDone')) + '</button>' : '') + '</div>';
       };
-      body = '<div class="pad lead" style="padding-top:12px">' + esc(t('evalsLead')) + '</div><div class="disp h2">' + esc(t('evalsOpen')) + ' ' + open.length + '</div>' + (open.length ? open.map(card).join('') : '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>') +
-        '<div class="disp h2">' + esc(t('evalsAssigned')) + ' ' + assigned.length + '</div>' + (assigned.length ? assigned.map(card).join('') : '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>') +
+      body = '<div class="pad lead" style="padding-top:12px">' + esc(t('evalsLead')) + '</div><div class="disp h2">' + esc(t('evalsOpen')) + ' ' + open.length + '</div>' + (open.length ? open.map(card).join('') : '<div class="card"><div class="hint">' + esc(t('evalsNoneOpen')) + '</div></div>') +
+        '<div class="disp h2">' + esc(t('evalsAssigned')) + ' ' + assigned.length + '</div>' + (assigned.length ? assigned.map(card).join('') : '<div class="card"><div class="hint">' + esc(t('evalsNoneAsg')) + '</div></div>') +
         ((CC.toReview || []).length ? '<div class="disp h2">' + esc(t('evalsToReview')) + ' ' + CC.toReview.length + '</div><div class="list">' + CC.toReview.map(function (e) { return '<a class="item" href="#eval/' + e.id + '"><div><b>' + esc(e.ref_name || '') + '</b><br><span class="hint">' + esc(t('evalCoach')) + ' ' + esc(e.coach_name || '') + (e.game_date ? ', ' + esc(dayLong(e.game_date)) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>' : '') +
         ((CC.cands || []).length ? '<div class="disp h2">' + esc(t('evalCandidates').replace('{y}', new Date().getFullYear())) + '</div><div class="pad hint" style="padding-top:0">' + esc(t('evalCandidatesHint')) + '</div><div class="pad" style="padding-top:6px"><table class="dt" style="width:100%"><thead><tr><th>' + esc(t('fitName')) + '</th><th>' + esc(t('evalPurposeCol')) + '</th><th class="n">' + esc(t('evalDoneCol')) + '</th><th class="n">' + esc(t('evalOpenCol')) + '</th></tr></thead><tbody>' + CC.cands.map(function (c) { var full = Number(c.done) >= Number(c.need); return '<tr class="' + (full ? 'passed' : '') + '"><td>' + refLink(c.name || '') + '</td><td>' + (c.person_id ? '<a class="refname" href="#upgrade/' + esc(c.person_id) + '">' + esc(t('evalPurpose.' + c.purpose) || c.purpose) + '</a>' : esc(t('evalPurpose.' + c.purpose) || c.purpose)) + '</td><td class="n"><b>' + esc(String(c.done)) + ' / ' + esc(String(c.need)) + '</b></td><td class="n">' + esc(String(c.requested)) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '');
     } else if (CC.tab === 'co90') {
       body = '<div class="pad lead" style="padding-top:12px">' + esc(t('co90Lead')) + '</div>' +
         '<div class="card" style="gap:8px"><div class="hint" style="font-weight:700">' + esc(t('co90New')) + '</div><input id="cgName" placeholder="' + esc(t('co90Name')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><div class="actions" style="padding:0"><button class="btn outline small" id="cgCreate">' + esc(t('co90Create')) + '</button></div></div>' +
-        ((CC.co90 || []).length ? (CC.co90 || []).map(co90GroupCard).join('') : '<div class="card"><div class="hint">' + esc(t('nothingHere')) + '</div></div>');
+        ((CC.co90 || []).length ? (CC.co90 || []).map(co90GroupCard).join('') : '<div class="card"><div class="hint">' + esc(t('co90Empty')) + '</div></div>');
     } else if (CC.tab === 'schedule') {
       var todayAss = CC.assigns.filter(function (a) { return a.date === CC.sdate; });
       var avCount = Object.keys(CC.avail || {}).filter(function (k) { return CC.avail[k][CC.block]; }).length;
@@ -3375,7 +3419,7 @@
   }
   async function renderRef(name) {
     $('refBack').href = REF.from || '#day';
-    $('refBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>';
+    $('refBody').innerHTML = skelCard() + skelCard() + skelCard();
     busy(true);
     var staff = iCan('command_center') || iCan('scheduling') || iCan('people');
     var rr = await Promise.all([
@@ -3415,6 +3459,21 @@
       '<div class="pad hint" style="padding-top:8px">' + (c.first_game ? esc(t('refFirst')) + ' ' + esc(dayLong(c.first_game)) + ', ' : '') + (c.last_game ? esc(t('refLast')) + ' ' + esc(dayLong(c.last_game)) : '') + (c.last_seen ? '. ' + esc(t('refLastSeen')) + ' ' + esc(dayLong(c.last_seen)) : '') + '</div>' +
       (c.next_game ? '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('refNext')) + '</b><div>' + esc(dayLong(c.next_game)) + ', ' + esc(clock(c.next_kickoff)) + ', ' + esc(c.next_venue || '') + (c.next_field ? ', ' + esc(c.next_field) : '') + '</div><div class="hint">' + esc(t('refNextHint')) + '</div></div>' : '') +
       '<div class="disp h2">' + esc(t('upTitle')) + '</div><div id="refUpcoming"><div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div></div>' +
+      (function () {
+        // Development picture: where the coaching has pointed, from the
+        // area tag every cleaned note carries (v3 pipeline). Same data as
+        // the notes below, read at a glance instead of eight at a time.
+        var list = notes.data || [];
+        var ar = { laws: 0, reading: 0, fitness: 0, presence: 0 }, tot = 0;
+        list.forEach(function (n) { if (n.area && ar[n.area] != null) { ar[n.area]++; tot++; } });
+        if (!tot) return '';
+        var mx = Math.max(ar.laws, ar.reading, ar.fitness, ar.presence);
+        var top = ['laws', 'reading', 'fitness', 'presence'].sort(function (a, b) { return ar[b] - ar[a]; })[0];
+        var row = function (k) { return '<div class="devbar"><div class="lbl">' + esc(t('areas.' + k)) + '</div><div class="tr"><i style="width:' + (mx ? Math.round(100 * ar[k] / mx) : 0) + '%"></i></div><div class="n">' + ar[k] + '</div></div>'; };
+        return '<div class="disp h2">' + esc(t('devTitle')) + '</div><div class="card" style="gap:8px">' +
+          row('laws') + row('reading') + row('fitness') + row('presence') +
+          '<div class="hint">' + esc(t('devTop').replace('{a}', t('areas.' + top)).replace('{n}', tot)) + '</div></div>';
+      })() +
       '<div class="disp h2">' + esc(t('refNotes')) + ((notes.data || []).length ? ' · ' + (notes.data || []).length : '') + '</div>' + (function () {
         // Every note on the PERSON, every name spelling, newest first (085).
         // Unreleased notes reach reviewers and their own coach with a status pill.
@@ -3893,7 +3952,7 @@
     if (h === 'ops') { if (!iCan('command_center')) { location.hash = '#day'; return; } if (OPS.openStaff) { OPS.tab = 'staff'; OPS.openStaff = false; } $('opsBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-ops'); loadOps().then(renderOps).catch(function (e) { $('opsBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'state') { if (!iCan('state_view')) { location.hash = '#day'; return; } $('stateBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-state'); loadState().then(renderState).catch(function (e) { $('stateBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'center/evals') { CC.tab = 'evals'; h = 'center'; }
-    if (h === 'center') { if (!iCan('review')) { location.hash = '#day'; return; } $('centerBody').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-center'); loadCenter().then(renderCenter).catch(function (e) { $('centerBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
+    if (h === 'center') { if (!iCan('review')) { location.hash = '#day'; return; } $('centerBody').innerHTML = skelCard() + skelCard(); show('s-center'); loadCenter().then(renderCenter).catch(function (e) { $('centerBody').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'review') { if (!iCan('review')) { location.hash = '#day'; return; } $('reviewList').innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>'; show('s-review'); loadReview().then(renderReview).catch(function (e) { $('reviewList').innerHTML = '<div class="msg bad">' + esc(t('reviewFailed') + ' ' + (e && e.message || '')) + '</div>'; }); return; }
     if (h === 'coach') { loadCoach().then(function () { renderCoach(); }); show('s-coach'); }
     else if (h.indexOf('coach/game/') === 0) { var cg = h.slice(11).split('/'); (S.coach.games.length ? Promise.resolve() : loadCoach()).then(function () { renderCoachGame(cg[0], cg[1]); }); show('s-coachgame'); }
