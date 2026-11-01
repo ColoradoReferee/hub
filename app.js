@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.10.30-d';
+  var VERSION = '2026.11.01-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -259,9 +259,11 @@
   })();
 
   // ── An evaluation: the session summary, the debrief list, and the report ──
-  // The coach writes the formal evaluation from the PDF and their notes and
-  // saves it here. The Writer (a draft from the log) is reviewer-only for now:
-  // a coach first shows they can write a formal evaluation themselves.
+  // The coach writes the formal evaluation here. The Writer drafts a first
+  // pass from the log for the assigned coach and for reviewers (1 Nov,
+  // Jeff's call after the first live evaluation); the coach edits it into
+  // their own words before submitting. The backend allowed exactly this
+  // all along; only the button was stricter.
   var EV = { row: null, busy: false };
   async function renderEval(id) {
     var body = $('evalBody'); body.innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>';
@@ -282,7 +284,7 @@
     var rs = e.report_status || 'draft', isRev = iCan('review');
     var canEdit = isRev || (mine && (rs === 'draft' || rs === 'returned'));
     var canSubmit = mine && e.status === 'complete' && (rs === 'draft' || rs === 'returned');
-    var canDraft = isRev && e.status === 'complete';
+    var canDraft = (isRev || (mine && (rs === 'draft' || rs === 'returned'))) && e.status === 'complete';
     var rsPill = e.report ? ' <span class="pill' + (rs === 'approved' ? ' ok' : rs === 'returned' ? ' bad' : '') + '">' + esc(t('evalRs.' + rs)) + '</span>' : '';
     body.innerHTML = '<div class="pad" style="padding-top:12px"><div class="lead">' + esc(t('evalTitle')) + '</div><div class="disp" style="font-size:34px">' + esc(e.ref_name || '') + '</div><div class="hint">' + esc(e.game_date ? dayLong(e.game_date) : '') + (e.venue ? ', ' + esc(e.venue) : '') + (e.competition ? ', ' + esc(e.competition) : '') + '</div><div class="hint">' + esc(t('evalCoach')) + ' ' + esc(e.coach_name || '') + '. ' + esc(e.purpose || '') + (e.license ? ', ' + esc(e.license) : '') + ' <span class="pill' + (e.status === 'complete' ? ' ok' : '') + '">' + esc(e.status === 'complete' ? t('evalComplete') : t('evalInProgress')) + '</span></div></div>' +
       '<div class="stats">' + '<div class="stat"><b>' + nEv + '</b><i>' + esc(t('evalEvents')) + '</i></div><div class="stat"><b>' + nInc + '</b><i>' + esc(t('evalIncidents')) + '</i></div><div class="stat"><b>' + Object.keys(ratings).length + '</b><i>' + esc(t('evalRatings')) + '</i></div></div>' +
