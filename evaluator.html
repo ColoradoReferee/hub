@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Evaluator v2026.10.30-c · 2026-10-20 · the coach's live log, post-match ratings and PDF. The formal evaluation is written by the coach in the Hub. -->
+<!-- Evaluator v2026.11.01-a · 2026-10-20 · the coach's live log, post-match ratings and PDF. The formal evaluation is written by the coach in the Hub. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2089,7 +2089,7 @@ function setLang(l) { LANG = l; try { localStorage.setItem('hub-lang', l); } cat
 // ═══════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════
-var EVAL_VERSION = '2026.10.21-h';
+var EVAL_VERSION = '2026.11.01-a';
 document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v' + EVAL_VERSION; });
 var MD = {};
 var OT = { active:false, half:0, len:10, otStarted:false };
@@ -3970,25 +3970,58 @@ function genPDF() {
   body += '<div style="text-align:right"><div>Ref Coach: '+(MD.coach||'')+'</div>';
   body += '<div style="color:#e63946;font-style:italic">For the Love of the Game</div></div></div>';
 
-  // ── Assemble and open as Blob ───────────────────────────────────────────
-  var fullHTML = '<!DOCTYPE html><html><head><title>Evaluation Report</title><style>'+css+'</style></head><body>'+body+'</body></html>';
+  // ── Render the report in THIS tab ──────────────────────────────────────
+  // It used to open as a blob: URL in a new tab. A blob address lives only
+  // in the tab that created it: it cannot be opened on another device, and
+  // it was revoked after 30 seconds, which is how a finished report turned
+  // into "Safari can't open the page" on 1 Nov. The report now renders in
+  // an overlay right here. Print saves a real PDF through the browser's
+  // own sheet and Download saves a real .html file; both can be shared.
+  var fullHTML = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Evaluation Report</title><style>'+css+'</style></head><body>'+body+'</body></html>';
 
   try {
-    var blob = new Blob([fullHTML], {type:'text/html;charset=utf-8'});
-    var url  = URL.createObjectURL(blob);
-    var win  = window.open(url, '_blank');
-    if (!win) {
-      // Popup blocked — download as file instead
+    var oldOv = document.getElementById('rpt-overlay'); if (oldOv) oldOv.parentNode.removeChild(oldOv);
+    var ov = document.createElement('div');
+    ov.id = 'rpt-overlay';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fff;display:flex;flex-direction:column;';
+    var bar = document.createElement('div');
+    bar.style.cssText = 'flex:0 0 auto;display:flex;gap:8px;align-items:center;padding:10px 12px;background:#0D1525;padding-top:calc(10px + env(safe-area-inset-top,0px));';
+    var mk = function(label, primary){
+      var b = document.createElement('button');
+      b.type = 'button'; b.textContent = label;
+      b.style.cssText = 'font:inherit;font-weight:700;font-size:15px;padding:10px 14px;border-radius:8px;cursor:pointer;' +
+        (primary ? 'background:#F5C842;color:#0D1525;border:0;' : 'background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);');
+      return b;
+    };
+    var es = (LANG === 'es');
+    var bPrint = mk(es ? 'Imprimir / Guardar PDF' : 'Print / Save PDF', true);
+    var bDl    = mk(es ? 'Descargar' : 'Download', false);
+    var bClose = mk(es ? 'Cerrar' : 'Close', false);
+    bClose.style.marginLeft = 'auto';
+    bar.appendChild(bPrint); bar.appendChild(bDl); bar.appendChild(bClose);
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'flex:1 1 auto;overflow:auto;-webkit-overflow-scrolling:touch;background:#fff;';
+    var fr = document.createElement('iframe');
+    fr.setAttribute('title', 'Evaluation Report');
+    fr.style.cssText = 'border:0;width:100%;height:100%;display:block;background:#fff;';
+    fr.onload = function(){ try { var h = fr.contentDocument.body.scrollHeight; if (h) fr.style.height = (h + 60) + 'px'; } catch(e3) {} };
+    wrap.appendChild(fr);
+    ov.appendChild(bar); ov.appendChild(wrap);
+    document.body.appendChild(ov);
+    fr.srcdoc = fullHTML;
+    bPrint.onclick = function(){ try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch(e2) { window.print(); } };
+    bDl.onclick = function(){
+      var blob = new Blob([fullHTML], {type:'text/html;charset=utf-8'});
+      var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
       a.download = 'Evaluation_'+(MD.date||'report')+'.html';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-    setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 30000);
+    };
+    bClose.onclick = function(){ if (ov.parentNode) ov.parentNode.removeChild(ov); };
   } catch(e) {
-    alert('PDF generation error: ' + e.message);
+    alert('Report error: ' + e.message);
   }
 }
 
