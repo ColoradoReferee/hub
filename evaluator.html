@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Evaluator v2026.11.01-a · 2026-10-20 · the coach's live log, post-match ratings and PDF. The formal evaluation is written by the coach in the Hub. -->
+<!-- Evaluator v2026.11.01-c · 2026-10-20 · the coach's live log, post-match ratings and PDF. The formal evaluation is written by the coach in the Hub. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2089,7 +2089,7 @@ function setLang(l) { LANG = l; try { localStorage.setItem('hub-lang', l); } cat
 // ═══════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════
-var EVAL_VERSION = '2026.11.01-a';
+var EVAL_VERSION = '2026.11.01-c';
 document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v' + EVAL_VERSION; });
 var MD = {};
 var OT = { active:false, half:0, len:10, otStarted:false };
@@ -2372,7 +2372,7 @@ function toggleClock() {
         cs.secs = cs.secsAtStart + Math.floor((Date.now() - clockStartedAt) / 1000);
       }
       renderClock();
-    }, 500);
+    }, 1000);
   }
 }
 
@@ -4117,9 +4117,12 @@ document.addEventListener('visibilitychange', function() {
   }
 });
 
-// Heartbeat save every 5 seconds
+// Heartbeat save every 5 seconds, LOCAL ONLY. The database flush is
+// batched in the sync layer below; this used to schedule a full-session
+// network upsert on every beat, which kept the phone's radio hot for the
+// whole match and was most of the battery drain reported on 1 Nov.
 heartbeatInt = setInterval(function() {
-  if (cur().running) saveState();
+  if (cur().running) { window.HB_SAVE = true; try { saveState(); } finally { window.HB_SAVE = false; } }
 }, 5000);
 
 
@@ -4588,7 +4591,7 @@ checkResumeOnLoad();
 (function () {
   var C = window.HUB, P = new URLSearchParams(location.search);
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
-  var ME = null, GAME = null, KEY = null, TIMER = null, DIRTY = false, ASSIGN = null;
+  var ME = null, GAME = null, KEY = null, DIRTY = false, ASSIGN = null;
   function gate(msg) { var g = document.getElementById('gate'); g.hidden = false; g.innerHTML = msg; document.querySelectorAll('.screen, .nav, #bar').forEach(function (el) { el.style.display = 'none'; }); }
   function set(id, v) { var el = document.getElementById(id); if (el && v != null && v !== '' && !el.value) el.value = v; }
   function pick(id, v) { var el = document.getElementById(id); if (!el || !v) return; for (var i = 0; i < el.options.length; i++) if (el.options[i].text.toLowerCase().indexOf(String(v).toLowerCase()) === 0) { el.selectedIndex = i; return; } }
@@ -4624,12 +4627,22 @@ checkResumeOnLoad();
     KEY = ME.person_id + '|' + (GAME ? GAME.game_id : 'free') + '|' + (localStorage.getItem('eval_started_' + (GAME ? GAME.game_id : 'free')) || (function () { var t = new Date().toISOString(); try { localStorage.setItem('eval_started_' + (GAME ? GAME.game_id : 'free'), t); } catch (e) {} return t; })());
     document.getElementById('evBack').href = GAME ? 'index.html#coach/game/' + GAME.game_id : 'index.html#coach';
   }
-  // Every local save also goes to the database, a few seconds later.
+  // Every local save marks the session dirty; the database copy refreshes
+  // in batches. It used to push the whole session within seconds of every
+  // save, and the clock heartbeat saves every 5 seconds, so a 90 minute
+  // match meant a thousand uploads and a radio that never slept. Now the
+  // flush runs at most once a minute while something changed, immediately
+  // when the app is backgrounded or closed, and on completion. The local
+  // copy still saves every few seconds and the resume banner reads from
+  // it, so nothing is at risk between flushes.
   var _save = window.saveState;
   window.saveState = function () {
     if (typeof _save === 'function') _save();
-    DIRTY = true; clearTimeout(TIMER); TIMER = setTimeout(push, 2500);
+    if (window.HB_SAVE) return;
+    DIRTY = true;
   };
+  setInterval(function () { if (DIRTY) push(); }, 60000);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden' && DIRTY) push(); });
   async function push(complete) {
     if (!ME || !KEY || ME.previewing) return;
     var raw = null; try { raw = JSON.parse(localStorage.getItem('co_eval_v1') || 'null'); } catch (e) {}
