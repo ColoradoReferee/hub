@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.01-b';
+  var VERSION = '2026.11.02-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -453,7 +453,7 @@
       : '<div class="pad"><button class="btn outline" id="upAddBtn" style="width:100%">' + esc(t('upAdd')) + '</button></div>');
     body.innerHTML =
       '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(t('upTrackerTitle')) + '</div><div class="disp" style="font-size:36px">' + esc(d.name || '') + '</div><div class="hint">' + esc(t('upSeason').replace('{y}', d.season)) + '</div></div>' +
-      '<div class="pad hint" style="padding-top:8px">' + esc(t('upLead')) + '</div>' +
+      '<div class="pad hint" style="padding-top:8px">' + esc(t('upLead')) + ' <a href="' + (C.library || 'library.html') + '#career-upgrade" style="font-weight:700">' + esc(t('upGuide')) + '</a></div>' +
       '<div class="disp h2">' + esc(t('upChecklist')) + '</div><div class="pad">' +
         row(t('upAge'), d.age_ok) +
         row(t('upLicensed'), Number(d.licensed_prior_years) >= 2, esc(t('upLicensedDetail').replace('{n}', d.licensed_prior_years))) +

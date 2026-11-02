@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- library.html v2026.10.30-c · 2026-10-23 · Colorado Referees Library -->
+<!-- library.html v2026.11.02-a · 2026-10-23 · Colorado Referees Library -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -427,7 +427,7 @@ a{color:inherit;text-decoration:none;}
       <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program">
     </div>
     <div class="footer-text">
-      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.10.30-c<br>
+      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.02-a<br>
       <a href="https://coloradosoccer.org" class="footer-link">ColoradoSoccer.org</a> &middot;
       <span data-l="questions">Questions:</span> <a href="mailto:refeducation@coloradoreferees.com" class="footer-link">refeducation@coloradoreferees.com</a> &middot; 303.888.6863
     </div>
@@ -1489,24 +1489,45 @@ var MODULES = [
   {
     id:"career-upgrade", cat:"career", icon:"&#128200;",
     iconBg:"rgba(230,126,34,.12)",
-    title:"How Do I Upgrade My Grade?",
-    sub:"Referee to Regional to National: process & contact",
+    title:"Upgrade to Regional Referee",
+    sub:"The official step by step: games, fitness, evaluations",
     eyebrow:"Career Resources",
-    keywords:"upgrade grade regional national assessment pathway",
+    keywords:"upgrade grade regional pathway game count log fitness test formal evaluation OMS checklist national",
     build: function() {
-      return ds("Grade Overview",
-        bul("<strong>Referee</strong>: Entry level, completed initial Grassroots course") +
-        bul("<strong>Regional Referee</strong>: Intermediate, additional training and assessments required") +
-        bul("<strong>National Referee</strong>: Advanced, national-level assessments required") +
-        dt("Each grade unlocks higher-level games and better pay. Most active referees can upgrade to Regional in 1-2 seasons.")) +
-      ds("How to Get Assessed",
-        callout("200,146,26","&#128105;","Contact the <strong>Director of Referee Operations</strong> at <strong>refeducation@coloradoreferees.com</strong> or <strong>303.888.6863</strong> to express your interest. She will explain requirements, connect you with an assessor, and guide the process.") +
-        dt("<strong>Do not wait to be asked</strong>: reach out proactively.")) +
-      ds("What Happens During Assessment",
-        dt("An assessor watches you referee a game (usually without you knowing exactly when). They evaluate positioning, decision-making, game management, and fitness. After the game they give you a written report.")) +
-      ds("After Upgrading to Regional",
-        dt("You become eligible for Front Range League, higher-level tournament games, elite academy games, and premium pay rates.") +
-        dt("<strong>The pathway beyond Regional:</strong> National Referee, then Referee Instructor (you teach new referees), then Referee Assessor (you evaluate others for upgrades). Talk to the CRA about the national development pathway."));
+      return ds("What Regional is",
+        dt("Regional Referees officiate top youth and adult 11v11 games, work with National Referees, and may officiate regional and national amateur competitions such as USL-2, NPSL, UPSL, UWS, WPSL and early Lamar Hunt U.S. Open Cup rounds.") +
+        dt("The pathway: Referee, then Regional, then National, then Professional, then FIFA. Every requirement must be done by <strong>June 30</strong> to take the Regional Referee course when it opens in August for the next registration year.")) +
+      ds("Before anything counts",
+        bul("<strong>18 or older</strong>, with a Referee license held in the 2 previous registration years") +
+        bul("<strong>25 centers and 15 assistant games</strong> at adult amateur level. These are bare minimums; build well past them before starting") +
+        bul("<strong>Clearances current</strong>: background screening, SafeSport, and Intro to Safe and Healthy Playing Environments") +
+        bul("<strong>Games must be US Soccer sanctioned</strong>, and the league AND the assignor must both be certified, or the game does not count") +
+        dt("Games count back as far as your career goes. A center you worked counts even if you were assigned to a different position. Leagues that count in Colorado: CPL, Mountain Premier League, Boulder Soccer League outdoor, Arsenal Colorado adult (90-minute matches), Colorado Adult Soccer League, USL-2, USL W, WPSL, League of Clubs, and USCCS from fall 2026.")) +
+      ds("The steps, in order",
+        stp(1,"<strong>Build your game count</strong> on sanctioned adult amateur games, past the 25 / 15 minimums.") +
+        stp(2,"<strong>Get a developmental evaluation</strong> (recommended). If you have never worked an adult center, take it on a U18/U19 game first. Repeat until your coach says you are ready.") +
+        stp(3,"<strong>Register for and pass the fitness test</strong> in Colorado OMS. No walk-ups; complete the waiver and pay the fee. Time it so the pass is valid for the year you will be evaluated.") +
+        stp(4,"<strong>Compile and submit your game log</strong> for verification. Download the official log below; every game is one row with the full crew.") +
+        stp(5,"<strong>Secure an eligible assignment</strong>: an adult amateur game, or a highest-level youth game (U18/U19, 2 &#215; 45). Confirm it with your assignor.") +
+        stp(6,"<strong>Request the formal evaluation in OMS.</strong> The program assigns the referee coach; completed evaluations land in US Soccer RefEval.") +
+        stp(7,"<strong>Pass three formal evaluations</strong> in the registration year: average 8.0 or higher as referee, two on adult amateur games and one on a U18/U19 90-minute game, from three different coaches, no more than one per day or weekend. After a non-pass, wait at least 30 days.") +
+        stp(8,"<strong>Complete the US Soccer coursework</strong> after July 1: the Regional online modules, the Laws update and national test, and the in-person practical.") +
+        stp(9,"<strong>Receive your Regional badge</strong> for the new registration year.")) +
+      ds("The fitness standard",
+        dt("The FIFA sprint and interval tests at the FIFA Women's standard: men run Category 1, women Category 3.") +
+        bul("<strong>Sprints:</strong> 6 &#215; 40 m, each in 6.4 s (men) or 6.6 s (women). Fail one and you get one extra attempt after the sixth; fail two and the test is failed") +
+        bul("<strong>Interval:</strong> 40 reps of 75 m run in 17 s plus 25 m walk in 20 s (men) or 24 s (women), paced by audio. The first missed walking zone is a warning, the second ends the test") +
+        bul("Tests are planned for March, May, July and September; test early in the cycle. Train for 45 to 50 reps so test day feels routine") +
+        dt("Register through OMS Available Clinics and complete the waiver first. Practice audio lives on the program's evaluation and fitness tests page.")) +
+      ds("Keeping the grade",
+        bul("Pass the same fitness standard at least once each registration year") +
+        bul("Pass 2 to 3 formal evaluations from 2 different coaches, averaging 8.0 or higher") +
+        bul("Annual online training, the Laws update and the national test, with clearances kept current") +
+        bul("Premium pay needs 5 or more hours of continuing education each license year, tracked on your Hub record")) +
+      ds("Track it in the Hub",
+        dt("Your upgrade tracker on this Hub counts your synced games, your logged games, your evaluations and your fitness pass live, against these exact requirements.") +
+        callout("200,146,26","&#128229;","<a href=\"assets/Regional-Referee-Game-Count-Log.xlsx\" download><strong>Download the official Regional Referee Game Count Log</strong></a> (Excel). Referee games and assistant games go on separate tabs, one row per game with the full crew; submit it to the program for verification.") +
+        dt("Questions and evaluation requests: the <strong>Director of Referee Operations</strong> at <strong>refeducation@coloradoreferees.com</strong>. Recordings of the upgrade and fitness information sessions are on the assigning site."));
     }
   },
   {
@@ -2648,24 +2669,45 @@ var ES = {
   },
 
   "career-upgrade": {
-    title: "¿Cómo asciendo de grado?",
-    sub: "De Árbitro a Regional a Nacional: proceso y contacto",
+    title: "Ascenso a Árbitro Regional",
+    sub: "El paso a paso oficial: partidos, físico, evaluaciones",
     eyebrow: "Recursos de carrera",
-    keywords: "ascenso grado regional nacional evaluación director operaciones arbitrales camino",
+    keywords: "ascenso grado regional camino registro de partidos prueba física evaluación formal OMS lista nacional",
     build: function() {
-      return ds("Resumen de grados",
-        bul("<strong>Árbitro</strong>: Nivel inicial, curso Grassroots inicial completado") +
-        bul("<strong>Árbitro Regional</strong>: Nivel intermedio, requiere capacitación y evaluaciones adicionales") +
-        bul("<strong>Árbitro Nacional</strong>: Nivel avanzado, requiere evaluaciones a nivel nacional") +
-        dt("Cada grado abre partidos de mayor nivel y mejor pago. La mayoría de los árbitros activos pueden ascender a Regional en 1-2 temporadas.")) +
-      ds("Cómo pedir una evaluación",
-        callout("200,146,26","&#128105;","Contacta al <strong>Director de Operaciones Arbitrales</strong> en <strong>refeducation@coloradoreferees.com</strong> o al <strong>303.888.6863</strong> para expresar tu interés. Te explicará los requisitos, te conectará con un evaluador y te guiará en el proceso.") +
-        dt("<strong>No esperes a que te lo pidan</strong>: toma la iniciativa.")) +
-      ds("Qué pasa durante la evaluación",
-        dt("Un evaluador te observa arbitrar un partido (normalmente sin que sepas exactamente cuándo). Evalúa tu posicionamiento, toma de decisiones, manejo del partido y condición física. Después del partido te entrega un reporte por escrito.")) +
-      ds("Después de ascender a Regional",
-        dt("Pasas a ser elegible para la Front Range League, partidos de torneo de mayor nivel, partidos de academias de élite y tarifas de pago premium.") +
-        dt("<strong>El camino más allá de Regional:</strong> Árbitro Nacional, luego Instructor de Árbitros (enseñas a árbitros nuevos), luego Evaluador de Árbitros (evalúas a otros para sus ascensos). Habla con el CRA sobre el camino de desarrollo nacional."));
+      return ds("Qué es Regional",
+        dt("Los Árbitros Regionales dirigen los partidos juveniles de máximo nivel y de adultos 11v11, trabajan con Árbitros Nacionales y pueden dirigir competencias amateur regionales y nacionales como USL-2, NPSL, UPSL, UWS, WPSL y rondas tempranas de la Lamar Hunt U.S. Open Cup.") +
+        dt("El camino: Árbitro, luego Regional, luego Nacional, luego Profesional, luego FIFA. Todos los requisitos deben completarse antes del <strong>30 de junio</strong> para tomar el curso de Árbitro Regional cuando abre en agosto para el siguiente año de registro.")) +
+      ds("Antes de que algo cuente",
+        bul("<strong>18 años o más</strong>, con licencia de Árbitro en los 2 años de registro anteriores") +
+        bul("<strong>25 partidos como central y 15 como asistente</strong> a nivel amateur adulto. Son mínimos; acumula bastante más antes de empezar") +
+        bul("<strong>Habilitaciones vigentes</strong>: verificación de antecedentes, SafeSport e Intro to Safe and Healthy Playing Environments") +
+        bul("<strong>Los partidos deben estar sancionados por US Soccer</strong>, y la liga Y el asignador deben estar certificados, o el partido no cuenta") +
+        dt("Los partidos cuentan desde el inicio de tu carrera. Un partido que trabajaste como central cuenta aunque te hayan asignado a otra posición. Ligas que cuentan en Colorado: CPL, Mountain Premier League, Boulder Soccer League al aire libre, Arsenal Colorado adulto (partidos de 90 minutos), Colorado Adult Soccer League, USL-2, USL W, WPSL, League of Clubs y USCCS desde otoño de 2026.")) +
+      ds("Los pasos, en orden",
+        stp(1,"<strong>Acumula tus partidos</strong> en juegos amateur adultos sancionados, más allá de los mínimos de 25 / 15.") +
+        stp(2,"<strong>Pide una evaluación de desarrollo</strong> (recomendada). Si nunca has trabajado un central adulto, tómala primero en un partido U18/U19. Repítela hasta que tu coach diga que estás listo.") +
+        stp(3,"<strong>Regístrate y aprueba la prueba física</strong> en Colorado OMS. Sin llegadas sin cita; completa la autorización y paga la cuota. Prográmala para que el pase sea válido en el año en que serás evaluado.") +
+        stp(4,"<strong>Compila y entrega tu registro de partidos</strong> para verificación. Descarga el registro oficial abajo; cada partido es una fila con el equipo arbitral completo.") +
+        stp(5,"<strong>Consigue una asignación elegible</strong>: un partido amateur adulto, o un juvenil del máximo nivel (U18/U19, 2 &#215; 45). Confírmala con tu asignador.") +
+        stp(6,"<strong>Solicita la evaluación formal en OMS.</strong> El programa asigna al coach; las evaluaciones completadas quedan en US Soccer RefEval.") +
+        stp(7,"<strong>Aprueba tres evaluaciones formales</strong> en el año de registro: promedio de 8.0 o más como árbitro, dos en partidos amateur adultos y una en un U18/U19 de 90 minutos, con tres coaches distintos, máximo una por día o fin de semana. Tras una no aprobada, espera al menos 30 días.") +
+        stp(8,"<strong>Completa los cursos de US Soccer</strong> después del 1 de julio: los módulos Regional en línea, la actualización de las Reglas con su examen nacional y la práctica presencial.") +
+        stp(9,"<strong>Recibe tu insignia Regional</strong> para el nuevo año de registro.")) +
+      ds("El estándar físico",
+        dt("Las pruebas FIFA de sprints e intervalos al estándar femenil de FIFA: los hombres corren Categoría 1, las mujeres Categoría 3.") +
+        bul("<strong>Sprints:</strong> 6 &#215; 40 m, cada uno en 6.4 s (hombres) o 6.6 s (mujeres). Si fallas uno tienes un intento extra después del sexto; con dos fallos la prueba no se aprueba") +
+        bul("<strong>Intervalos:</strong> 40 repeticiones de 75 m corriendo en 17 s más 25 m caminando en 20 s (hombres) o 24 s (mujeres), con audio. La primera zona de caminata perdida es advertencia, la segunda termina la prueba") +
+        bul("Las pruebas se planean para marzo, mayo, julio y septiembre; hazla temprano en el ciclo. Entrena para 45 a 50 repeticiones para que el día de la prueba se sienta rutinario") +
+        dt("Regístrate en OMS Available Clinics y completa primero la autorización. El audio de práctica está en la página de evaluaciones y pruebas físicas del programa.")) +
+      ds("Mantener el grado",
+        bul("Aprueba el mismo estándar físico al menos una vez cada año de registro") +
+        bul("Aprueba 2 a 3 evaluaciones formales de 2 coaches distintos, con promedio de 8.0 o más") +
+        bul("Capacitación anual en línea, la actualización de las Reglas y el examen nacional, con habilitaciones vigentes") +
+        bul("El pago premium requiere 5 o más horas de educación continua por año de licencia, registradas en tu expediente del Hub")) +
+      ds("Síguelo en el Hub",
+        dt("Tu rastreador de ascenso en este Hub cuenta en vivo tus partidos sincronizados, tus partidos registrados, tus evaluaciones y tu pase físico, contra estos mismos requisitos.") +
+        callout("200,146,26","&#128229;","<a href=\"assets/Regional-Referee-Game-Count-Log.xlsx\" download><strong>Descarga el Registro oficial de partidos para Árbitro Regional</strong></a> (Excel). Los partidos como central y como asistente van en pestañas separadas, una fila por partido con el equipo completo; entrégalo al programa para verificación.") +
+        dt("Preguntas y solicitudes de evaluación: la <strong>Directora de Operaciones Arbitrales</strong> en <strong>refeducation@coloradoreferees.com</strong>. Las grabaciones de las sesiones informativas de ascenso y prueba física están en el sitio de asignaciones."));
     }
   },
 
