@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.02-a';
+  var VERSION = '2026.11.02-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -412,6 +412,58 @@
     });
   }
   // ── The upgrade tracker: every Regional requirement, with the game log the sync cannot see ──
+  // ── Export the official game count log, pre-filled (2 Nov) ──
+  // The tracker already knows every synced and logged game, so nobody
+  // hand-types the upgrade spreadsheet. Columns match the program's
+  // official workbook; the Assignor column carries the assigning group
+  // and Notes says where each row came from. The xlsx writer loads only
+  // when the button is tapped.
+  var ASG_GROUPS = { 20901: 'CSA', 21036: 'MLS NEXT', 23484: 'Elite', 23652: 'EAL', 25138: 'WPSL', 90000: 'Hub' };
+  function loadXlsxLib() {
+    return new Promise(function (res, rej) {
+      if (window.XLSX) return res();
+      var sc = document.createElement('script');
+      sc.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      sc.onload = res; sc.onerror = function () { rej(new Error('xlsx')); };
+      document.head.appendChild(sc);
+    });
+  }
+  async function exportGameLog(d) {
+    await loadXlsxLib();
+    var keys = S.me.nameKeys || [];
+    var r = await fetchAll(function () { return sb.from('games').select('date,kickoff,venue,field,competition,age_group,home,away,cr,ar1,ar2,fourth,site_id,status').lte('date', todayStr()).not('status', 'in', '(C,X,canceled_no_pay)').or(mineOr()).order('date'); });
+    var HEAD = ['Date', 'Kick-off time', 'Location / field', 'League', 'Age group', 'Position', 'Home team', 'Away team', 'Referee', 'Assistant Referee 1', 'Assistant Referee 2', 'Fourth official', 'Assignor', 'Notes'];
+    var refRows = [], arRows = [];
+    (r.data || []).forEach(function (g) {
+      var slot = null;
+      if (keys.indexOf(key(g.cr)) >= 0) slot = 'Referee';
+      else if (keys.indexOf(key(g.ar1)) >= 0) slot = 'AR1';
+      else if (keys.indexOf(key(g.ar2)) >= 0) slot = 'AR2';
+      else if (keys.indexOf(key(g.fourth)) >= 0) slot = '4th official';
+      if (!slot) return;
+      var row = [g.date, g.kickoff ? clock(g.kickoff) : '', [g.venue, g.field].filter(Boolean).join(', '), g.competition || '', g.age_group || '', slot, g.home || '', g.away || '', g.cr || 'None', g.ar1 || 'None', g.ar2 || 'None', g.fourth || 'None', ASG_GROUPS[g.site_id] || '', 'Hub synced'];
+      (slot === 'Referee' ? refRows : arRows).push(row);
+    });
+    ((d && d.log) || []).forEach(function (g) {
+      var row = [g.date, '', g.venue || '', g.league || '', g.level === 'adult' ? 'Adult' : g.level === 'youth' ? 'U18/U19' : '', g.role === 'cr' ? 'Referee' : 'AR', g.home || '', g.away || '', '', '', '', '', '', (g.crew ? 'Crew: ' + g.crew + '. ' : '') + (g.verified ? 'Hub log, verified' : 'Hub log')];
+      (g.role === 'cr' ? refRows : arRows).push(row);
+    });
+    var name = S.me.first_name + ' ' + S.me.last_name;
+    var wb = XLSX.utils.book_new();
+    var sum = XLSX.utils.aoa_to_sheet([
+      ['Regional Referee Upgrade: Game Count Log'],
+      ['Candidate name', name],
+      ['Exported from the Colorado Referees Hub', todayStr()],
+      ['Rows as referee (center)', refRows.length],
+      ['Rows as assistant referee', arRows.length],
+      ['The program verifies which games are adult amateur and sanctioned. Minimums: 25 centers, 15 assistant games.']
+    ]);
+    XLSX.utils.book_append_sheet(wb, sum, 'Summary');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([HEAD].concat(refRows)), 'Referee Games');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([HEAD].concat(arRows)), 'AR Games');
+    XLSX.writeFile(wb, 'Game-Count-Log-' + name.replace(/[^A-Za-z0-9]+/g, '-') + '.xlsx');
+    return { refs: refRows.length, ars: arRows.length };
+  }
   var UP = { pid: null, data: null, add: false, role: '', ceuAdd: false };
   function renderUpgradeFromData(pid) { renderUpgrade(pid); }
   async function renderUpgrade(pid) {
@@ -465,10 +517,15 @@
       '</div>' +
       (Number(d.maint_coaches) ? '<div class="pad hint">' + esc(t('upMaint').replace('{c}', d.maint_coaches).replace('{avg}', d.maint_avg == null ? '–' : d.maint_avg)) + '</div>' : '') +
       '<div class="disp h2">' + esc(t('upEvalsTitle')) + '</div>' + evList +
-      '<div class="disp h2">' + esc(t('upLogTitle')) + '</div><div class="pad hint" style="padding-top:0">' + esc(t('upLogHint')) + '</div>' + addForm + (logAll.length ? '<div class="pad">' + roleChips + logRows + '</div>' : '') +
+      '<div class="disp h2">' + esc(t('upLogTitle')) + '</div><div class="pad hint" style="padding-top:0">' + esc(t('upLogHint')) + '</div>' + (mine ? '<div class="pad no-print" style="padding-top:8px"><button class="btn outline small" id="upExport">' + esc(t('upExport')) + '</button><div class="msg" id="upExpMsg" hidden></div></div>' : '') + addForm + (logAll.length ? '<div class="pad">' + roleChips + logRows + '</div>' : '') +
       ceuBlock(ceuRows, UP.ceuAdd);
     wireCeu(body, pid || (S.me && S.me.person_id), UP, function () { renderUpgrade(pid); });
     body.querySelectorAll('[data-uprole]').forEach(function (c) { c.onclick = function () { UP.role = c.getAttribute('data-uprole'); renderUpgradeFromData(pid); }; });
+    var ex = $('upExport'); if (ex) ex.onclick = async function () {
+      ex.disabled = true; busy(true);
+      try { var n = await exportGameLog(d); busy(false); ex.disabled = false; say('upExpMsg', t('upExportDone').replace('{r}', n.refs).replace('{a}', n.ars), 'ok'); }
+      catch (e) { busy(false); ex.disabled = false; say('upExpMsg', t('upExportFail'), 'bad'); }
+    };
     var ab = $('upAddBtn'); if (ab) ab.onclick = function () { UP.add = true; renderUpgrade(pid); };
     var cb = $('upCancel'); if (cb) cb.onclick = function () { UP.add = false; renderUpgrade(pid); };
     var sv = $('upSave'); if (sv) sv.onclick = async function () {
