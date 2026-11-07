@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.05-a';
+  var VERSION = '2026.11.07-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -3981,6 +3981,8 @@
     if (code.length < 6) { say('msgCode', t('wholeCode'), 'bad'); return; }
     $('verifyBtn').disabled = true;
     var r = await sb.auth.verifyOtp({ email: email, token: code, type: 'email' });
+    // A code made for the referee at Referee HQ is the other kind; accept both.
+    if (r.error) { try { r = await sb.auth.verifyOtp({ email: email, token: code, type: 'magiclink' }); } catch (e) {} }
     $('verifyBtn').disabled = false;
     if (r.error) { say('msgCode', t('badCode'), 'bad'); return; }
     await start();
