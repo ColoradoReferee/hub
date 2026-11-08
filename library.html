@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- library.html v2026.11.02-a · 2026-10-23 · Colorado Referees Library -->
+<!-- library.html v2026.11.08-a · 2026-10-23 · Colorado Referees Library -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -19,7 +19,7 @@
   --gold:#C8921A;--red:#C8102E;--grn:#2E8B4E;
   --bebas:"Barlow Condensed",sans-serif;--font:"Atkinson Hyperlegible",system-ui,sans-serif;
   --c-guide:#D9A400;--c-laws:#2F7FD6;--c-gameday:#2E8B4E;
-  --c-career:#D9731A;--c-policy:#C8102E;--c-contacts:#7E57C2;--c-hub:#1B2F55;
+  --c-career:#D9731A;--c-policy:#C8102E;--c-contacts:#7E57C2;--c-hub:#1B2F55;--c-usrw:#4A5FC1;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -27,7 +27,7 @@
     --navy:#FFFFFF;--gold:#F5C842;--title:#F5C842;--onnavy:#1B2F55;
     --ov:rgba(255,255,255,.06);--ov2:rgba(255,255,255,.14);--faint:rgba(255,255,255,.45);
     --red:#E24B5A;--grn:#3DBA63;
-    --c-guide:#F5C842;--c-laws:#64b4ff;--c-gameday:#2ecc71;--c-career:#e67e22;--c-policy:#e63946;--c-contacts:#b39ddb;--c-hub:#FFD24A;
+    --c-guide:#F5C842;--c-laws:#64b4ff;--c-gameday:#2ecc71;--c-career:#e67e22;--c-policy:#e63946;--c-contacts:#b39ddb;--c-hub:#FFD24A;--c-usrw:#93a8ff;
   }
 }
 :root[data-theme="dark"]{
@@ -35,7 +35,7 @@
   --navy:#FFFFFF;--gold:#F5C842;--title:#F5C842;--onnavy:#1B2F55;
   --ov:rgba(255,255,255,.06);--ov2:rgba(255,255,255,.14);--faint:rgba(255,255,255,.45);
   --red:#E24B5A;--grn:#3DBA63;
-  --c-guide:#F5C842;--c-laws:#64b4ff;--c-gameday:#2ecc71;--c-career:#e67e22;--c-policy:#e63946;--c-contacts:#b39ddb;--c-hub:#FFD24A;
+  --c-guide:#F5C842;--c-laws:#64b4ff;--c-gameday:#2ecc71;--c-career:#e67e22;--c-policy:#e63946;--c-contacts:#b39ddb;--c-hub:#FFD24A;--c-usrw:#93a8ff;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 [style*="--bebas"],.header-title,.sec-title,.mod-title,.hero-title,.cat-title,.law-num,.page-title,h1,h2{font-family:var(--bebas);font-style:italic;font-weight:800;}
@@ -130,6 +130,7 @@ a{color:inherit;text-decoration:none;}
 }
 .filter-pill[data-cat="guide"].active{background:rgba(245,200,66,.15);border-color:rgba(245,200,66,.4);color:var(--c-guide);}
 .filter-pill[data-cat="laws"].active{background:rgba(100,180,255,.15);border-color:rgba(100,180,255,.4);color:var(--c-laws);}
+.filter-pill[data-cat="usrw"].active{background:rgba(74,95,193,.15);border-color:rgba(74,95,193,.45);color:var(--c-usrw);}
 .filter-pill[data-cat="gameday"].active{background:rgba(46,204,113,.15);border-color:rgba(46,204,113,.4);color:var(--c-gameday);}
 .filter-pill[data-cat="career"].active{background:rgba(230,126,34,.15);border-color:rgba(230,126,34,.4);color:var(--c-career);}
 .filter-pill[data-cat="policy"].active{background:rgba(230,57,70,.15);border-color:rgba(230,57,70,.4);color:var(--c-policy);}
@@ -208,6 +209,7 @@ a{color:inherit;text-decoration:none;}
 /* Category accent on left border */
 .mod-card[data-cat="guide"]{border-left:3px solid rgba(245,200,66,.4);}
 .mod-card[data-cat="laws"]{border-left:3px solid rgba(100,180,255,.4);}
+.mod-card[data-cat="usrw"]{border-left:3px solid rgba(74,95,193,.45);}
 .mod-card[data-cat="gameday"]{border-left:3px solid rgba(46,204,113,.4);}
 .mod-card[data-cat="career"]{border-left:3px solid rgba(230,126,34,.4);}
 .mod-card[data-cat="policy"]{border-left:3px solid rgba(230,57,70,.4);}
@@ -353,6 +355,7 @@ a{color:inherit;text-decoration:none;}
     <div class="filter-pill" data-cat="hub" onclick="setFilter('hub')" data-l="pill_hub">&#128241; Using the Hub</div>
     <div class="filter-pill" data-cat="guide" onclick="setFilter('guide')" data-l="pill_guide">&#128218; CSA Guide</div>
     <div class="filter-pill" data-cat="laws" onclick="setFilter('laws')" data-l="pill_laws">&#9878; Laws</div>
+    <div class="filter-pill" data-cat="usrw" onclick="setFilter('usrw')" data-l="pill_usrw">&#127482;&#127480; Refereeing Way</div>
     <div class="filter-pill" data-cat="gameday" onclick="setFilter('gameday')" data-l="pill_gameday">&#9917; Game Day</div>
     <div class="filter-pill" data-cat="career" onclick="setFilter('career')" data-l="pill_career">&#128197; Career</div>
     <div class="filter-pill" data-cat="policy" onclick="setFilter('policy')" data-l="pill_policy">&#128737; Policy</div>
@@ -388,6 +391,13 @@ a{color:inherit;text-decoration:none;}
     <div class="section-title" data-l="sec_laws">17 Laws of the Game 2026/27</div>
   </div>
   <div class="modules-grid" id="grid-laws"></div>
+
+  <!-- U.S. REFEREEING WAY -->
+  <div class="section-header" data-section="usrw">
+    <div class="section-dot" style="background:var(--c-usrw)"></div>
+    <div class="section-title" data-l="sec_usrw">The U.S. Refereeing Way</div>
+  </div>
+  <div class="modules-grid" id="grid-usrw"></div>
 
   <!-- GAME DAY -->
   <div class="section-header" data-section="gameday">
@@ -427,7 +437,7 @@ a{color:inherit;text-decoration:none;}
       <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program">
     </div>
     <div class="footer-text">
-      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.02-a<br>
+      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.08-a<br>
       <a href="https://coloradosoccer.org" class="footer-link">ColoradoSoccer.org</a> &middot;
       <span data-l="questions">Questions:</span> <a href="mailto:refeducation@coloradoreferees.com" class="footer-link">refeducation@coloradoreferees.com</a> &middot; 303.888.6863
     </div>
@@ -481,12 +491,12 @@ var LANG = 'en';
 try { LANG = localStorage.getItem('hub-lang') === 'es' ? 'es' : 'en'; } catch (e) {}
 var UI = {
   en: { back: '&#8249; Your day', title: 'Library', sub: 'Colorado Referees &middot; the Laws, the guide, game day', offline: '&#9679; Works offline', langSwitch: 'Español', search: 'Search the Library',
-        pill_all: 'All Modules', pill_hub: '&#128241; Using the Hub', pill_guide: '&#128218; CSA Guide', pill_laws: '&#9878; Laws', pill_gameday: '&#9917; Game Day', pill_career: '&#128197; Career', pill_policy: '&#128737; Policy', pill_contacts: '&#128222; Contacts',
-        noResults: 'No modules found. Try a different search or filter.', sec_hub: 'Using the Hub', sec_guide: 'CSA Guide to Referees 2026/27', sec_laws: '17 Laws of the Game 2026/27', sec_gameday: 'Game Day Procedures', sec_career: 'Career Resources', sec_policy: 'Policies &amp; Safety', sec_contacts: 'CSA Contacts',
+        pill_all: 'All Modules', pill_hub: '&#128241; Using the Hub', pill_guide: '&#128218; CSA Guide', pill_laws: '&#9878; Laws', pill_usrw: '&#127482;&#127480; Refereeing Way', pill_gameday: '&#9917; Game Day', pill_career: '&#128197; Career', pill_policy: '&#128737; Policy', pill_contacts: '&#128222; Contacts',
+        noResults: 'No modules found. Try a different search or filter.', sec_hub: 'Using the Hub', sec_guide: 'CSA Guide to Referees 2026/27', sec_laws: '17 Laws of the Game 2026/27', sec_usrw: 'The U.S. Refereeing Way', sec_gameday: 'Game Day Procedures', sec_career: 'Career Resources', sec_policy: 'Policies &amp; Safety', sec_contacts: 'CSA Contacts',
         foot1: 'Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition', questions: 'Questions:' },
   es: { back: '&#8249; Tu día', title: 'Biblioteca', sub: 'Árbitros de Colorado &middot; las Reglas, la guía, el día del partido', offline: '&#9679; Funciona sin señal', langSwitch: 'English', search: 'Buscar en la Biblioteca',
-        pill_all: 'Todos los módulos', pill_hub: '&#128241; Cómo usar el Hub', pill_guide: '&#128218; Guía CSA', pill_laws: '&#9878; Reglas', pill_gameday: '&#9917; Día del partido', pill_career: '&#128197; Carrera', pill_policy: '&#128737; Políticas', pill_contacts: '&#128222; Contactos',
-        noResults: 'No hay módulos con ese nombre. Prueba otra búsqueda u otro filtro.', sec_hub: 'Cómo usar el Hub', sec_guide: 'Guía CSA para árbitros 2026/27', sec_laws: '17 Reglas de Juego 2026/27', sec_gameday: 'Procedimientos del día del partido', sec_career: 'Recursos de carrera', sec_policy: 'Políticas y seguridad', sec_contacts: 'Contactos de CSA',
+        pill_all: 'Todos los módulos', pill_hub: '&#128241; Cómo usar el Hub', pill_guide: '&#128218; Guía CSA', pill_laws: '&#9878; Reglas', pill_usrw: '&#127482;&#127480; Refereeing Way', pill_gameday: '&#9917; Día del partido', pill_career: '&#128197; Carrera', pill_policy: '&#128737; Políticas', pill_contacts: '&#128222; Contactos',
+        noResults: 'No hay módulos con ese nombre. Prueba otra búsqueda u otro filtro.', sec_hub: 'Cómo usar el Hub', sec_guide: 'Guía CSA para árbitros 2026/27', sec_laws: '17 Reglas de Juego 2026/27', sec_usrw: 'U.S. Refereeing Way', sec_gameday: 'Procedimientos del día del partido', sec_career: 'Recursos de carrera', sec_policy: 'Políticas y seguridad', sec_contacts: 'Contactos de CSA',
         foot1: 'Biblioteca de Árbitros de Colorado &middot; Colorado Soccer Association &middot; edición 2026/27', questions: 'Preguntas:' }
 };
 function applyLang() {
@@ -1199,6 +1209,123 @@ var MODULES = [
     }
   },
 
+
+  /* ══════════ U.S. REFEREEING WAY ══════════ */
+  {
+    id:"usrw-what", cat:"usrw", icon:"&#127482;&#127480;",
+    iconBg:"rgba(74,95,193,.12)",
+    title:"What the U.S. Refereeing Way is",
+    sub:"The shared standard behind every evaluation and every debrief",
+    eyebrow:"U.S. Refereeing Way · 1 of 5",
+    keywords:"usrw refereeing way values develop guide motivate confidence protect evaluation gp cmi cre match difficulty debrief",
+    build: function() {
+      return ds("One standard, every level",
+        dt("The U.S. Refereeing Way is U.S. Soccer's definition of what good refereeing looks like. It is practical (built on real match situations), consistent (one shared language at every level), and game based (grounded in understanding football, not just the rule book). When a coach evaluates you or runs a debrief, this is the standard they are coaching toward, not personal opinion.")) +
+      ds("How a formal evaluation is scored",
+        bul("<strong>General Performance (GP)</strong> is the whole-match picture: patterns, consistency, cumulative impact. It is set first, on its own. Levels are Good, Satisfactory, and Below Expectation.") +
+        bul("<strong>Critical Match Incidents (CMIs)</strong> are game-changing decisions from a set list: penalty kicks, send-offs, decisions that lead to or wipe out a goal. They are logged separately and adjust the score afterward.") +
+        bul("<strong>Clear Referee Errors (CREs)</strong> are clear errors from a second set list, such as a missed caution for a reckless challenge. They are always errors; there is no credit side.") +
+        bul("<strong>Match Difficulty</strong> rates what the match demanded of you, not how you handled it. It only lifts a score when the performance level is Good.") +
+        dt("This is why one big moment does not define your evaluation. The whole match sets the score; the incidents adjust it.")) +
+      ds("The five values your coach works from",
+        bul("<strong>Develop.</strong> Every conversation should leave you better prepared for your next match.") +
+        bul("<strong>Guide.</strong> Experience is used to help you see what you could not see.") +
+        bul("<strong>Motivate.</strong> Feedback should increase your drive, not drain it.") +
+        bul("<strong>Give Confidence.</strong> You should leave a debrief feeling capable, not judged.") +
+        bul("<strong>Protect.</strong> Coaching protects you from bad habits and repeated errors."));
+    }
+  },
+  {
+    id:"usrw-gm", cat:"usrw", icon:"&#129504;",
+    iconBg:"rgba(74,95,193,.12)",
+    title:"Game management",
+    sub:"Tone, flow, and the stepped approach to discipline",
+    eyebrow:"U.S. Refereeing Way · 2 of 5",
+    keywords:"usrw game management tone flow advantage stepped discipline escalation warning caution consistency temperature",
+    build: function() {
+      return ds("Three principles",
+        stp(1, "<strong>Read the game's context.</strong> The same foul in minute one of a friendly and minute ninety of a final can deserve a different response. Flow, tempo, and emotional temperature all count.") +
+        stp(2, "<strong>Know when to let play flow.</strong> Not every minor infraction needs a whistle. Overrefereed games lose credibility just as fast as underrefereed ones.") +
+        stp(3, "<strong>Use a stepped approach to discipline.</strong> Verbal warning, public warning, caution, send-off. Escalate as behavior worsens, and let players see the ladder.")) +
+      ds("What an evaluator looks for",
+        bul("The tone set in the first 15 minutes of each half.") +
+        bul("The same standard for both teams, all match.") +
+        bul("De-escalation before incidents, not reaction after them.") +
+        bul("Proactive talking, not waiting for a problem to develop.") +
+        bul("Recognizing when the game's temperature changes, and doing something about it.")) +
+      callout("74,95,193","&#128161;","Good management is built before the match turns. The credit you earn early with presence and conversation is the credit you spend later when the big call comes.");
+    }
+  },
+  {
+    id:"usrw-handball", cat:"usrw", icon:"&#9995;",
+    iconBg:"rgba(74,95,193,.12)",
+    title:"Handball: the three concepts",
+    sub:"Deliberate touch, unnaturally bigger, and goals scored off the arm",
+    eyebrow:"U.S. Refereeing Way · 3 of 5",
+    keywords:"usrw handball hand arm deliberate unnatural bigger goal law 12 armpit justifiable",
+    build: function() {
+      return ds("Every handball decision comes down to three concepts",
+        stp(1, "<strong>Deliberately touches the ball.</strong> The intent of the movement decides: a hand moving toward the ball is deliberate; a ball striking a still arm may not be.") +
+        stp(2, "<strong>The arm made the body unnaturally bigger.</strong> The question is whether the arm position is justifiable by the body's movement. Extending an arm to create space while jumping or running is taking a risk. The arm starts at the bottom of the armpit.") +
+        stp(3, "<strong>A goal scored directly or immediately off the hand or arm does not stand,</strong> even when accidental, including the goalkeeper's. Immediately is the key word: if touches come in between, judge whether it was truly immediate.")) +
+      ds("Usually handball",
+        bul("Extended arm, away from the body.") +
+        bul("Arm position not justifiable by the movement.") +
+        bul("Extra movement of the arm toward the ball.") +
+        bul("Attacker scores directly or immediately off the hand or arm.")) +
+      ds("Usually not handball",
+        bul("Hand close to or against the body.") +
+        bul("Arm in a justifiable position, such as bracing a slide.") +
+        bul("Ball off the player's own head or feet immediately before.") +
+        bul("A natural self-protection position.")) +
+      callout("74,95,193","&#128161;","Consistency is the development goal: the same situation called the same way for both teams, all match, explained in the language of the Law.");
+    }
+  },
+  {
+    id:"usrw-position", cat:"usrw", icon:"&#127919;",
+    iconBg:"rgba(74,95,193,.12)",
+    title:"Positioning around the penalty area",
+    sub:"Optimal position for the optimal decision",
+    eyebrow:"U.S. Refereeing Way · 4 of 5",
+    keywords:"usrw positioning movement penalty area angle proximity counter attack anticipate scan feet moving",
+    build: function() {
+      return ds("Read the play before you move",
+        bul("<strong>Pressure on the ball:</strong> a challenge is coming. Position for the potential foul.") +
+        bul("<strong>Open path with speed:</strong> the attack is moving fast. Create the angle when you cannot win the footrace.") +
+        bul("<strong>Player's head down:</strong> a dribble. Stay connected to play.") +
+        bul("<strong>Player's head up:</strong> a pass is coming. Anticipate the ball, not the player.")) +
+      ds("The 5 keys",
+        stp(1, "<strong>Presence and proximity.</strong> Enter the penalty area when your presence is required. There is no fence around it.") +
+        stp(2, "<strong>Angle of view.</strong> Position to see the decision spots, not just to be near the ball. One step either way makes the difference.") +
+        stp(3, "<strong>Location.</strong> Know your out. Stay out of player and ball paths. Scan; do not ball-watch.") +
+        stp(4, "<strong>Counter attacks: angle over proximity.</strong> When you cannot be close, the first two steps left or right decide the angle you will have.") +
+        stp(5, "<strong>Keep your feet moving.</strong> As the ball moves, you move. Do not let players block your view."));
+    }
+  },
+  {
+    id:"usrw-team", cat:"usrw", icon:"&#129309;",
+    iconBg:"rgba(74,95,193,.12)",
+    title:"Teamwork and AR involvement",
+    sub:"Assist, don't insist: when the flag comes up and when it stays down",
+    eyebrow:"U.S. Refereeing Way · 5 of 5",
+    keywords:"usrw teamwork ar assistant referee involvement flag silent signals skirt pocket credibility pregame",
+    build: function() {
+      return ds("The AR's core mandate",
+        dt("Assist, don't insist. The AR provides information and support; the referee makes the final decision. The one exception is a clear misapplication of the Laws of the Game.")) +
+      ds("Four questions before getting involved, in order",
+        stp(1, "<strong>Is there a clear offense?</strong> Without certainty there is no basis for involvement.") +
+        stp(2, "<strong>What is the referee's proximity and angle?</strong> The closer and better-sighted the referee, the less likely the AR should act.") +
+        stp(3, "<strong>What is the AR's proximity and angle?</strong> A clear view, not a guess.") +
+        stp(4, "<strong>What are the AR's priorities?</strong> Involvement must not cost the offside line or ball coverage.")) +
+      ds("Silent signals",
+        bul("<strong>Tap the top pocket:</strong> caution-level misconduct.") +
+        bul("<strong>Tap the back pocket:</strong> send-off level misconduct.") +
+        bul("<strong>Step away from the penalty area:</strong> the foul is outside.") +
+        bul("<strong>Move toward the corner flag:</strong> penalty kick, used only when certain.")) +
+      callout("74,95,193","&#128161;","Credibility shrinks with distance. Close to your line, your information beats the referee's view. In the far third, involvement is reserved for unseen violent conduct and a penalty you are certain of.");
+    }
+  },
+
   /* ══════════ GAME DAY ══════════ */
   {
     id:"gd-firstday", cat:"gameday", icon:"&#11088;",
@@ -1773,6 +1900,110 @@ var MODULES = [
 
 /* ══════════ EN ESPAÑOL: the same modules, keyed by id ══════════ */
 var ES = {
+  "usrw-what": {
+    title:"Qué es el U.S. Refereeing Way",
+    sub:"El estándar compartido detrás de cada evaluación y cada charla",
+    eyebrow:"U.S. Refereeing Way · 1 de 5",
+    keywords:"usrw valores desarrollar guiar motivar confianza proteger evaluacion gp cmi cre dificultad del partido",
+    build: function() {
+      return ds("Un estándar, todos los niveles",
+        dt("El U.S. Refereeing Way es la definición de U.S. Soccer de lo que es un buen arbitraje. Es práctico (construido sobre situaciones reales de partido), consistente (un mismo lenguaje en todos los niveles) y basado en el juego (entender el fútbol, no solo el reglamento). Cuando un coach te evalúa o dirige una charla, este es el estándar hacia el que te guía, no una opinión personal.")) +
+      ds("Cómo se califica una evaluación formal",
+        bul("<strong>Desempeño General (GP)</strong> es la imagen del partido completo: patrones, consistencia, impacto acumulado. Se fija primero, por sí solo. Los niveles son Bueno, Satisfactorio y Debajo de lo Esperado.") +
+        bul("<strong>Incidentes Críticos del Partido (CMI)</strong> son decisiones que cambian el partido, de una lista fija: penales, expulsiones, decisiones que generan o anulan un gol. Se registran aparte y ajustan la calificación después.") +
+        bul("<strong>Errores Claros del Árbitro (CRE)</strong> son errores claros de una segunda lista fija, como una amonestación no mostrada por una entrada temeraria. Siempre son errores; no tienen lado positivo.") +
+        bul("<strong>La Dificultad del Partido</strong> mide lo que el partido te exigió, no cómo lo manejaste. Solo eleva la calificación cuando el nivel de desempeño es Bueno.") +
+        dt("Por eso un solo momento grande no define tu evaluación. El partido completo fija la calificación; los incidentes la ajustan.")) +
+      ds("Los cinco valores con los que trabaja tu coach",
+        bul("<strong>Desarrollar.</strong> Cada conversación debe dejarte mejor preparado para tu próximo partido.") +
+        bul("<strong>Guiar.</strong> La experiencia se usa para ayudarte a ver lo que no pudiste ver.") +
+        bul("<strong>Motivar.</strong> La retroalimentación debe aumentar tus ganas de mejorar, no apagarlas.") +
+        bul("<strong>Dar confianza.</strong> Debes salir de la charla sintiéndote capaz, no juzgado.") +
+        bul("<strong>Proteger.</strong> El coaching te protege de malos hábitos y errores repetidos."));
+    }
+  },
+  "usrw-gm": {
+    title:"Manejo del partido",
+    sub:"El tono, el ritmo y la disciplina escalonada",
+    eyebrow:"U.S. Refereeing Way · 2 de 5",
+    keywords:"usrw manejo del partido tono ritmo ventaja disciplina escalonada advertencia amonestacion consistencia temperatura",
+    build: function() {
+      return ds("Tres principios",
+        stp(1, "<strong>Lee el contexto del juego.</strong> La misma falta en el minuto uno de un amistoso y en el noventa de una final puede merecer respuestas distintas. El ritmo, el flujo y la temperatura emocional cuentan.") +
+        stp(2, "<strong>Sabe cuándo dejar fluir el juego.</strong> No toda infracción menor necesita silbato. Un partido sobrearbitrado pierde credibilidad igual de rápido que uno subarbitrado.") +
+        stp(3, "<strong>Usa la disciplina escalonada.</strong> Advertencia verbal, advertencia pública, amonestación, expulsión. Escala cuando la conducta empeora, y deja que los jugadores vean la escalera.")) +
+      ds("Qué busca un evaluador",
+        bul("El tono en los primeros 15 minutos de cada tiempo.") +
+        bul("El mismo criterio para ambos equipos, todo el partido.") +
+        bul("Desescalar antes del incidente, no reaccionar después.") +
+        bul("Hablar proactivamente, no esperar a que el problema crezca.") +
+        bul("Reconocer cuándo cambia la temperatura del juego, y hacer algo al respecto.")) +
+      callout("74,95,193","&#128161;","El buen manejo se construye antes de que el partido se complique. El crédito que ganas temprano con presencia y conversación es el que gastas después cuando llega la decisión grande.");
+    }
+  },
+  "usrw-handball": {
+    title:"Mano: los tres conceptos",
+    sub:"Toque deliberado, cuerpo antinaturalmente más grande y goles con el brazo",
+    eyebrow:"U.S. Refereeing Way · 3 de 5",
+    keywords:"usrw mano brazo deliberado antinatural gol regla 12 axila justificable",
+    build: function() {
+      return ds("Toda decisión de mano se reduce a tres conceptos",
+        stp(1, "<strong>Toca el balón deliberadamente.</strong> La intención del movimiento decide: una mano que va hacia el balón es deliberada; un balón que golpea un brazo quieto puede no serlo.") +
+        stp(2, "<strong>El brazo hizo el cuerpo antinaturalmente más grande.</strong> La pregunta es si la posición del brazo se justifica por el movimiento del cuerpo. Extender el brazo para ganar espacio al saltar o correr es asumir un riesgo. El brazo empieza en la parte baja de la axila.") +
+        stp(3, "<strong>Un gol anotado directa o inmediatamente con la mano o el brazo no vale,</strong> aunque sea accidental, incluido el del portero. Inmediatamente es la palabra clave: si hay toques en medio, evalúa si de verdad fue inmediato.")) +
+      ds("Normalmente es mano",
+        bul("Brazo extendido, lejos del cuerpo.") +
+        bul("Posición del brazo no justificable por el movimiento.") +
+        bul("Movimiento adicional del brazo hacia el balón.") +
+        bul("El atacante anota directa o inmediatamente con la mano o el brazo.")) +
+      ds("Normalmente no es mano",
+        bul("Mano cerca del cuerpo o pegada a él.") +
+        bul("Brazo en posición justificable, como al apoyarse en una barrida.") +
+        bul("Balón que viene de la propia cabeza o pie justo antes.") +
+        bul("Posición natural de protección del cuerpo.")) +
+      callout("74,95,193","&#128161;","La consistencia es la meta de desarrollo: la misma situación sancionada igual para ambos equipos, todo el partido, explicada con el lenguaje de la Regla.");
+    }
+  },
+  "usrw-position": {
+    title:"Posicionamiento cerca del área penal",
+    sub:"La posición óptima para la decisión óptima",
+    eyebrow:"U.S. Refereeing Way · 4 de 5",
+    keywords:"usrw posicionamiento movimiento area penal angulo proximidad contraataque anticipar escanear pies en movimiento",
+    build: function() {
+      return ds("Lee la jugada antes de moverte",
+        bul("<strong>Presión sobre el balón:</strong> viene una disputa. Posiciónate para la posible falta.") +
+        bul("<strong>Camino abierto con velocidad:</strong> el ataque va rápido. Crea el ángulo cuando no puedes ganar la carrera.") +
+        bul("<strong>Jugador con la cabeza abajo:</strong> conducción. Mantente conectado al juego.") +
+        bul("<strong>Jugador con la cabeza arriba:</strong> viene un pase. Anticipa el balón, no al jugador.")) +
+      ds("Las 5 claves",
+        stp(1, "<strong>Presencia y proximidad.</strong> Entra al área penal cuando tu presencia hace falta. No hay una cerca alrededor.") +
+        stp(2, "<strong>Ángulo de visión.</strong> Posiciónate para ver los puntos de decisión, no solo para estar cerca del balón. Un paso a cualquier lado hace la diferencia.") +
+        stp(3, "<strong>Ubicación.</strong> Conoce tu salida. Fuera del camino de jugadores y balón. Escanea; no mires solo el balón.") +
+        stp(4, "<strong>Contraataques: ángulo sobre proximidad.</strong> Cuando no puedes estar cerca, los dos primeros pasos a izquierda o derecha deciden el ángulo que tendrás.") +
+        stp(5, "<strong>Pies siempre en movimiento.</strong> El balón se mueve, tú te mueves. No dejes que los jugadores te tapen la vista."));
+    }
+  },
+  "usrw-team": {
+    title:"Trabajo en equipo e intervención del AR",
+    sub:"Asistir, no insistir: cuándo sube la bandera y cuándo se queda abajo",
+    eyebrow:"U.S. Refereeing Way · 5 de 5",
+    keywords:"usrw trabajo en equipo ar asistente intervencion bandera señales silenciosas bolsillo credibilidad previa",
+    build: function() {
+      return ds("El mandato del AR",
+        dt("Asistir, no insistir. El AR aporta información y apoyo; el árbitro toma la decisión final. La única excepción es una clara aplicación incorrecta de las Reglas de Juego.")) +
+      ds("Cuatro preguntas antes de intervenir, en orden",
+        stp(1, "<strong>¿Hay una infracción clara?</strong> Sin certeza no hay base para intervenir.") +
+        stp(2, "<strong>¿Qué proximidad y ángulo tiene el árbitro?</strong> Cuanto más cerca y mejor ubicado esté, menos debe intervenir el AR.") +
+        stp(3, "<strong>¿Qué proximidad y ángulo tiene el AR?</strong> Una vista clara, no una suposición.") +
+        stp(4, "<strong>¿Cuáles son las prioridades del AR?</strong> Intervenir no puede costar la línea de fuera de juego ni la cobertura del balón.")) +
+      ds("Señales silenciosas",
+        bul("<strong>Tocar el bolsillo del pecho:</strong> conducta de amonestación.") +
+        bul("<strong>Tocar el bolsillo trasero:</strong> conducta de expulsión.") +
+        bul("<strong>Alejarse del área penal:</strong> la falta es afuera.") +
+        bul("<strong>Moverse hacia el banderín de esquina:</strong> penal, solo con certeza.")) +
+      callout("74,95,193","&#128161;","La credibilidad se reduce con la distancia. Cerca de tu línea, tu información vale más que la vista del árbitro. En el tercio lejano, la intervención se reserva para conducta violenta no vista y un penal del que estás seguro.");
+    }
+  },
   "hub-start": {
     title: "Primeros pasos", sub: "Inicia sesión, ponlo en tu teléfono, idioma, claro u oscuro", eyebrow: "Cómo usar el Hub · 1 de 7",
     keywords: "tutorial cómo empezar iniciar sesión instalar pantalla de inicio teléfono idioma español modo oscuro versión",
@@ -2950,7 +3181,8 @@ function buildCards() {
     career:   document.getElementById("grid-career"),
     policy:   document.getElementById("grid-policy"),
     contacts: document.getElementById("grid-contacts"),
-    hub:      document.getElementById("grid-hub")
+    hub:      document.getElementById("grid-hub"),
+    usrw:     document.getElementById("grid-usrw")
   };
 
   Object.keys(grids).forEach(function (k) { if (grids[k]) grids[k].innerHTML = ""; });
@@ -3037,7 +3269,7 @@ function applySearchAndFilter() {
   });
 
   // Show/hide section headers
-  var sections = ["hub","guide","laws","gameday","career","policy","contacts"];
+  var sections = ["hub","guide","laws","usrw","gameday","career","policy","contacts"];
   sections.forEach(function(s) {
     var header = document.querySelector(".section-header[data-section=\"" + s + "\"]");
     var grid = document.getElementById("grid-" + s);
