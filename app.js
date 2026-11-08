@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.08-b';
+  var VERSION = '2026.11.08-c';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -2995,7 +2995,18 @@
         pc.dataset.confirm = '1'; pc.textContent = t('signinCodeAgainBtn'); return;
       }
       pc.dataset.confirm = ''; pc.disabled = true; pc.textContent = t('signinCodeMaking');
-      try { var j = await post({ action: 'signinCode', email: em }); CODE_MADE[em] = Date.now(); $('ppCodeBox').innerHTML = '<div class="card" style="border-color:var(--gold);gap:4px;margin:8px 0 0"><div class="hint">' + esc(t('signinCodeRead')) + '</div><div class="disp" style="font-size:48px;letter-spacing:.12em">' + esc(j.code) + '</div><div class="hint">' + esc(t('signinCodeHow').replace('{email}', em)) + '</div></div>'; }
+      try {
+        var j = await post({ action: 'signinCode', email: em }); CODE_MADE[em] = Date.now();
+        $('ppCodeBox').innerHTML = '<div class="card" style="border-color:var(--gold);gap:4px;margin:8px 0 0"><div class="hint">' + esc(t('signinCodeRead')) + '</div><div class="disp" style="font-size:48px;letter-spacing:.12em">' + esc(j.code) + '</div><div class="hint">' + esc(t('signinCodeHow').replace('{email}', em)) + '</div>' +
+          (j.link ? '<button class="btn outline small" id="ppCodeLink" style="margin-top:8px">' + esc(t('signinLinkCopy')) + '</button><div class="hint">' + esc(t('signinLinkHint')) + '</div>' : '') + '</div>';
+        var lb = $('ppCodeLink');
+        if (lb) lb.onclick = async function () {
+          var ok = false;
+          try { await navigator.clipboard.writeText(j.link); ok = true; } catch (e) {}
+          if (!ok) { try { window.prompt(t('signinLinkCopyManual'), j.link); ok = true; } catch (e2) {} }
+          lb.textContent = ok ? t('signinLinkCopied') : t('signinLinkCopy');
+        };
+      }
       catch (e) { say('ppMsg', t('reviewFailed') + ' ' + (e.message || ''), 'bad'); }
       pc.disabled = false; pc.textContent = t('signinCodeBtn');
     };
