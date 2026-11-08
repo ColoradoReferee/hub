@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.07-b';
+  var VERSION = '2026.11.07-c';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -3211,6 +3211,7 @@
       '<div class="card no-print" style="gap:10px">' +
       (e ? '<div class="msg good" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span>' + esc(t('eodEditing')) + ' <b>' + esc(e.staff_name) + '</b>, ' + esc(dayLong(e.date)) + '</span><button class="btn outline small" id="eodEditCancel">' + esc(t('cancel')) + '</button></div>' : '') +
       '<div class="hint" style="font-weight:700">' + esc(t('eodRole')) + '</div><div class="chips">' + roles.map(function (k) { return '<button class="chip-btn' + (EOD.role === k ? ' on' : '') + '" data-role="' + k + '">' + esc(t('roles.' + k)) + '</button>'; }).join('') + '</div>' +
+      (canEditAny && !e ? '<label class="hint" style="font-weight:700" for="eodWho">' + esc(t('eodWho')) + '</label><input id="eodWho" value="' + esc(S.me.first_name + ' ' + S.me.last_name) + '" style="' + inp + '"><div class="hint">' + esc(t('eodWhoHint')) + '</div>' : '') +
       '<label class="hint" style="font-weight:700" for="eodDate">' + esc(t('eodDate')) + '</label><input id="eodDate" type="date" value="' + esc(e ? e.date : (EOD.date || today)) + '" style="' + inp + '">' +
       '<label class="hint" style="font-weight:700" for="eodVenue">' + esc(t('eodVenue')) + '</label>' + venueField + '<div class="hint" id="eodVenueHint">' + esc(t('eodVenueHint')) + '</div>' +
       '<div class="grid2"><div><label class="hint" style="font-weight:700" for="eodIn">' + esc(t('eodIn')) + '</label><input id="eodIn" type="time" value="' + esc(e ? hhmm(e.time_in) : '') + '" style="' + inp + '"></div><div><label class="hint" style="font-weight:700" for="eodOut">' + esc(t('eodOut')) + '</label><input id="eodOut" type="time" value="' + esc(e ? hhmm(e.time_out) : '') + '" style="' + inp + '"></div></div>' +
@@ -3250,6 +3251,8 @@
       var venue = $('eodVenue').value, ev = null;
       S.events.forEach(function (x) { if (!ev && (x.venues || []).some(function (v) { return key(v) === key(venue); })) ev = x; });
       var who = EOD.edit && canEditAny ? EOD.edit.staff_name : (S.me.first_name + ' ' + S.me.last_name);
+      var whoEl = $('eodWho');
+      if (!EOD.edit && canEditAny && whoEl && whoEl.value.trim()) who = whoEl.value.trim();
       try {
         var jr = await sb.rpc('hub_eod', { p: { event: ev ? ev.id : '', date: $('eodDate').value, venue: venue, staff_name: who, role: EOD.role, time_in: tin, time_out: tout, notes: $('eodNotes').value.trim() } });
         if (jr.error) throw new Error(jr.error.message);
