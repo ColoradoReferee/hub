@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.07-d';
+  var VERSION = '2026.11.08-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -3772,10 +3772,21 @@
       (rows.length ? '<div class="pad">' + rows.map(function (n) {
         var open = LINK.pick && LINK.pick.name_key === n.name_key;
         return '<div class="rowline" style="flex-direction:column;align-items:stretch;gap:6px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><a class="refname" href="#" data-link="' + esc(n.name_key) + '"><b>' + esc(n.name) + '</b></a><span class="hint">' + n.games + ' ' + esc(t('linkGames')) + ', ' + esc(n.last_game ? dayLong(n.last_game) : '') + '</span></div><div class="hint">' + esc(n.venues || '') + '</div>' +
-          (open ? '<div class="hint" style="font-weight:700">' + esc(t('linkPick')) + '</div><div class="chips">' + (LINK.suggest.length ? LINK.suggest.map(function (p) { return '<button class="chip-btn" data-linkto="' + p.id + '">' + esc(p.first_name + ' ' + p.last_name) + (p.city ? ' <small>' + esc(p.city) + '</small>' : '') + '</button>'; }).join('') : '<span class="hint">' + esc(t('linkNoSuggest')) + '</span>') + '</div><div class="hint">' + esc(t('linkOther')) + '</div><div class="msg" id="linkMsg" hidden></div>' : '') + '</div>';
+          (open ? '<div class="hint" style="font-weight:700">' + esc(t('linkPick')) + '</div><div class="chips">' + (LINK.suggest.length ? LINK.suggest.map(function (p) { return '<button class="chip-btn" data-linkto="' + p.id + '">' + esc(p.first_name + ' ' + p.last_name) + (p.city ? ' <small>' + esc(p.city) + '</small>' : '') + '</button>'; }).join('') : '<span class="hint">' + esc(t('linkNoSuggest')) + '</span>') + '</div><div class="hint">' + esc(t('linkOther')) + '</div><button class="btn outline small" data-dismissname="1" style="margin-top:6px">' + esc(t('linkDismiss')) + '</button><div class="msg" id="linkMsg" hidden></div>' : '') + '</div>';
       }).join('') + '</div>' : '<div class="card"><div class="hint">' + esc(t('linkNone')) + '</div></div>');
     $('peopleResults').querySelectorAll('[data-link]').forEach(function (a) { a.onclick = async function (e) { e.preventDefault(); var k = a.getAttribute('data-link'); var n = LINK.rows.filter(function (x) { return x.name_key === k; })[0]; LINK.pick = n; busy(true); var s = await sb.rpc('suggest_people', { p_name: n.name }); busy(false); LINK.suggest = s.data || []; renderLinks(); }; });
     $('peopleResults').querySelectorAll('[data-linkto]').forEach(function (b) { b.onclick = function () { linkTo(parseInt(b.getAttribute('data-linkto'), 10), b); }; });
+    // An out-of-state crew name is never going to match a Colorado person.
+    var dn = $('peopleResults').querySelector('[data-dismissname]');
+    if (dn) dn.onclick = async function () {
+      if (!LINK.pick) return;
+      dn.disabled = true;
+      var r = await sb.rpc('dismiss_name', { p_name: LINK.pick.name });
+      if (r.error) { var m = $('linkMsg'); if (m) { m.hidden = false; m.className = 'msg bad'; m.textContent = r.error.message; } dn.disabled = false; return; }
+      LINK.rows = LINK.rows.filter(function (x) { return x.name_key !== LINK.pick.name_key; });
+      LINK.pick = null; LINK.suggest = [];
+      renderLinks();
+    };
   }
   async function linkTo(personId, b) {
     if (!LINK.pick) return;
