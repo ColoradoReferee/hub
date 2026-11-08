@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.07-a';
+  var VERSION = '2026.11.07-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -3982,9 +3982,16 @@
     $('verifyBtn').disabled = true;
     var r = await sb.auth.verifyOtp({ email: email, token: code, type: 'email' });
     // A code made for the referee at Referee HQ is the other kind; accept both.
+    var firstErr = r.error ? (r.error.message || r.error.code || String(r.error.status || '')) : '';
     if (r.error) { try { r = await sb.auth.verifyOtp({ email: email, token: code, type: 'magiclink' }); } catch (e) {} }
     $('verifyBtn').disabled = false;
-    if (r.error) { say('msgCode', t('badCode'), 'bad'); return; }
+    if (r.error) {
+      // Say what the server actually said, so a failure names itself
+      // instead of hiding behind one generic line.
+      var secondErr = r.error.message || r.error.code || String(r.error.status || '');
+      say('msgCode', t('badCode') + ' [' + email + ' / ' + firstErr + ' / ' + secondErr + ']', 'bad');
+      return;
+    }
     await start();
   };
 
