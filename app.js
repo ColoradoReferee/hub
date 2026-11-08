@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.07-c';
+  var VERSION = '2026.11.07-d';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -2983,9 +2983,19 @@
     if (es) es.onclick = async function () { es.disabled = true; var r = await sb.rpc('set_person_email', { p_person: p.id, p_email: $('ppEmail').value.trim() }); es.disabled = false; if (r.error) { say('ppMsg', r.error.message, 'bad'); return; } p.email = $('ppEmail').value.trim().toLowerCase(); say('ppMsg', t('emailSaved'), 'good'); };
     var pc = $('ppCode');
     if (pc) pc.onclick = async function () {
-      var em = ($('ppEmail').value || p.email || '').trim(); if (!em) { say('ppMsg', t('emailFirst'), 'bad'); return; }
-      pc.disabled = true; pc.textContent = t('signinCodeMaking');
-      try { var j = await post({ action: 'signinCode', email: em }); $('ppCodeBox').innerHTML = '<div class="card" style="border-color:var(--gold);gap:4px;margin:8px 0 0"><div class="hint">' + esc(t('signinCodeRead')) + '</div><div class="disp" style="font-size:48px;letter-spacing:.12em">' + esc(j.code) + '</div><div class="hint">' + esc(t('signinCodeHow').replace('{email}', em)) + '</div></div>'; }
+      var em = ($('ppEmail').value || p.email || '').trim().toLowerCase(); if (!em) { say('ppMsg', t('emailFirst'), 'bad'); return; }
+      // The code is tied to the exact email it is minted for. A code made
+      // for an address typed but never saved is a mismatch waiting to
+      // happen on the next visit to this card.
+      if (em !== String(p.email || '').trim().toLowerCase()) { say('ppMsg', t('signinCodeSaveFirst'), 'bad'); return; }
+      // One live code at a time. A second tap inside the hour must be a
+      // deliberate choice, because it kills the code already read out.
+      var madeAt = CODE_MADE[em] || 0;
+      if (Date.now() - madeAt < 3600000 && pc.dataset.confirm !== '1') {
+        pc.dataset.confirm = '1'; pc.textContent = t('signinCodeAgainBtn'); return;
+      }
+      pc.dataset.confirm = ''; pc.disabled = true; pc.textContent = t('signinCodeMaking');
+      try { var j = await post({ action: 'signinCode', email: em }); CODE_MADE[em] = Date.now(); $('ppCodeBox').innerHTML = '<div class="card" style="border-color:var(--gold);gap:4px;margin:8px 0 0"><div class="hint">' + esc(t('signinCodeRead')) + '</div><div class="disp" style="font-size:48px;letter-spacing:.12em">' + esc(j.code) + '</div><div class="hint">' + esc(t('signinCodeHow').replace('{email}', em)) + '</div></div>'; }
       catch (e) { say('ppMsg', t('reviewFailed') + ' ' + (e.message || ''), 'bad'); }
       pc.disabled = false; pc.textContent = t('signinCodeBtn');
     };
@@ -3119,6 +3129,9 @@
   // EOD.edit holds the report being corrected (tap a report to load it);
   // the backend keys on date + event + name, so filing again updates it.
   // EOD.pay is a day to print as a payroll sheet (everyone who filed).
+  // When this device last minted a read-out code, by email. Guards the
+  // generator against an accidental second tap killing a live code.
+  var CODE_MADE = {};
   var EOD = { mine: [], all: [], date: '', venues: [], role: 'sc', edit: null, pay: null };
   function canEod() { return iCan('coaching') || iCan('scheduling') || iCan('command_center'); }
   function roleLabel(r) { var k = String(r || 'other').toLowerCase(), v = t('roles.' + k); return v === 'roles.' + k ? k.toUpperCase() : v; }
@@ -3990,9 +4003,11 @@
     $('verifyBtn').disabled = false;
     if (r.error) {
       // Say what the server actually said, so a failure names itself
-      // instead of hiding behind one generic line.
+      // instead of hiding behind one generic line. A used or replaced
+      // code gets the guidance that would have saved tonight's calls.
       var secondErr = r.error.message || r.error.code || String(r.error.status || '');
-      say('msgCode', t('badCode') + ' [' + email + ' / ' + firstErr + ' / ' + secondErr + ']', 'bad');
+      var dead = /expired|invalid/i.test(firstErr + secondErr);
+      say('msgCode', t(dead ? 'codeDead' : 'badCode') + ' [' + email + ' / ' + firstErr + ' / ' + secondErr + ']', 'bad');
       return;
     }
     await start();
