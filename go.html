@@ -1,0 +1,87 @@
+<!doctype html>
+<!-- go.html v2026.11.08-a · Colorado Referees Hub · the tap-to-sign-in page.
+     A texted sign-in link must not point at the auth endpoint directly:
+     messaging apps fetch every link to draw a preview, the fetch counts
+     as the visit, and the one-use token dies before a human taps. This
+     page is what gets texted instead. Robots fetching it see static
+     HTML; the token is only spent when a person taps the button, which
+     calls the verify from the browser and lands the session in the same
+     storage the Hub reads. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Colorado Referees</title>
+<link rel="icon" type="image/png" href="assets/co-referee-program.png">
+<style>
+  :root { --navy:#1B2F55; --gold:#C8921A; --gold2:#F5C842; --ink:#15213B; --bg:#F6F3EC; --card:#FFFFFF; --muted:#C9C2B4; --red:#C8102E; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#0B1220; --card:#121C33; --ink:#F2EFE8; --muted:#2A3650; }
+  }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family:Arial,Helvetica,sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .card { background:var(--card); border-radius:14px; padding:28px 22px; max-width:420px; width:100%; text-align:center; border-top:6px solid var(--gold); box-shadow:0 8px 30px rgba(0,0,0,.18); }
+  img.mark { width:72px; height:auto; margin-bottom:10px; }
+  h1 { font-size:22px; margin-bottom:6px; }
+  p { font-size:15px; line-height:1.45; margin:8px 0 18px; opacity:.85; }
+  button { font:inherit; font-weight:700; font-size:18px; width:100%; padding:16px; border:0; border-radius:10px; background:var(--navy); color:#fff; cursor:pointer; }
+  button:disabled { opacity:.6; }
+  .msg { margin-top:14px; font-size:14px; display:none; }
+  .msg.bad { color:var(--red); display:block; }
+  .msg.good { color:#1d7a3f; display:block; font-weight:700; }
+  .foot { margin-top:18px; font-size:11px; opacity:.55; }
+</style>
+</head>
+<body>
+<div class="card">
+  <img class="mark" src="assets/co-referee-program.png" alt="">
+  <h1 id="h">Sign in to the Hub</h1>
+  <p id="p">Tap the button and you are in. This works once; if it says the link was used, ask Referee HQ for a fresh one.</p>
+  <button id="go">Sign in / Iniciar sesi&oacute;n</button>
+  <div class="msg" id="m"></div>
+  <div class="foot" id="f">Colorado Soccer Referee Program &middot; v2026.11.08-a</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+(function () {
+  var es = false;
+  try { es = localStorage.getItem('hub-lang') === 'es'; } catch (e) {}
+  try { if (!es && /^es/i.test(navigator.language || '')) es = true; } catch (e) {}
+  if (es) {
+    document.documentElement.lang = 'es';
+    document.getElementById('h').textContent = 'Entrar al Hub';
+    document.getElementById('p').textContent = 'Toca el botón y entras. Funciona una sola vez; si dice que el enlace ya se usó, pide uno nuevo en la carpa.';
+  }
+  var qs = new URLSearchParams(location.search);
+  var th = (qs.get('th') || '').trim();
+  var btn = document.getElementById('go');
+  var msg = document.getElementById('m');
+  function bad(x) { msg.className = 'msg bad'; msg.textContent = x; }
+  if (!th) { btn.disabled = true; bad(es ? 'A este enlace le falta su clave. Pide uno nuevo.' : 'This link is missing its key. Ask for a fresh one.'); }
+  btn.onclick = async function () {
+    btn.disabled = true;
+    btn.textContent = es ? 'Entrando...' : 'Signing in...';
+    try {
+      var sb = window.supabase.createClient(window.HUB.supabaseUrl, window.HUB.publishableKey);
+      var r = await sb.auth.verifyOtp({ token_hash: th, type: 'magiclink' });
+      if (r.error) { r = await sb.auth.verifyOtp({ token_hash: th, type: 'email' }); }
+      if (r.error) {
+        btn.disabled = false;
+        btn.textContent = es ? 'Entrar / Sign in' : 'Sign in / Iniciar sesión';
+        bad((es ? 'No funcionó: ' : 'That did not work: ') + (r.error.message || '') + (es ? '. Pide un enlace nuevo y toca solo una vez.' : '. Ask for a fresh link and tap only once.'));
+        return;
+      }
+      msg.className = 'msg good';
+      msg.textContent = es ? 'Listo. Abriendo el Hub...' : 'You are in. Opening the Hub...';
+      setTimeout(function () { location.replace('index.html'); }, 400);
+    } catch (e) {
+      btn.disabled = false;
+      bad(String(e && e.message || e));
+    }
+  };
+})();
+</script>
+</body>
+</html>

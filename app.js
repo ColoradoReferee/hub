@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.08-e';
+  var VERSION = '2026.11.08-f';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -3011,6 +3011,7 @@
       pc.dataset.confirm = ''; pc.disabled = true; pc.textContent = t('signinCodeMaking');
       try {
         var j = await post({ action: 'signinCode', email: em }); CODE_MADE[em] = Date.now();
+        if (j.hash) { try { j.link = new URL('go.html?th=' + encodeURIComponent(j.hash), location.href).href; } catch (e) {} }
         $('ppCodeBox').innerHTML = '<div class="card" style="border-color:var(--gold);gap:4px;margin:8px 0 0"><div class="hint">' + esc(t('signinCodeRead')) + '</div><div class="disp" style="font-size:48px;letter-spacing:.12em">' + esc(j.code) + '</div><div class="hint">' + esc(t('signinCodeHow').replace('{email}', em)) + '</div>' +
           (j.link ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn outline small" id="ppCodeSms">' + esc(t('signinLinkSmsBtn')) + '</button><button class="btn outline small" id="ppCodeLink">' + esc(t('signinLinkCopy')) + '</button></div><div class="hint">' + esc(t('signinLinkHint')) + '</div><div class="msg" id="ppLinkMsg" hidden></div>' : '') + '</div>';
         var sm = $('ppCodeSms');
