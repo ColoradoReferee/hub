@@ -1,4 +1,4 @@
-/* app.css · Colorado Referees Hub · 2026.11.08-i
+/* app.css · Colorado Referees Hub · 2026.11.08-j
    Tokens once, two themes, every component. Nothing page-specific.
    2026.11.08-h: the Matchday layer. Broadcast hero with the Front Range
    ridgeline, fixtures-board stat strips, notched primary buttons, the
@@ -471,13 +471,23 @@ details.fold > .fold-body > .list { padding-top: 8px; }
 .hero-md .sub { color: #C9D4EC; font-size: 15px; margin-top: 4px; }
 
 .crew { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; align-items: flex-start; }
-.mate { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11.5px; color: #8FA0C4; min-width: 60px; max-width: 76px; text-align: center; }
-.ava { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; background: #22365F; color: #E9EDF5; border: 2px solid #263650; flex: none; }
-.mate.you .ava { border-color: #FFC400; background: #2A3E68; }
-.mate.you .role { color: #FFC400; font-weight: 800; }
-.mate .nm { color: #F3F5FA; font-weight: 700; font-size: 12.5px; line-height: 1.15; }
-.mate .in { color: #3DBA63; font-weight: 800; }
-.crewfull { display: flex; align-items: center; gap: 7px; font-weight: 800; font-size: 13px; color: #3DBA63; margin-top: 10px; }
+.mate { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11.5px; color: var(--muted); min-width: 60px; max-width: 76px; text-align: center; }
+.ava { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; background: var(--line); color: var(--ink); border: 2px solid var(--line); flex: none; }
+.mate.you .ava { border-color: var(--gold); }
+.mate.you .role { color: var(--gold); font-weight: 800; }
+.mate .nm { color: var(--ink); font-weight: 700; font-size: 12.5px; line-height: 1.15; }
+.mate .in { color: var(--green); font-weight: 800; }
+.crewfull { display: flex; align-items: center; gap: 7px; font-weight: 800; font-size: 13px; color: var(--green); margin-top: 10px; }
+/* On the alpenglow hero the crew wears the broadcast palette. */
+.hero-md .mate { color: #8FA0C4; }
+.hero-md .ava { background: #22365F; color: #E9EDF5; border-color: #263650; }
+.hero-md .mate.you .ava { border-color: #FFC400; background: #2A3E68; }
+.hero-md .mate.you .role { color: #FFC400; }
+.hero-md .mate .nm { color: #F3F5FA; }
+.hero-md .mate .in { color: #3DBA63; }
+.hero-md .crewfull { color: #3DBA63; }
+.vsline { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 26px; line-height: 1.05; }
+.vsline .vs { font-family: var(--body); font-style: normal; font-weight: 700; font-size: 13px; color: var(--muted); }
 
 .cardglyph { display: inline-block; width: 12px; height: 17px; border-radius: 2px; transform: rotate(-8deg); background: var(--green); box-shadow: 0 1px 3px rgba(0,0,0,.4); flex: none; }
 .cardglyph.y { background: #FFC400; }
