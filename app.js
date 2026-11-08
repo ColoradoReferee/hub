@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.08-j';
+  var VERSION = '2026.11.08-k';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1156,7 +1156,88 @@
       '<div class="actions" style="padding:0"><button class="btn primary" id="sesSave">' + esc(t('sesSave')) + '</button><button class="btn outline" id="sesCancelForm">' + esc(t('neverMind')) + '</button></div><div class="msg" id="sesFormMsg" hidden></div></div>';
     var item = function (x) { var n = SES.counts[String(x.id)] || 0; return '<a class="item" href="#" data-ses-open="' + x.id + '"><div><b>' + esc(t('sesKind.' + x.kind)) + ': ' + esc(x.title) + '</b>' + (x.active ? '' : ' <span class="pill">' + esc(t('evOff')) + '</span>') + '<br><span class="hint">' + sessionLine(x) + '. ' + n + (x.capacity ? ' / ' + x.capacity : '') + ' ' + esc(t('sesSignedUp')) + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; };
     return '<div class="disp h2">' + esc(t('sesSetupTitle')) + '</div>' + form + (SES.list.length ? '<div class="list">' + SES.list.map(item).join('') + '</div>' : '<div class="pad hint">' + esc(t('sesNone')) + '</div>') +
-      (SES.past.length ? fold('sespast', t('sesPast'), SES.past.length, '<div class="list">' + SES.past.map(item).join('') + '</div>', false) : '');
+      (SES.past.length ? fold('sespast', t('sesPast'), SES.past.length, '<div class="list">' + SES.past.map(item).join('') + '</div>', false) : '') +
+      '<div class="pad" style="padding-top:10px"><button class="btn outline small" id="sesExport">' + esc(t('fitExport')) + '</button><div class="hint" style="padding-top:6px">' + esc(t('fitExportHint')) + '</div><div class="msg" id="sesExpMsg" hidden></div></div>';
+  }
+  // The US Soccer State Fitness Test Submission workbook, straight from
+  // the program's own fitness records. One component row per test, in
+  // the December 2024 workbook's exact column order. Recording rules
+  // from the protocol guide: record the protocol actually run (the
+  // Colorado Regional test IS the Women's Category 1 protocol, whoever
+  // ran it; the women's Regional test is Women's Lower categories);
+  // never invent a missing sprint, attempt or interval; a finished
+  // interval test is 40; a historical Pass or Fail stands as recorded.
+  var FIT_PROTO = {
+    national:  { g: "Men's",   c: 'Category 1',       purpose: 'National preparation' },
+    regional:  { g: "Women's", c: 'Category 1',       purpose: 'Regional evaluation' },
+    regional3: { g: "Women's", c: 'Lower categories', purpose: 'Regional evaluation' }
+  };
+  var FIT_SUBMIT_HEAD = ['ussf_id', 'first_name', 'last_name', 'official_gender', 'role', 'test_date', 'test_purpose', 'protocol_gender', 'protocol_category', 'test_type', 'standard_version', 'sprint_1_seconds', 'sprint_2_seconds', 'sprint_3_seconds', 'sprint_4_seconds', 'sprint_5_seconds', 'sprint_6_seconds', 'sprint_7_seconds', 'attempt_1_seconds', 'attempt_2_seconds', 'run_time_seconds', 'walk_time_seconds', 'intervals_completed', 'recorded_result', 'source_verified', 'notes', 'submission_status'];
+  async function exportFitnessSubmission() {
+    busy(true);
+    try {
+      await loadXlsxLib();
+      var ses = await fetchAll(function () { return sb.from('sessions').select('id,date,standard').eq('kind', 'fitness').order('date'); });
+      var list = ses.data || [];
+      var byId = {}; list.forEach(function (x) { byId[String(x.id)] = x; });
+      var ids = list.map(function (x) { return x.id; });
+      var signs = [];
+      for (var i = 0; i < ids.length; i += 50) {
+        var chunk = ids.slice(i, i + 50);
+        var r = await fetchAll(function () { return sb.from('session_signups').select('session_id,person_id,status,rsa,coda,interval_fail_run,interval_runs').in('session_id', chunk); });
+        signs = signs.concat(r.data || []);
+      }
+      signs = signs.filter(function (s) { return ['no_show', 'withdrawn', 'waitlist'].indexOf(s.status) < 0; });
+      var pids = {}; signs.forEach(function (s) { if (s.person_id) pids[s.person_id] = 1; });
+      var plist = Object.keys(pids), peeps = {};
+      for (var j = 0; j < plist.length; j += 200) {
+        var pchunk = plist.slice(j, j + 200);
+        var pr = await fetchAll(function () { return sb.from('people').select('id,ussf_id,first_name,last_name,gender').in('id', pchunk); });
+        (pr.data || []).forEach(function (p) { peeps[String(p.id)] = p; });
+      }
+      var rows = [];
+      signs.forEach(function (s) {
+        var x = byId[String(s.session_id)], p = peeps[String(s.person_id)];
+        if (!x || !p) return;
+        var kind = stdKey(x), std = FIT[kind], pro = FIT_PROTO[kind];
+        var g = p.gender === 'male' ? 'Male' : p.gender === 'female' ? 'Female' : '';
+        var ussf = String(p.ussf_id || ''); if (/^manual-/i.test(ussf)) ussf = '';
+        var base = function () { return [ussf, p.first_name || '', p.last_name || '', g, 'Referee', x.date, pro.purpose, pro.g, pro.c, '', 'December 2024', '', '', '', '', '', '', '', '', '', '', '', '', '', 'Yes', '', '']; };
+        var a = rsaVerdict(s.rsa, std.rsa);
+        if (a === 'pass' || a === 'fail') {
+          var row = base(); row[9] = 'Repeated Sprint Ability 40m';
+          for (var k = 0; k < 7; k++) { var v = (s.rsa || [])[k]; if (v != null && v !== '') row[11 + k] = Number(v); }
+          row[23] = a === 'pass' ? 'Pass' : 'Fail';
+          rows.push(row);
+        }
+        var b = intervalVerdict(s);
+        if (b === 'pass' || b === 'fail') {
+          var row2 = base(); row2[9] = 'Interval Test 75m / 25m';
+          row2[20] = std.run; row2[21] = std.walk;
+          row2[22] = b === 'fail' ? Math.max(0, (s.interval_fail_run || 1) - 1) : (s.interval_runs || INTERVAL_RUNS);
+          row2[23] = b === 'pass' ? 'Pass' : 'Fail';
+          rows.push(row2);
+        }
+        var c = codaVerdict(s.coda, std.coda);
+        if (c === 'pass' || c === 'fail') {
+          var row3 = base(); row3[4] = 'Assistant Referee'; row3[8] = 'Category 1'; row3[9] = 'CODA';
+          var tr = (s.coda || []).filter(function (v) { return v != null && v !== ''; });
+          if (tr[0] != null) row3[18] = Number(tr[0]);
+          if (tr[1] != null) row3[19] = Number(tr[1]);
+          row3[23] = c === 'pass' ? 'Pass' : 'Fail';
+          row3[25] = 'CODA run during a referee fitness session';
+          rows.push(row3);
+        }
+      });
+      var m = $('sesExpMsg');
+      if (!rows.length) { if (m) { m.hidden = false; m.className = 'msg'; m.textContent = t('fitExportNone'); } return; }
+      var wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([FIT_SUBMIT_HEAD].concat(rows)), 'State Submission');
+      XLSX.writeFile(wb, 'CO-State-Fitness-Submission-' + todayStr() + '.xlsx');
+      if (m) { m.hidden = false; m.className = 'msg good'; m.textContent = t('fitExportDone').replace('{n}', rows.length); }
+    } catch (e) {
+      var m2 = $('sesExpMsg'); if (m2) { m2.hidden = false; m2.className = 'msg bad'; m2.textContent = String(e && e.message || e); }
+    } finally { busy(false); }
   }
   async function openSession(id) {
     SES.open = id; busy(true);
@@ -1181,6 +1262,7 @@
     root.querySelectorAll('[data-ses-open]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); openSession(parseInt(a.getAttribute('data-ses-open'), 10)); }; });
     var bk = $('sesBack'); if (bk) bk.onclick = function () { SES.open = null; renderSetup(); };
     var pr = $('sesPrint'); if (pr) pr.onclick = function () { window.print(); };
+    var ex = $('sesExport'); if (ex) ex.onclick = function () { ex.disabled = true; exportFitnessSubmission().then(function () { ex.disabled = false; }); };
     var cl = $('sesClose'); if (cl) cl.onclick = async function () { var x = sessionById(SES.open); if (!x || !window.confirm(t('sesCancelConfirm'))) return; await sb.from('sessions').update({ active: !x.active }).eq('id', x.id); SES.open = null; await loadSessions_(); renderSetup(); };
     var dl = $('sesDelete'); if (dl) dl.onclick = async function () { var x = sessionById(SES.open); if (!x || !window.confirm(t('sesDeleteConfirm').replace('{title}', x.title))) return; var r = await sb.from('sessions').delete().eq('id', x.id); if (r.error) { say('fitMsg', r.error.message, 'bad'); return; } SES.open = null; await loadSessions_(); renderSetup(); };
     root.querySelectorAll('[data-ses-res]').forEach(function (b) { b.onclick = async function () {
