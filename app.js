@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.08-f';
+  var VERSION = '2026.11.08-g';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -4055,8 +4055,8 @@
     // A code made for the referee at Referee HQ is the other kind; accept both.
     var firstErr = r.error ? (r.error.message || r.error.code || String(r.error.status || '')) : '';
     if (r.error) { try { r = await sb.auth.verifyOtp({ email: email, token: code, type: 'magiclink' }); } catch (e) {} }
-    $('verifyBtn').disabled = false;
     if (r.error) {
+      $('verifyBtn').disabled = false;
       // Say what the server actually said, so a failure names itself
       // instead of hiding behind one generic line. A used or replaced
       // code gets the guidance that would have saved tonight's calls.
@@ -4065,6 +4065,7 @@
       say('msgCode', t(dead ? 'codeDead' : 'badCode') + ' [' + email + ' / ' + firstErr + ' / ' + secondErr + ']', 'bad');
       return;
     }
+    say('msgCode', t('signingIn'), 'good');
     await start();
   };
 
