@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.08-g';
+  var VERSION = '2026.11.08-h';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -190,7 +190,31 @@
     if (id === 's-signin') signinBuls();
     // State, Setup and the board are read on desktops too; they get the width.
     document.body.classList.toggle('wide', id === 's-state' || id === 's-setup' || id === 's-ops');
+    renderTabbar(id);
     window.scrollTo(0, 0);
+  }
+  // The bottom tab bar: the sections a person moves between all day.
+  // Everyone gets Your day, Notes and the Library; the board when they run
+  // the weekend, else Coaching when they coach. Hidden before sign-in and
+  // on the guardian view.
+  function renderTabbar(id) {
+    var tb = $('tabbar'); if (!tb) return;
+    var on = !!(S.me && S.me.person_id) && id !== 's-signin' && id !== 's-family';
+    tb.classList.toggle('on', on);
+    document.body.classList.toggle('tabbed', on);
+    if (!on) return;
+    var board = iCan('command_center'), coach = !board && iCan('coaching');
+    tb.querySelector('[data-tab-board]').hidden = !board;
+    tb.querySelector('[data-tab-coach]').hidden = !coach;
+    tb.querySelector('[data-tab-library]').href = C.library || 'library.html';
+    var h = location.hash || '#day';
+    var act = h === '#day' || h === '' || h === '#' ? 'day'
+      : h.indexOf('#notes') === 0 ? 'notes'
+      : (h.indexOf('#ops') === 0 || h.indexOf('#center') === 0) ? 'board'
+      : h.indexOf('#coach') === 0 ? 'coach' : '';
+    ['day', 'notes', 'board', 'coach', 'library'].forEach(function (k) {
+      var a = tb.querySelector('[data-tab-' + k + ']'); if (a) a.classList.toggle('on', act === k);
+    });
   }
 
   // ── Data ─────────────────────────────────────────────────────────
@@ -248,8 +272,12 @@
     S.prem = r[13] && r[13].data || null;
     S.games = (r[0].data || []).filter(function (x) { return ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(x[k])) >= 0; }); });
     S.events = r[1].data || [];
-    S.checkins = {};
-    (r[2].data || []).forEach(function (c) { if (c.game_id && keys.indexOf(key(c.ref_name)) >= 0) S.checkins[String(c.game_id)] = c.created_at; });
+    S.checkins = {}; S.checkinsAll = {};
+    (r[2].data || []).forEach(function (c) {
+      if (!c.game_id) return;
+      if (keys.indexOf(key(c.ref_name)) >= 0) S.checkins[String(c.game_id)] = c.created_at;
+      (S.checkinsAll[String(c.game_id)] = S.checkinsAll[String(c.game_id)] || {})[key(c.ref_name)] = c.created_at;
+    });
     S.notes = r[3].data || [];
     S.bulletins = r[4].data || [];
     S.scores = {}; (r[5].data || []).forEach(function (x) { S.scores[String(x.game_id)] = x; });
@@ -688,28 +716,77 @@
   var WRAP_FROM = [11, 15], WRAP = { me: null, board: null, club: '', year: null, open: false };
   // The compact year-round version: three numbers, standing, and the next
   // milestone. The full wrap with the leaderboard still arrives Nov 15.
-  var SEAS = { year: null, data: null, tried: false };
+  var SEAS = { year: null, data: null, tried: false, months: null, mTried: false };
+  // The season board: the ring is the C from the Colorado flag, filling
+  // as the year's games count up toward the next milestone. Months come
+  // from my_months (097); the board stands without them until it runs.
   async function renderSeason() {
     var el = $('seasonLine'); if (!el) return;
     var y = new Date().getFullYear();
-    if (SEAS.year !== y) { SEAS.year = y; SEAS.data = null; SEAS.tried = false; }
+    if (SEAS.year !== y) { SEAS.year = y; SEAS.data = null; SEAS.tried = false; SEAS.months = null; SEAS.mTried = false; }
     if (!SEAS.data && !SEAS.tried) {
       SEAS.tried = true;
       try { var r = await sb.rpc('my_season', { p_year: y }); SEAS.data = r.data || null; } catch (e) { SEAS.data = null; }
     }
+    if (!SEAS.months && !SEAS.mTried) {
+      SEAS.mTried = true;
+      try { var r2 = await sb.rpc('my_months', { p_year: y }); SEAS.months = (r2.data && r2.data.length === 12) ? r2.data : null; } catch (e2) { SEAS.months = null; }
+    }
     var m = SEAS.data;
     if (!m || !m.games) { el.innerHTML = ''; return; }
     var stat = function (n, l) { return '<div class="stat"><b>' + esc(n == null ? '0' : String(n)) + '</b><i>' + esc(l) + '</i></div>'; };
-    var mile = '';
-    [10, 25, 50, 75, 100, 150, 200, 250, 300].some(function (ms) { if (ms > Number(m.games)) { if (ms - m.games <= 7) mile = t('seasonMile').replace('{d}', ms - m.games).replace('{m}', ms); return true; } return false; });
+    var games = Number(m.games), next = null;
+    [10, 25, 50, 75, 100, 150, 200, 250, 300].some(function (ms) { if (ms > games) { next = ms; return true; } return false; });
     var hit = null;
-    [300, 250, 200, 150, 100, 75, 50, 25, 10].some(function (ms) { if (Number(m.games) >= ms) { hit = ms; return true; } return false; });
-    var badges = (hit ? '<span class="pill ok">' + esc(t('seasonBadgeGames').replace('{m}', hit)) + '</span> ' : '') +
-      (m.fitness_date ? '<span class="pill ok">' + esc(t('seasonBadgeFit')) + '</span>' : '');
-    el.innerHTML = '<div class="pad" style="padding-top:16px"><div class="kicker">' + esc(t('seasonTitle').replace('{y}', y)) + '</div></div>' +
-      '<div class="stats" style="margin-top:8px">' + stat(m.games, t('wrapGames')) + stat(m.as_center, t('refCenter')) + stat(m.venues, t('wrapVenues')) + '</div>' +
-      (badges ? '<div class="pad" style="padding-top:8px">' + badges + '</div>' : '') +
-      ((m.place || mile) ? '<div class="pad hint" style="padding-top:6px">' + esc([m.place ? t('seasonPlace').replace('{p}', m.place) : '', mile].filter(Boolean).join(' ')) + '</div>' : '');
+    [300, 250, 200, 150, 100, 75, 50, 25, 10].some(function (ms) { if (games >= ms) { hit = ms; return true; } return false; });
+    // The Colorado C: gold field, red arc opening to the right, filled
+    // along its 300 degrees by this season's progress to the milestone.
+    var SPAN = 289, Rr = 46, CIRC = 2 * Math.PI * Rr, frac = next ? Math.min(1, games / next) : 1;
+    var ring = '<div class="ring"><svg width="104" height="104" viewBox="0 0 104 104" aria-hidden="true">' +
+      '<circle cx="52" cy="52" r="42" fill="var(--gold)" opacity=".14"></circle>' +
+      '<circle cx="52" cy="52" r="46" fill="none" stroke="var(--line)" stroke-width="7" opacity=".45" stroke-linecap="round" stroke-dasharray="' + (CIRC * SPAN / 360).toFixed(1) + ' ' + CIRC.toFixed(1) + '" transform="rotate(28 52 52)"></circle>' +
+      '<circle cx="52" cy="52" r="46" fill="none" stroke="#C8102E" stroke-width="7" stroke-linecap="round" stroke-dasharray="' + (CIRC * SPAN * frac / 360).toFixed(1) + ' ' + CIRC.toFixed(1) + '" transform="rotate(28 52 52)"></circle>' +
+      '</svg><div class="mid"><div class="n">' + games + '</div><div class="l">' + esc(t('wrapGames')) + '</div></div></div>';
+    var mileLine = next ? esc(t('seasonMile').replace('{d}', next - games).replace('{m}', next)) : '';
+    var rankLine = m.place ? '<b>' + esc(t('seasonPlace').replace('{p}', m.place)) + '</b> ' : '';
+    var spark = '';
+    if (SEAS.months) {
+      var mx = Math.max.apply(null, SEAS.months.concat([1]));
+      var W = 320, H = 46, step = W / 11;
+      var pts = SEAS.months.map(function (v, i) { return (i * step).toFixed(1) + ',' + (H - 6 - (H - 14) * v / mx).toFixed(1); });
+      var peak = SEAS.months.indexOf(mx);
+      var px = peak * step, py = H - 6 - (H - 14);
+      var mon = function (i) { return new Date(y, i, 15).toLocaleDateString(S.lang === 'es' ? 'es-US' : 'en-US', { month: 'short' }); };
+      spark = '<div class="spark"><svg viewBox="0 0 ' + W + ' ' + (H + 4) + '" aria-hidden="true">' +
+        '<polyline points="' + pts.join(' ') + '" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round"></polyline>' +
+        '<circle cx="' + px.toFixed(1) + '" cy="' + py.toFixed(1) + '" r="3.4" fill="var(--gold)"></circle>' +
+        '<text x="' + Math.min(W - 44, Math.max(2, px - 20)).toFixed(1) + '" y="' + Math.max(9, py - 7).toFixed(1) + '" font-size="10.5" font-weight="700" fill="var(--ink)">' + mx + ' · ' + esc(mon(peak)) + '</text>' +
+        '</svg><div class="lbl"><span>' + esc(mon(0)) + '</span><span>' + esc(mon(11)) + '</span></div></div>';
+    }
+    var badges = (hit ? '<span class="badge"><span class="cardglyph"></span>' + esc(t('seasonBadgeGames').replace('{m}', hit)) + '</span>' : '') +
+      (m.fitness_date ? '<span class="badge"><span class="cardglyph"></span>' + esc(t('seasonBadgeFit')) + '</span>' : '');
+    el.innerHTML = '<div class="pad" style="padding-top:20px"><div class="slab"><span>' + esc(t('seasonTitle').replace('{y}', y)) + '</span></div></div>' +
+      '<div class="board gold" style="margin-top:10px"><div class="ringrow">' + ring +
+      '<div class="ringtext">' + rankLine + (mileLine ? '<span>' + mileLine + '</span>' : '') +
+      '<div class="rankbar"><i style="width:' + Math.round(frac * 100) + '%"></i></div></div></div>' + spark +
+      (badges ? '<div class="badges">' + badges + '</div>' : '') + '</div>' +
+      '<div class="stats" style="margin-top:10px">' + stat(m.games, t('wrapGames')) + stat(m.as_center, t('refCenter')) + stat(m.venues, t('wrapVenues')) + '</div>';
+  }
+  // Colorado, today: the statewide pulse. One program, one Sunday,
+  // every field at once. Needs co_pulse (097); silent until it runs.
+  var PULSE = { at: null, data: null };
+  async function renderPulse() {
+    var el = $('pulseLine'); if (!el) return;
+    if (PULSE.at !== todayStr()) {
+      PULSE.at = todayStr(); PULSE.data = null;
+      try { var r = await sb.rpc('co_pulse', { p_date: todayStr() }); PULSE.data = r.data || null; } catch (e) { PULSE.data = null; }
+    }
+    var p = PULSE.data;
+    if (!p || !Number(p.games)) { el.innerHTML = ''; return; }
+    var cell = function (n, l) { return '<div class="cell"><div class="n">' + esc(String(n)) + '</div><div class="l">' + esc(l) + '</div></div>'; };
+    el.innerHTML = '<div class="pulse"><div class="slab"><span>' + esc(t('pulseTitle')) + '</span></div>' +
+      '<div class="nums">' + cell(p.refs, t('pulseRefs')) + cell(p.games, t('pulseGames')) + (Number(p.first_whistles) ? cell(p.first_whistles, t('pulseFirst')) : '') + '</div>' +
+      '<div class="line">' + esc(Number(p.first_whistles) ? t('pulseLineFirst').replace('{n}', p.first_whistles) : t('pulseLine')) + '</div></div>';
   }
   function wrapYear() { var d = new Date(), m = d.getMonth() + 1, day = d.getDate(); if (m === 1) return d.getFullYear() - 1; if (m > WRAP_FROM[0] || (m === WRAP_FROM[0] && day >= WRAP_FROM[1])) return d.getFullYear(); return null; }
   async function renderWrap() {
@@ -1733,13 +1810,40 @@
       '<div>' + esc([n.venue, n.field].filter(Boolean).join(', ')) + (n.age_group ? ' · ' + esc(n.age_group) : '') + (role ? ' · ' + esc(role) : '') + '</div>' +
       '<div class="hint">' + esc(days === 1 ? t('inOneDay') : t('inDays').replace('{n}', days)) + '</div></div>';
   }
+  // The matchday crew: faces for the people sharing the field, who has
+  // arrived, and the full-crew mark when everyone has.
+  function crewHtml(g) {
+    var roles = ['cr', 'ar1', 'ar2', 'fourth'], meKeys = S.me.nameKeys || [];
+    var ins = (S.checkinsAll || {})[String(g.game_id)] || {};
+    var real = roles.filter(function (x) { return g[x] && !/^(tbd|open|none)$/i.test(g[x]); });
+    if (real.length < 2) return '';
+    var mates = real.map(function (x) {
+      var nm = g[x], k = key(nm), isMe = meKeys.indexOf(k) >= 0, at = ins[k];
+      var parts = nm.trim().split(/\s+/);
+      var ini = parts.map(function (w) { return w.charAt(0).toUpperCase(); }).slice(0, 2).join('');
+      var short = { cr: 'CR', ar1: 'AR1', ar2: 'AR2', fourth: '4TH' };
+      return '<div class="mate' + (isMe ? ' you' : '') + '"><div class="ava">' + esc(ini) + '</div><div class="nm">' + esc(isMe ? t('crewYou') : parts[0]) + '</div><div class="role">' + short[x] + '</div>' + (at ? '<div class="in">' + esc(clock(at)) + '</div>' : '') + '</div>';
+    });
+    var allIn = real.every(function (x) { return ins[key(g[x])]; });
+    return '<div class="crew">' + mates.join('') + '</div>' + (allIn ? '<div class="crewfull"><span class="cardglyph"></span>' + esc(t('crewFull')) + '</div>' : '');
+  }
   function renderDay() {
     var me = S.me, h = new Date().getHours();
     var greet = t(h < 12 ? 'greeting.morning' : h < 17 ? 'greeting.afternoon' : 'greeting.evening');
     var venue = S.games.length ? S.games[0].venue : '';
-    $('dayLead').textContent = greet + ', ' + me.first_name + '. ' + dayLong() + (venue ? ', ' + venue : '') + '.';
+    $('dayLead').textContent = greet + ', ' + me.first_name + '.' + (S.games.length ? '' : ' ' + dayLong() + '.');
+    $('daySlabText').textContent = S.games.length ? t('matchdaySlab').replace('{v}', venue) : dayLong();
     var g = nextGame();
     var cd = $('countdown');
+    var hm = $('heroMatch');
+    if (g && !isHQ(g)) {
+      var mu = [g.age_group, g.competition].filter(Boolean).join(' · ');
+      var vs = (g.home && g.away) ? esc(g.home) + ' <span style="color:#8FA0C4">vs</span> ' + esc(g.away) : '';
+      hm.innerHTML = '<div class="matchrow"><div class="t">' + esc(clock(g.kickoff)) + '</div><div class="f">' + esc(String(g.field || '').toUpperCase()) + '</div></div>' +
+        (mu || vs ? '<div class="sub">' + (mu ? esc(mu) : '') + (mu && vs ? ' · ' : '') + vs + '</div>' : '') + crewHtml(g);
+    } else if (g) {
+      hm.innerHTML = '<div class="matchrow"><div class="t">' + esc(t('refereeHQ')) + '</div><div class="f">' + esc(clock(g.kickoff)) + '</div></div><div class="sub">' + esc(g.venue || '') + '</div>';
+    } else hm.innerHTML = '';
     if (g) {
       cd.style.display = 'flex';
       tickCountdown();
@@ -1770,6 +1874,7 @@
     $('laterList').innerHTML = (later.length ? '<div class="hint" style="padding-bottom:8px;font-weight:700">' + esc(t('laterToday')) + '</div>' + later.map(rowOf).join('') : '') +
       (done.length ? fold('day-done', t('doneToday'), done.length, done.map(rowOf).join(''), false) : '');
     renderSeason();
+    renderPulse();
     var up = $('dayUpcoming');
     if (S.me.previewing) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div><div class="hint">' + esc(t('loadingReview')) + '</div>'; upcomingFor(S.me.first_name + ' ' + S.me.last_name, 90).then(function (list) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div>' + upcomingHtml(list.filter(function (g) { return g.date !== todayStr(); }), S.me.first_name + ' ' + S.me.last_name); }).catch(function () { up.innerHTML = ''; }); }
     else up.innerHTML = '';
@@ -1839,12 +1944,16 @@
     var inAt = S.checkins[String(g.game_id)];
     if (isHQ(g)) {
       var role = String(g.hq_role || '').toUpperCase() === 'SC' ? t('roleSC') : /standby/i.test(g.field + ' ' + g.age_group) ? t('roleStandby') : (g.age_group || '');
-      return '<div class="card" style="border-color:var(--gold)"><div class="row"><div class="disp big">' + esc(t('refereeHQ')) + '</div><div class="disp" style="font-size:28px">' + esc(clock(g.kickoff)) + '</div></div>' +
-        '<div>' + esc(g.venue || '') + '. ' + esc(t('youAreToday')) + ' ' + esc(role) + '.</div>' +
+      // The hero already carries Referee HQ, the time and the venue;
+      // this card is the role and the action.
+      return '<div class="card" style="border-top-color:var(--gold);margin-top:12px">' +
+        '<div>' + esc(t('youAreToday')) + ' ' + esc(role) + '.</div>' +
         '<div class="actions">' + checkinBtn(g, inAt) + '</div><div class="hint">' + esc(t('hqHint')) + '</div><div class="msg bad" id="ci-msg-' + esc(g.game_id) + '" hidden></div></div>';
     }
-    return '<div class="card"><div class="row"><div class="disp big">' + esc(clock(g.kickoff)) + '</div><div class="disp big">' + esc(String(g.field || '').toUpperCase()) + '</div></div>' +
-      '<div>' + (isCoachSlot(g) ? esc(t('coachSlot')) + (g.field ? ', ' + esc(g.field) : '') : esc(g.age_group || '') + (g.competition ? ', ' + esc(g.competition) : '') + '. ' + esc(t('youAre')) + ' ' + esc(t('role.' + myRole(g)))) + '.</div>' +
+    // The hero above already carries the time, field, matchup and crew;
+    // this card is the actions.
+    return '<div class="card" style="margin-top:12px">' +
+      (isCoachSlot(g) ? '<div>' + esc(t('coachSlot')) + (g.field ? ', ' + esc(g.field) : '') + '.</div>' : '') +
       (inAt
         ? '<div class="actions">' + checkinBtn(g, inAt) + '</div>' +
           '<div class="actions" style="padding-top:0">' + (mapLayoutFor(g.venue) ? '<a class="btn primary" style="flex-grow:1" href="#map/' + encodeURIComponent(g.venue || '') + '/' + encodeURIComponent(g.field || '') + '">' + esc(t('mapToField').replace('{f}', fieldShort(g.field || ''))) + '</a>' : '') + '<a class="btn outline" href="#game/' + esc(g.game_id) + '">' + esc(t('details')) + '</a></div>'

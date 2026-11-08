@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#142850" media="(prefers-color-scheme: dark)">
 <title>Colorado Referees</title>
 <link rel="stylesheet" href="fonts/fonts.css">
-<link rel="stylesheet" href="app.css?v=2026.11.08-g">
+<link rel="stylesheet" href="app.css?v=2026.11.08-h">
 </head>
 <body>
 <div id="busy" style="display:none" aria-live="polite"><span class="ball">&#9917;</span></div>
@@ -53,14 +53,28 @@
         <button class="linkbtn" id="langBtn1" data-t="langSwitch"></button>
       </div>
     </div>
-    <div class="pad" style="padding-top:20px">
-      <div class="lead" id="dayLead"></div>
+    <div class="hero-md" id="dayHero">
+      <svg class="ridge" viewBox="0 0 420 110" preserveAspectRatio="none" height="110" aria-hidden="true">
+        <defs><radialGradient id="coglow" cx="50%" cy="38%" r="65%">
+          <stop offset="0%" stop-color="#C98A52" stop-opacity=".5"></stop>
+          <stop offset="45%" stop-color="#8A4E4B" stop-opacity=".3"></stop>
+          <stop offset="100%" stop-color="#8A4E4B" stop-opacity="0"></stop>
+        </radialGradient></defs>
+        <ellipse cx="210" cy="40" rx="300" ry="64" fill="url(#coglow)"></ellipse>
+        <path d="M0 92 L38 64 L62 76 L96 38 L118 56 L146 30 L170 52 L198 20 L224 46 L252 34 L284 58 L312 44 L342 66 L374 52 L420 78 L420 110 L0 110 Z" fill="#0D1830"></path>
+        <path d="M0 92 L38 64 L62 76 L96 38 L118 56 L146 30 L170 52 L198 20 L224 46 L252 34 L284 58 L312 44 L342 66 L374 52 L420 78" fill="none" stroke="#E8B33A" stroke-width="1.6" opacity=".85"></path>
+        <path d="M190 28 L198 20 L206 28 Z M138 38 L146 30 L154 38 Z" fill="#F2EFE6" opacity=".9"></path>
+      </svg>
+      <div class="lead" id="dayLead" style="font-size:14px;margin-bottom:8px"></div>
+      <div class="slab" id="daySlab" style="margin-bottom:10px"><span id="daySlabText"></span></div>
       <div class="count" id="countdown" style="display:none"><div class="disp n" id="countN"></div><div class="disp w" id="countW"></div></div>
+      <div id="heroMatch"></div>
     </div>
     <div id="nextCard"></div>
     <div class="list" id="laterList"></div>
     <div id="dayUpcoming"></div>
     <div id="seasonLine"></div>
+    <div id="pulseLine"></div>
     <div id="staffLine"></div>
     <div id="noteBox"></div>
     <div id="evalLine"></div>
@@ -308,11 +322,18 @@
   </section>
 
 </div>
+<nav class="tabbar" id="tabbar" aria-label="Sections">
+  <a href="#day" data-tab-day><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5" stroke-linecap="round" stroke-linejoin="round"></path><path d="M5.5 10v9h13v-9" stroke-linecap="round" stroke-linejoin="round"></path></svg><span data-t="tabDay"></span></a>
+  <a href="#notes" data-tab-notes><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2"></rect><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4.5" stroke-linecap="round"></path></svg><span data-t="tabNotes"></span></a>
+  <a href="#ops" data-tab-board hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="2"></rect><path d="M3.5 9.5h17M9.5 9.5V20" stroke-linecap="round"></path></svg><span data-t="tabBoard"></span></a>
+  <a href="#coach" data-tab-coach hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" stroke-linecap="round"></path></svg><span data-t="tabCoach"></span></a>
+  <a href="library.html" data-tab-library><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 016.5 3H20v16.5H6.5A2.5 2.5 0 004 22z" stroke-linejoin="round"></path><path d="M4 19.5A2.5 2.5 0 016.5 17H20" stroke-linecap="round"></path></svg><span data-t="tabLibrary"></span></a>
+</nav>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js"></script>
-<script src="lang.js?v=2026.11.08-g"></script>
-<script src="pacer.js?v=2026.11.08-g"></script>
-<script src="fieldmap.js?v=2026.11.08-g"></script>
-<script src="app.js?v=2026.11.08-g"></script>
+<script src="lang.js?v=2026.11.08-h"></script>
+<script src="pacer.js?v=2026.11.08-h"></script>
+<script src="fieldmap.js?v=2026.11.08-h"></script>
+<script src="app.js?v=2026.11.08-h"></script>
 </body>
 </html>
