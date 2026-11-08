@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.08-h';
+  var VERSION = '2026.11.08-i';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -645,6 +645,33 @@
   // referee sees their own field lit and their kickoff. Layouts live in
   // fieldmaps.json; a venue without one gets a plain link to directions.
   var MAPS = { all: null, fm: null, venue: '', field: '', q: '', slug: '' };
+  // Venue layouts, loaded once and shared by the full map, the board
+  // thumbnails and the day screen.
+  async function ensureMaps() {
+    if (MAPS.all) return;
+    MAPS.all = {};
+    try { (await loadVenues_()).forEach(function (v) { if (v.layout) MAPS.all[v.slug] = v.layout; }); } catch (e) {}
+    if (!Object.keys(MAPS.all).length) { try { MAPS.all = await fetch('fieldmaps.json?v=' + VERSION).then(function (r) { return r.json(); }); } catch (e) { MAPS.all = {}; } }
+  }
+  // A postage-stamp venue map: every field as a block, the one that
+  // needs a person lit, Referee HQ as the gold dot. Where to walk,
+  // without opening the map.
+  function miniMapHtml(venue, field) {
+    var hit = mapLayoutFor(venue); if (!hit || !window.FieldMap) return '';
+    var L = hit.layout, vb = (L.viewBox || [0, 0, 1200, 800]).join(' ');
+    var want = field ? FieldMap.fieldKey(field) : '';
+    var found = false;
+    var cells = (L.fields || []).map(function (f) {
+      var isIt = want && FieldMap.fieldKey(f.id) === want; if (isIt) found = true;
+      return '<rect x="' + f.x + '" y="' + f.y + '" width="' + f.w + '" height="' + f.h + '" rx="8" class="' + (isIt ? 'mm-hot' : 'mm-field') + '"></rect>';
+    }).join('');
+    if (!cells || !found) return '';
+    var hq = (L.hq || []).map(function (h) {
+      if (h.x == null) return '';
+      return '<circle cx="' + (h.x + (h.w || 40) / 2) + '" cy="' + (h.y + (h.h || 40) / 2) + '" r="16" class="mm-hq"></circle>';
+    }).join('');
+    return '<svg class="minimap" viewBox="' + vb + '" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' + cells + hq + '</svg>';
+  }
   function mapLayoutFor(venue) {
     if (!MAPS.all) return null;
     var slug = FieldMap.slug(venue); if (MAPS.all[slug]) return { slug: slug, layout: MAPS.all[slug] };
@@ -680,7 +707,7 @@
     MAPS.venue = venue; MAPS.field = field || '';
     var body = $('mapBody'), sheet = $('mapSheet');
     $('mapTitle').textContent = venue || t('map');
-    if (!MAPS.all) { MAPS.all = {}; try { (await loadVenues_()).forEach(function (v) { if (v.layout) MAPS.all[v.slug] = v.layout; }); } catch (e) {} if (!Object.keys(MAPS.all).length) { try { MAPS.all = await fetch('fieldmaps.json?v=' + VERSION).then(function (r) { return r.json(); }); } catch (e) { MAPS.all = {}; } } }
+    await ensureMaps();
     if ((iCan('command_center') || iCan('scheduling')) && !OPS.games) { busy(true); try { await loadOps_(); } catch (e) {} busy(false); }
     var hit = mapLayoutFor(venue);
     var dirs = '<a class="btn outline small" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(venue) + '">' + esc(t('directions')) + '</a>';
@@ -2759,11 +2786,16 @@
   function attentionHtml(games, ins, showVenue) {
     var items = attentionItems(games, ins);
     if (!items.length) return '<div class="card" style="border-color:var(--green);text-align:center;gap:4px"><div class="disp" style="font-size:30px;color:var(--green)">' + esc(t('attnClear')) + '</div><div class="hint">' + esc(t('attnClearHint').replace('{m}', ATTN_MINS)) + '</div></div>';
+    var glyph = { missing: 'r', help: 'r', alert: 'r', warn: 'y', late: 'y', open: 'y', 'late-ok': '' };
     return '<div class="pad hint" style="padding-top:10px">' + esc(t('attnLead').replace('{n}', items.length).replace('{m}', ATTN_MINS)) + '</div>' + items.map(function (it) {
       var g = it.g;
-      return '<div class="card attn' + (it.severe ? ' severe' : '') + '" data-attn="' + esc(g.game_id) + '" data-attn-venue="' + esc(g.venue || '') + '"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span class="disp" style="font-size:26px">' + esc(clock(g.kickoff)) + '</span><span class="hint">' + (it.st === 'live' ? esc(t('state_live')) : it.mins <= 0 ? '' : esc(t('inMins').replace('{n}', it.mins))) + '</span></div>' +
-        '<div><b>' + esc(g.field || '') + '</b>' + (showVenue ? ' <span class="hint">' + esc(g.venue || '') + '</span>' : '') + ' <span class="hint">' + esc(g.age_group || '') + '</span> <a class="chip-btn small" style="text-decoration:none;margin-left:6px" href="#map/' + encodeURIComponent(g.venue || '') + '/' + encodeURIComponent(g.field || '') + '">' + esc(t('map')) + '</a></div>' +
-        it.why.map(function (w) { return '<div class="why ' + w.kind + '">' + (w.html || esc(w.text)) + (w.kind === 'late' ? ' <button class="btn outline small" data-late-ack="' + w.late.id + '">' + esc(t('lateAck')) + '</button>' : '') + '</div>'; }).join('') + '</div>';
+      var mini = miniMapHtml(g.venue, g.field);
+      var main = '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span class="disp" style="font-size:26px">' + esc(clock(g.kickoff)) + '</span><span class="hint">' + (it.st === 'live' ? esc(t('state_live')) : it.mins <= 0 ? '' : esc(t('inMins').replace('{n}', it.mins))) + '</span></div>' +
+        '<div><b>' + esc(g.field || '') + '</b>' + (showVenue ? ' <span class="hint">' + esc(g.venue || '') + '</span>' : '') + ' <span class="hint">' + esc(g.age_group || '') + '</span>' + (mini ? '' : ' <a class="chip-btn small" style="text-decoration:none;margin-left:6px" href="#map/' + encodeURIComponent(g.venue || '') + '/' + encodeURIComponent(g.field || '') + '">' + esc(t('map')) + '</a>') + '</div>' +
+        it.why.map(function (w) { return '<div class="why ' + w.kind + '"><span class="cardglyph ' + (glyph[w.kind] || '') + '"></span><span>' + (w.html || esc(w.text)) + (w.kind === 'late' ? ' <button class="btn outline small" data-late-ack="' + w.late.id + '">' + esc(t('lateAck')) + '</button>' : '') + '</span></div>'; }).join('');
+      return '<div class="card attn' + (it.severe ? ' severe' : '') + '" data-attn="' + esc(g.game_id) + '" data-attn-venue="' + esc(g.venue || '') + '"><div class="attnrow"><div class="attnmain">' + main + '</div>' +
+        (mini ? '<a class="mmlink" href="#map/' + encodeURIComponent(g.venue || '') + '/' + encodeURIComponent(g.field || '') + '" aria-label="' + esc(t('map')) + '" onclick="event.stopPropagation()">' + mini + '<span class="mmword">' + esc(t('map')) + '</span></a>' : '') +
+        '</div></div>';
     }).join('');
   }
   // Every name on a crew today, this venue first, for the switch form's typeahead.
@@ -2774,6 +2806,8 @@
     return Object.keys(here).sort().concat(Object.keys(all).filter(function (n) { return !here[n]; }).sort());
   }
   function renderOps() {
+    // Thumbnails need the venue layouts; fetch once, then repaint.
+    if (!MAPS.all) ensureMaps().then(function () { if (location.hash.indexOf('#ops') === 0) renderOps(); });
     var tabs = iCan('people') ? ['board', 'staff', 'protection', 'retain', 'premium', 'bulletins'] : ['board', 'staff', 'protection', 'retain', 'bulletins'];
     var openAlerts = OPS.alerts.filter(function (a) { return a.status === 'open'; }).length, msgCount = (OPS.msgs || []).length;
     var head = '<div class="tabs">' + tabs.map(function (k) { return '<button class="chip-btn' + (OPS.tab === k ? ' on' : '') + '" data-otab="' + k + '">' + esc(t('tab' + k.charAt(0).toUpperCase() + k.slice(1))) + (k === 'protection' && openAlerts ? ' ' + openAlerts : '') + (k === 'staff' && msgCount ? ' ' + msgCount : '') + '</button>'; }).join('') + '</div>';
@@ -4325,7 +4359,18 @@
       // No referee record: a guardian email lands on the family screen.
       var g0 = await sb.rpc('guardian_overview');
       if (g0.data && (g0.data.wards || []).length) { S.fam = g0.data; show('s-family'); renderFamily(); return; }
-      show('s-signin'); return;
+      show('s-signin');
+      // The silent bounce, no longer silent: a working session with no
+      // person behind it says so, instead of showing sign-in again as if
+      // nothing happened (the whole Rush East morning, in one message).
+      try {
+        var ses = await sb.auth.getSession();
+        if (ses.data && ses.data.session) {
+          var m0 = $('msgEmail');
+          if (m0) { m0.hidden = false; m0.className = 'msg bad'; m0.textContent = t('signedInNoRecord').replace('{e}', (ses.data.session.user || {}).email || ''); }
+        }
+      } catch (e1) {}
+      return;
     }
     void painted;
     if (S.me.language === 'es' && S.lang !== 'es') { S.lang = 'es'; applyWords(); }

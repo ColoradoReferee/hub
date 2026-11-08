@@ -1,4 +1,4 @@
-/* app.css · Colorado Referees Hub · 2026.11.08-h
+/* app.css · Colorado Referees Hub · 2026.11.08-i
    Tokens once, two themes, every component. Nothing page-specific.
    2026.11.08-h: the Matchday layer. Broadcast hero with the Front Range
    ridgeline, fixtures-board stat strips, notched primary buttons, the
@@ -523,3 +523,16 @@ details.fold > .fold-body > .list { padding-top: 8px; }
 body.tabbed .screen { padding-bottom: 84px; }
 @media (min-width: 900px) { .tabbar { max-width: 760px; } }
 @media print { .tabbar { display: none !important; } }
+
+/* Board attention cards: the postage-stamp venue map (2026.11.08-i) */
+.attnrow { display: flex; gap: 12px; align-items: stretch; }
+.attnmain { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.mmlink { flex: none; align-self: center; display: flex; flex-direction: column; align-items: center; gap: 3px; text-decoration: none; }
+.mmword { font-size: 11px; font-weight: 700; color: var(--muted); }
+.minimap { width: 112px; height: auto; max-height: 86px; display: block; border-radius: 3px; background: #0F1B32; border: 1px solid var(--line); padding: 4px; }
+.minimap .mm-field { fill: #2E6B3C; opacity: .8; }
+.minimap .mm-hot { fill: var(--red); stroke: #FFC400; stroke-width: 8; }
+.minimap .mm-hq { fill: #F2B800; }
+.card.attn .why { display: flex; gap: 8px; align-items: flex-start; }
+.card.attn .why .cardglyph { width: 9px; height: 13px; margin-top: 3px; }
+.card.attn .why.late-ok .cardglyph { background: var(--green); }
