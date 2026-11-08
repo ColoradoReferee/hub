@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.08-d';
+  var VERSION = '2026.11.08-e';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -2925,8 +2925,15 @@
     if (q.length < 2) { PP.results = []; renderPeople(); return; }
     var parts = q.split(/\s+/).filter(Boolean);
     var query = sb.from('people').select('id,first_name,last_name,city,dob,email').limit(20);
-    if (parts.length >= 2) query = query.ilike('first_name', parts[0] + '%').ilike('last_name', parts.slice(1).join(' ') + '%');
-    else query = query.or('last_name.ilike.' + parts[0] + '*,first_name.ilike.' + parts[0] + '*');
+    // Josh finds Joshua, Duhl Josh finds Joshua Duhl, mid-name pieces match.
+    var tok = function (v) { return String(v).replace(/[,()]/g, ' ').trim(); };
+    if (parts.length >= 2) {
+      var a0 = tok(parts[0]), b0 = tok(parts.slice(1).join(' '));
+      query = query.or('and(first_name.ilike.' + a0 + '*,last_name.ilike.' + b0 + '*),and(first_name.ilike.' + b0 + '*,last_name.ilike.' + a0 + '*)');
+    } else {
+      var t0 = tok(parts[0]);
+      query = query.or('last_name.ilike.*' + t0 + '*,first_name.ilike.*' + t0 + '*');
+    }
     busy(true); var r = await query.order('last_name').order('first_name'); busy(false);
     if (PP.q !== q) return;
     PP.results = r.data || [];
@@ -2939,9 +2946,16 @@
     var r = await sb.from('person_titles').select('title_code,source').eq('person_id', p.id);
     PP.held = r.data || [];
     await loadCatalog();
+    // The card belongs under the tapped name, not at the bottom of a
+    // long result list.
+    var card = $('personCard'), row = $('peopleResults').querySelector('[data-person="' + p.id + '"]');
+    if (card && row) row.insertAdjacentElement('afterend', card);
     renderPerson();
   }
   function renderPeople() {
+    var pcHome = $('peopleResults');
+    var pcNode = $('personCard');
+    if (pcNode && pcNode.parentElement !== pcHome.parentElement) { pcNode.innerHTML = ''; pcHome.insertAdjacentElement('afterend', pcNode); }
     $('peopleResults').innerHTML = PP.q.length < 2 ? '' : (PP.results.length ? '<div class="list">' + PP.results.map(function (p) {
       return '<a class="item" href="#" data-person="' + p.id + '"><div><b>' + esc(p.first_name + ' ' + p.last_name) + '</b><br><span class="hint">' + esc(p.city || '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
     }).join('') + '</div>' : '<div class="card"><div class="hint">' + esc(t('noMatch')) + '</div></div>' + addPersonHtml(PP.q));
@@ -3788,17 +3802,21 @@
   }
 
   // ── Names to link ────────────────────────────────────────────────
-  var LINK = { rows: null, pick: null, suggest: [] };
+  var LINK = { rows: null, pick: null, suggest: [], sort: 'az' };
   async function renderLinks() {
     if (!LINK.rows) { busy(true); var r = await sb.rpc('unlinked_names'); busy(false); LINK.rows = r.data || []; }
     $('personCard').innerHTML = '';
-    var rows = LINK.rows.slice(0, 60);
-    $('peopleResults').innerHTML = '<div class="pad" style="padding-top:12px"><div class="disp" style="font-size:30px">' + esc(t('linkTitle')) + ' ' + LINK.rows.length + '</div><div class="hint">' + esc(t('linkLead')) + '</div></div>' +
+    var rows = LINK.rows.slice();
+    if (LINK.sort === 'az') rows.sort(function (a, b) { return a.name_key < b.name_key ? -1 : a.name_key > b.name_key ? 1 : 0; });
+    else rows.sort(function (a, b) { return (b.games || 0) - (a.games || 0); });
+    $('peopleResults').innerHTML = '<div class="pad" style="padding-top:12px"><div class="disp" style="font-size:30px">' + esc(t('linkTitle')) + ' ' + LINK.rows.length + '</div><div class="hint">' + esc(t('linkLead')) + '</div>' +
+      '<div class="chips" style="margin-top:8px"><button class="chip-btn' + (LINK.sort === 'az' ? ' on' : '') + '" data-linksort="az">' + esc(t('linkSortAZ')) + '</button><button class="chip-btn' + (LINK.sort === 'games' ? ' on' : '') + '" data-linksort="games">' + esc(t('linkSortGames')) + '</button></div></div>' +
       (rows.length ? '<div class="pad">' + rows.map(function (n) {
         var open = LINK.pick && LINK.pick.name_key === n.name_key;
         return '<div class="rowline" style="flex-direction:column;align-items:stretch;gap:6px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><a class="refname" href="#" data-link="' + esc(n.name_key) + '"><b>' + esc(n.name) + '</b></a><span class="hint">' + n.games + ' ' + esc(t('linkGames')) + ', ' + esc(n.last_game ? dayLong(n.last_game) : '') + '</span></div><div class="hint">' + esc(n.venues || '') + '</div>' +
           (open ? '<div class="hint" style="font-weight:700">' + esc(t('linkPick')) + '</div><div class="chips">' + (LINK.suggest.length ? LINK.suggest.map(function (p) { return '<button class="chip-btn" data-linkto="' + p.id + '">' + esc(p.first_name + ' ' + p.last_name) + (p.city ? ' <small>' + esc(p.city) + '</small>' : '') + '</button>'; }).join('') : '<span class="hint">' + esc(t('linkNoSuggest')) + '</span>') + '</div><div class="hint">' + esc(t('linkOther')) + '</div><button class="btn outline small" data-dismissname="1" style="margin-top:6px">' + esc(t('linkDismiss')) + '</button><div class="msg" id="linkMsg" hidden></div>' : '') + '</div>';
       }).join('') + '</div>' : '<div class="card"><div class="hint">' + esc(t('linkNone')) + '</div></div>');
+    $('peopleResults').querySelectorAll('[data-linksort]').forEach(function (b) { b.onclick = function () { LINK.sort = b.getAttribute('data-linksort'); renderLinks(); }; });
     $('peopleResults').querySelectorAll('[data-link]').forEach(function (a) { a.onclick = async function (e) { e.preventDefault(); var k = a.getAttribute('data-link'); var n = LINK.rows.filter(function (x) { return x.name_key === k; })[0]; LINK.pick = n; busy(true); var s = await sb.rpc('suggest_people', { p_name: n.name }); busy(false); LINK.suggest = s.data || []; renderLinks(); }; });
     $('peopleResults').querySelectorAll('[data-linkto]').forEach(function (b) { b.onclick = function () { linkTo(parseInt(b.getAttribute('data-linkto'), 10), b); }; });
     // An out-of-state crew name is never going to match a Colorado person.
