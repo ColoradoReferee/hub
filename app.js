@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.08-p';
+  var VERSION = '2026.11.08-q';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -3860,10 +3860,16 @@
       '</div><div class="hint">' + esc(t('ussfSrc')) + '</div></div>';
     // The Academy pipeline: cohort sizes and who still holds a badge.
     // Positive numbers only by design; campaign tracking stays off screens.
-    if (ST.acad && ST.acad.length) {
+    // 106 returns { years, students, active } with distinct people in the
+    // totals; the bare array (103) summed class memberships and counted a
+    // two-year student twice.
+    var acYears = ST.acad && (ST.acad.years || (ST.acad.length ? ST.acad : null));
+    if (acYears && acYears.length) {
       var acTot = 0, acAct = 0;
+      acYears.forEach(function (a) { acTot += a.students; acAct += a.active; });
+      if (ST.acad.students != null) { acTot = ST.acad.students; acAct = ST.acad.active; }
       html += '<div class="card" style="gap:6px"><b>' + esc(t('acadTitle')) + '</b><div class="stats" style="margin:0">' +
-        ST.acad.map(function (a) { acTot += a.students; acAct += a.active; return '<div class="stat"><b>' + fmtN(a.students) + '</b><i>' + esc(t('acadClass').replace('{y}', a.class_year)) + '</i></div>'; }).join('') +
+        acYears.map(function (a) { return '<div class="stat"><b>' + fmtN(a.students) + '</b><i>' + esc(t('acadClass').replace('{y}', a.class_year)) + '</i></div>'; }).join('') +
         '</div><div>' + esc(t('acadActive').replace('{n}', fmtN(acAct)).replace('{t}', fmtN(acTot))) + '</div>' +
         '<div class="hint">' + esc(t('acadHint')) + '</div></div>';
     }
