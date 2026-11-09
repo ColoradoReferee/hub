@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- library.html v2026.11.09-b · 2026-10-23 · Colorado Referees Library -->
+<!-- library.html v2026.11.09-c · 2026-11-09 · Colorado Referees Library -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -21,7 +21,7 @@
   --c-guide:#D9A400;--c-laws:#2F7FD6;--c-gameday:#2E8B4E;
   --c-career:#D9731A;--c-policy:#C8102E;--c-contacts:#7E57C2;--c-hub:#1B2F55;--c-usrw:#4A5FC1;
 }
-/* What is this screen: the glance card, same as the Hub (v2026.11.09-b) */
+/* What is this screen: the glance card, same as the Hub (v2026.11.09-c) */
 .sbx-guide{max-width:1060px;margin:10px auto 0;padding:0 16px}
 .sbx-guide .sbx-g-btn{font:700 13px/1 var(--font);color:var(--gold);background:none;border:1.5px solid var(--gold);border-radius:999px;padding:7px 14px;cursor:pointer}
 .sbx-guide .sbx-g-body{font-size:14.5px;line-height:1.45;color:var(--muted);padding:10px 2px 0}
@@ -355,7 +355,7 @@ a{color:inherit;text-decoration:none;}
 </div>
 <script>
 (function () {
-  var KEY = 'hub-guide-off:lib-v2026.11.09-b';
+  var KEY = 'hub-guide-off:lib-v2026.11.09-c';
   var off = false; try { off = localStorage.getItem(KEY) === '1'; } catch (e) {}
   if (off) return;
   var es = false; try { es = localStorage.getItem('hub-lang') === 'es'; } catch (e) {}
@@ -491,7 +491,7 @@ a{color:inherit;text-decoration:none;}
       <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program">
     </div>
     <div class="footer-text">
-      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.09-b<br>
+      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.09-c<br>
       <a href="https://coloradosoccer.org" class="footer-link">ColoradoSoccer.org</a> &middot;
       <span data-l="questions">Questions:</span> <a href="mailto:refeducation@coloradoreferees.com" class="footer-link">refeducation@coloradoreferees.com</a> &middot; 303.888.6863
     </div>
@@ -599,13 +599,15 @@ var MODULES = [
     title:"Your day",
     sub:"Your games, the field map, check-in, and the board",
     eyebrow:"Using the Hub · 2 of 7",
-    keywords:"tutorial your day games game card check in checkin map field board gold red crew rules",
+    keywords:"tutorial your day games game card check in checkin map field board gold red crew rules availability offers bottom bar tabs",
     build: function() {
       return ds("What you see",
-        dt("Your day lists every game Assignr has published for you, in time order, with the venue, field and crew. The Hub refreshes from Assignr every few minutes, so a late change shows up without you doing anything.") +
+        dt("Your day opens with a matchday banner for your next game: the venue, the countdown to kickoff, the matchup, and your crew with their check-in times. Below it, every game Assignr has published for you, in time order, with the venue, field and crew. The Hub refreshes from Assignr every few minutes, so a late change shows up without you doing anything.") +
         bul("<strong>Tap a game</strong> for the full card: crew with phone numbers, the competition rules link, and the Map link to the exact field.") +
         bul("<strong>Map</strong> opens the venue layout with your field lit up and a you-are-here marker from the parking lot or HQ.") +
-        bul("<strong>Rules</strong> opens the competition's rules of play (ball size, halves, substitutions).")) +
+        bul("<strong>Rules</strong> opens the competition's rules of play (ball size, halves, substitutions).") +
+        bul("<strong>The bottom bar</strong> moves between Your day, Notes and the Library. Coaches get a Coaching tab and site coordinators get the Board.") +
+        bul("<strong>Offers and availability:</strong> if you are on a Hub assigning roster, Your day also shows game offers and your availability calendar. Mark when you can start and when you must be done, and add a day note such as my team plays at 9 on field 4, I can referee after. Assignors only offer games that finish inside your hours.")) +
       ds("Check in when you arrive",
         stp(1, "Open the game card and tap <strong>Check in</strong>. Do it when you are at the field, not from the car.") +
         stp(2, "Referee HQ sees a board of every game. A crew that has not checked in turns <strong>gold at 30 minutes</strong> before kickoff and <strong>red at 15</strong>. Checking in keeps you off that list.") +
@@ -645,13 +647,13 @@ var MODULES = [
     keywords:"tutorial notes feedback coach observation acknowledge referee card season evaluation progress upgrade maintenance request",
     build: function() {
       return ds("Feedback from a referee coach",
-        dt("When a referee coach watches you, their note comes to you in the Hub, cleaned up and in plain language, usually the same evening. Your latest note sits on Your day; <strong>All your notes</strong> opens the rest.") +
+        dt("When a referee coach watches you, their note comes to you in the Hub, cleaned up and in plain language, usually the same evening. Your latest note sits on Your day; the <strong>Notes</strong> tab in the bottom bar opens them all.") +
         bul("Each note has one or two things that went well and one or two to work on. Opening it tells the coach you read it.") +
         bul("No feedback yet does not mean you were not watched. First-year referees get a visit early in the season.")) +
       ds("Formal evaluations",
         bul("An upgrade to Regional needs <strong>three</strong> formal evaluations from three different referee coaches; keeping the Regional grade needs <strong>two</strong> from two different coaches. Your progress shows on Your day.") +
         bul("<strong>Request an evaluation</strong> from the card of an upcoming game: tap Request evaluation and say whether it is for an upgrade or maintenance. The Director of Referee Development assigns a coach; you see the assignment on Your day and, once it is approved, the written evaluation.") +
-        bul("Your fitness result and badge show on the Fitness test card. At the end of the season a <strong>Your season</strong> card sums up your year and the club leaderboard."));
+        bul("<strong>Your season board</strong> runs all year: games worked, the milestone ring, your statewide rank, the month chart and your badges. The fitness badge appears when you pass the test, and Academy alumni wear the gold <strong>RR</strong> mark."));
     }
   },
   {
@@ -664,7 +666,7 @@ var MODULES = [
     build: function() {
       return ds("Before the test",
         stp(1, "Open the <strong>Fitness test</strong> card on Your day or the Fitness module in this Library.") +
-        stp(2, "Read the standards for your category: 6 x 40 m sprints, the 40 x 75 m / 25 m interval run, and the CODA.") +
+        stp(2, "Read the standards for your category: the repeated sprints, the 40 x 75 m / 25 m interval run, and for assistant referee tests the CODA. The card shows the exact times for each test.") +
         stp(3, "Tick the <strong>waiver</strong>, then tap <strong>Sign up</strong> for a session. You can cancel from the same card.")) +
       ds("On the day",
         bul("The instructor runs everything from their phone, including the beeps for the interval run. You can download the audio to train with.") +
@@ -683,16 +685,16 @@ var MODULES = [
       return ds("Observation notes",
         stp(1, "Open <strong>Coaching</strong> from Your day, pick the game, tap the referee.") +
         stp(2, "Talk or type your notes during and after the game. Short and specific beats long.") +
-        stp(3, "Tap <strong>Send</strong>. The Hub tidies the wording, you approve it, and the referee gets it the same evening.")) +
+        stp(3, "Tap <strong>Send</strong>. The Hub tidies the wording, a reviewer approves it, and the referee gets it the same evening.")) +
       ds("A formal evaluation, start to finish",
         stp(1, "The Director of Referee Development assigns you to a referee's game. It shows under <strong>My evaluations</strong> on Coaching.") +
         stp(2, "<strong>Open in the Evaluator</strong> at the field. Log events live, with the coin toss and attacking direction so the app knows which goal is which.") +
         stp(3, "After the game: <strong>Post-Match</strong> tab, rate each official, record the CMIs and CREs, pick your feeling score.") +
-        stp(4, "<strong>Debrief</strong> tab: tap the two or three items you will talk through with the referee. Keep the debrief to those.") +
+        stp(4, "<strong>Debrief</strong> tab: tap the items you will talk through. Debrief the way the course teaches: set the tone, one genuine strength, the development areas in order of importance, and at most two next steps.") +
         stp(5, "<strong>Export</strong>: generate the PDF. The evaluation is now complete in the Hub.") +
         stp(6, "At home, open the evaluation in the Hub and <strong>write the formal evaluation</strong> yourself from the PDF and your notes, in US Soccer's style. Save as you go.") +
         stp(7, "Tap <strong>Submit for review</strong>. A reviewer approves it or returns it with a note. Once approved, <strong>Copy for RefEval</strong> and paste it there.")) +
-      callout("245,200,66","&#128161;","The Writer, which drafts from your log, is for reviewers. A coach writes their first evaluations themselves; that is how the program learns you can.");
+      callout("245,200,66","&#128161;","The Writer can draft the report from your log. A coach still writes their first evaluations themselves; that is how the program learns you can.");
     }
   },
   {
@@ -710,12 +712,12 @@ var MODULES = [
         bul("<strong>Bulletins:</strong> what every referee sees on Your day, in a date window. <strong>Staff:</strong> messages between site coordinators and the Director, never to referees.") +
         bul("<strong>Retain:</strong> referees who are working but nobody has seen, and referees who have gone quiet.") +
         bul("<strong>Evaluations:</strong> open requests, assignments, evaluations awaiting review, and who is on track for an upgrade this year.")) +
-      ds("State view (read on a desktop)",
-        dt("The program at a glance: registrations against last year, who comes back, the age bands, the fitness summary, and the not-registered list with one-tap email batches.")) +
+      ds("State view",
+        dt("The program at a glance: the referee pool and the 2027 registration race up top, then retention, the official national yardstick beside the program's own numbers, the Academy pipeline, the age bands, fitness, and the not-registered list with one-tap email batches. Built for a phone; it spreads out on a laptop on its own.")) +
       ds("Setup (admins)",
         bul("<strong>Events:</strong> what is live, what is off, what is done. An event needs venues and tools only when it is active.") +
         bul("<strong>Venues:</strong> the field layouts behind the maps and the QR signs, with a live preview while you edit.") +
-        bul("<strong>Sessions:</strong> fitness tests and classroom sessions; the instructor runs them from the same card.") +
+        bul("<strong>Sessions:</strong> fitness tests and classroom sessions; the instructor runs them from the same card, and the official State Fitness Test Submission workbook exports straight from the records.") +
         bul("<strong>Assignr sync:</strong> when each assigning group was last pulled and whether anything failed. It runs every five minutes on its own."));
     }
   },
@@ -2080,13 +2082,15 @@ var ES = {
 
   "hub-day": {
     title: "Tu día", sub: "Tus partidos, el mapa de canchas, el registro al llegar y el tablero", eyebrow: "Cómo usar el Hub · 2 de 7",
-    keywords: "tutorial tu día partidos tarjeta del partido registrarme registro mapa cancha tablero dorado rojo equipo arbitral reglas",
+    keywords: "tutorial tu día partidos tarjeta del partido registrarme registro mapa cancha tablero dorado rojo equipo arbitral reglas disponibilidad ofertas barra inferior pestañas notas",
     build: function() {
       return ds("Lo que ves",
-        dt("Tu día muestra cada partido que Assignr ha publicado para ti, en orden de hora, con la sede, la cancha y el equipo arbitral. El Hub se actualiza desde Assignr cada pocos minutos, así que un cambio de último momento aparece sin que hagas nada.") +
+        dt("Tu día abre con un cartel de jornada para tu próximo partido: la sede, la cuenta regresiva al saque de salida, el enfrentamiento y tu equipo arbitral con sus horas de registro. Debajo, cada partido que Assignr ha publicado para ti, en orden de hora, con la sede, la cancha y el equipo arbitral. El Hub se actualiza desde Assignr cada pocos minutos, así que un cambio de último momento aparece sin que hagas nada.") +
         bul("<strong>Toca un partido</strong> para ver la tarjeta completa: el equipo arbitral con teléfonos, el enlace a las reglas de la competición y el enlace al Mapa con la cancha exacta.") +
         bul("<strong>Mapa</strong> abre el plano de la sede con tu cancha resaltada y un marcador de dónde estás desde el estacionamiento o la carpa de árbitros.") +
-        bul("<strong>Reglas</strong> abre las reglas de juego de la competición (tamaño del balón, duración de los tiempos, sustituciones).")) +
+        bul("<strong>Reglas</strong> abre las reglas de juego de la competición (tamaño del balón, duración de los tiempos, sustituciones).") +
+        bul("<strong>La barra inferior</strong> te lleva entre Tu día, Notas y la Biblioteca. Los coaches tienen una pestaña de Coaching y los coordinadores de sede el Tablero.") +
+        bul("<strong>Ofertas y disponibilidad:</strong> si estás en una lista de asignación del Hub, Tu día también muestra ofertas de partidos y tu calendario de disponibilidad. Marca desde cuándo puedes empezar y para cuándo debes terminar, y agrega una nota del día, por ejemplo: mi equipo juega a las 9 en la cancha 4, puedo arbitrar después. Los asignadores solo ofrecen partidos que terminan dentro de tus horas.")) +
       ds("Regístrate al llegar",
         stp(1, "Abre la tarjeta del partido y toca <strong>Registrarme</strong>. Hazlo cuando estés en la cancha, no desde el carro.") +
         stp(2, "La carpa de árbitros ve un tablero con todos los partidos. Un equipo arbitral que no se ha registrado se pone <strong>dorado a 30 minutos</strong> del saque de salida y <strong>rojo a 15</strong>. Registrarte te mantiene fuera de esa lista.") +
@@ -2120,13 +2124,13 @@ var ES = {
     keywords: "tutorial notas comentarios coach observación confirmar lectura tarjeta de árbitro temporada evaluación progreso ascenso mantenimiento pedir",
     build: function() {
       return ds("Comentarios de un coach de árbitros",
-        dt("Cuando un coach de árbitros te observa, su nota te llega en el Hub, ya pulida y en lenguaje claro, normalmente esa misma tarde. Tu nota más reciente aparece en Tu día; <strong>Todas tus notas</strong> abre las demás.") +
+        dt("Cuando un coach de árbitros te observa, su nota te llega en el Hub, ya pulida y en lenguaje claro, normalmente esa misma tarde. Tu nota más reciente aparece en Tu día; la pestaña <strong>Notas</strong> de la barra inferior las abre todas.") +
         bul("Cada nota tiene una o dos cosas que salieron bien y una o dos para trabajar. Al abrirla, el coach sabe que la leíste.") +
         bul("Que todavía no tengas comentarios no significa que no te hayan observado. Los árbitros de primer año reciben una visita al inicio de la temporada.")) +
       ds("Evaluaciones formales",
         bul("Un ascenso a Regional requiere <strong>tres</strong> evaluaciones formales de tres coaches de árbitros distintos; mantener el grado Regional requiere <strong>dos</strong> de dos coaches distintos. Tu progreso se muestra en Tu día.") +
         bul("<strong>Pide una evaluación</strong> desde la tarjeta de un partido próximo: toca Pedir evaluación e indica si es para ascenso o mantenimiento. El Director de Desarrollo Arbitral asigna un coach; verás la asignación en Tu día y, una vez aprobada, la evaluación escrita.") +
-        bul("Tu resultado de la prueba física y tu insignia aparecen en la tarjeta de la prueba física. Al final de la temporada, una tarjeta de <strong>Tu temporada</strong> resume tu año y la tabla de posiciones del club."));
+        bul("<strong>Tu tablero de temporada</strong> está activo todo el año: partidos trabajados, el anillo de metas, tu posición estatal, la gráfica por mes y tus insignias. La insignia de condición física aparece al aprobar la prueba, y los egresados de la Academia llevan la marca dorada <strong>RR</strong>."));
     }
   },
 
@@ -2136,7 +2140,7 @@ var ES = {
     build: function() {
       return ds("Antes de la prueba",
         stp(1, "Abre la tarjeta de la <strong>Prueba física</strong> en Tu día o el módulo de Condición física en esta Biblioteca.") +
-        stp(2, "Lee los estándares de tu categoría: 6 x 40 m de sprints, la carrera de intervalos de 40 x 75 m / 25 m y el CODA.") +
+        stp(2, "Lee los estándares de tu categoría: los sprints repetidos, la carrera de intervalos de 40 x 75 m / 25 m y, para las pruebas de árbitro asistente, el CODA. La tarjeta muestra los tiempos exactos de cada prueba.") +
         stp(3, "Marca la <strong>exención de responsabilidad</strong> y luego toca <strong>Inscribirme</strong> en una sesión. Puedes cancelar desde la misma tarjeta.")) +
       ds("El día de la prueba",
         bul("El instructor dirige todo desde su teléfono, incluidos los pitidos de la carrera de intervalos. Puedes descargar el audio para entrenar.") +
@@ -2152,16 +2156,16 @@ var ES = {
       return ds("Notas de observación",
         stp(1, "Abre <strong>Coaching</strong> desde Tu día, elige el partido y toca al árbitro.") +
         stp(2, "Dicta o escribe tus notas durante y después del partido. Corto y específico es mejor que largo.") +
-        stp(3, "Toca <strong>Enviar</strong>. El Hub pule la redacción, tú la apruebas y el árbitro la recibe esa misma tarde.")) +
+        stp(3, "Toca <strong>Enviar</strong>. El Hub pule la redacción, un revisor la aprueba y el árbitro la recibe esa misma tarde.")) +
       ds("Una evaluación formal, de principio a fin",
         stp(1, "El Director de Desarrollo Arbitral te asigna al partido de un árbitro. Aparece en <strong>Mis evaluaciones</strong> dentro de Coaching.") +
         stp(2, "<strong>Ábrela en el Evaluador</strong> en la cancha. Registra los eventos en vivo, con el sorteo y la dirección de ataque para que la app sepa cuál portería es cuál.") +
         stp(3, "Después del partido: pestaña <strong>Post-partido</strong>, califica a cada árbitro, registra los CMI y los CRE y elige tu puntaje de sensación.") +
-        stp(4, "Pestaña <strong>Debrief</strong>: toca los dos o tres puntos que vas a conversar con el árbitro. Limita el debrief a esos.") +
+        stp(4, "Pestaña <strong>Debrief</strong>: toca los puntos que vas a conversar. Haz el debrief como enseña el curso: marca el tono, una fortaleza genuina, las áreas de desarrollo en orden de importancia y como máximo dos próximos pasos.") +
         stp(5, "<strong>Exportar</strong>: genera el PDF. La evaluación ya está completa en el Hub.") +
         stp(6, "En casa, abre la evaluación en el Hub y <strong>redacta tú mismo la evaluación formal</strong> a partir del PDF y tus notas, en el estilo de US Soccer. Guarda conforme avances.") +
         stp(7, "Toca <strong>Enviar a revisión</strong>. Un revisor la aprueba o la devuelve con una nota. Una vez aprobada, <strong>Copiar para RefEval</strong> y pégala ahí.")) +
-      callout("245,200,66","&#128161;","El Redactor, que genera un borrador a partir de tu registro, es para los revisores. Un coach redacta sus primeras evaluaciones por su cuenta; así es como el programa confirma que puedes hacerlo.");
+      callout("245,200,66","&#128161;","El Redactor puede generar un borrador a partir de tu registro. Aun así, un coach redacta sus primeras evaluaciones por su cuenta; así es como el programa confirma que puedes hacerlo.");
     }
   },
 
@@ -2176,12 +2180,12 @@ var ES = {
         bul("<strong>Avisos:</strong> lo que cada árbitro ve en Tu día, dentro de un rango de fechas. <strong>Personal:</strong> mensajes entre coordinadores de sede y el Director, nunca para los árbitros.") +
         bul("<strong>Retener:</strong> árbitros que están trabajando pero nadie ha observado, y árbitros que han dejado de aparecer.") +
         bul("<strong>Evaluaciones:</strong> solicitudes abiertas, asignaciones, evaluaciones pendientes de revisión y quién va en camino a un ascenso este año.")) +
-      ds("Estado del programa (léelo en una computadora)",
-        dt("El programa de un vistazo: registros comparados con el año pasado, quién regresa, los rangos de edad, el resumen de condición física y la lista de no registrados con envíos de correo en lote con un solo toque.")) +
+      ds("Estado del programa",
+        dt("El programa de un vistazo: el grupo de árbitros y la carrera de registro 2027 arriba, luego la retención, la referencia nacional oficial junto a los números del programa, la Academia, los rangos de edad, la condición física y la lista de no registrados con envíos de correo en lote con un solo toque. Hecho para el teléfono; en una computadora se acomoda solo.")) +
       ds("Configuración (administradores)",
         bul("<strong>Eventos:</strong> qué está activo, qué está apagado, qué ya terminó. Un evento necesita sedes y herramientas solo cuando está activo.") +
         bul("<strong>Sedes:</strong> los planos de canchas detrás de los mapas y los letreros con QR, con una vista previa en vivo mientras editas.") +
-        bul("<strong>Sesiones:</strong> pruebas físicas y sesiones de aula; el instructor las dirige desde la misma tarjeta.") +
+        bul("<strong>Sesiones:</strong> pruebas físicas y sesiones de aula; el instructor las dirige desde la misma tarjeta, y el libro oficial de envío estatal de pruebas físicas se exporta directo de los registros.") +
         bul("<strong>Sincronización con Assignr:</strong> cuándo se descargó por última vez cada grupo de asignación y si algo falló. Se ejecuta sola cada cinco minutos."));
     }
   },
