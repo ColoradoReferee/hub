@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.08-k';
+  var VERSION = '2026.11.08-l';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -51,47 +51,197 @@
   // Collapsed to one small pill; Hide keeps them away on this device until
   // the next release, when they return once.
   var GUIDE_OFF_KEY = 'hub-guide-off:' + VERSION;
+  // What is this screen: one bold line of purpose, then the glance
+  // list. Each entry is [english, spanish]; lead + points render as the
+  // tip card. This layer trains and markets at once: what the screen is
+  // for, what lives on it, what you can do from it.
   var HUB_GUIDE = {
-    's-day': ['Home base for every referee. Today\'s games with one-tap check-in, bulletins from the program, released coaching feedback, fitness sign-ups and season numbers. Staff see their tools listed below; everything branches from here.',
-      'La base de cada \u00e1rbitro. Los partidos de hoy con registro de un toque, avisos del programa, comentarios de coaching entregados, inscripci\u00f3n a pruebas f\u00edsicas y los n\u00fameros de la temporada. El personal ve sus herramientas abajo; todo parte de aqu\u00ed.'],
-    's-game': ['One game\'s full card: kickoff, field, the crew, check-in state, and score entry after the final whistle.',
-      'La ficha completa de un partido: hora, cancha, el equipo arbitral, el estado del registro y la captura del marcador tras el silbatazo final.'],
-    's-notes': ['Every piece of released coaching feedback for this referee, newest first.',
-      'Cada comentario de coaching entregado a este \u00e1rbitro, el m\u00e1s reciente primero.'],
-    's-coach': ['The referee coach\'s day. Pick a venue and a game, tap a crew member, leave a short note. Talk to text works. Notes go through Review before the referee sees them.',
-      'El d\u00eda del coach de \u00e1rbitros. Elige sede y partido, toca a un miembro del equipo y deja una nota corta. El dictado por voz funciona. Las notas pasan por Revisi\u00f3n antes de llegar al \u00e1rbitro.'],
-    's-coachgame': ['One game from the coach\'s side: the crew, what each official has already been told, and the note box.',
-      'Un partido visto por el coach: el equipo arbitral, lo que ya se le ha dicho a cada oficial y el cuadro de notas.'],
-    's-mynotes': ['The notes this coach has written, with where each one stands: pending, cleaned, released, read.',
-      'Las notas que este coach ha escrito, con el estado de cada una: pendiente, pulida, entregada, le\u00edda.'],
-    's-review': ['Quality control for coaching notes. Staff tidy a note, edit it, or release it as written. Only released notes reach the referee.',
-      'Control de calidad de las notas de coaching. El personal pule una nota, la edita o la entrega tal cual. Solo las notas entregadas llegan al \u00e1rbitro.'],
-    's-state': ['The whole program in numbers: referees by year, retention, the live season, registration pace.',
-      'Todo el programa en n\u00fameros: \u00e1rbitros por a\u00f1o, retenci\u00f3n, la temporada en vivo, el ritmo de registro.'],
-    's-family': ['What a parent or guardian sees: texting approvals for their referee and every message the program has sent.',
-      'Lo que ve un padre o tutor: las aprobaciones de mensajes de su \u00e1rbitro y cada mensaje que el programa ha enviado.'],
-    's-center': ['The development desk: formal evaluations to review, upgrade candidates with their progress, continuing education records, and sessions such as fitness tests.',
-      'La mesa de desarrollo: evaluaciones formales por revisar, candidatos a ascenso con su progreso, registros de educaci\u00f3n continua y sesiones como pruebas f\u00edsicas.'],
-    's-ops': ['Live game day operations: every field at the venue, who has checked in, crew switches and field moves, bulletins, emergencies with acknowledgment.',
-      'Operaciones del d\u00eda de juego en vivo: cada cancha de la sede, qui\u00e9n se ha registrado, cambios de equipo y de cancha, avisos y emergencias con confirmaci\u00f3n.'],
-    's-people': ['Every registered referee: search by name, see licenses, clearances and titles, open their card, grant local titles.',
-      'Cada \u00e1rbitro registrado: busca por nombre, mira licencias, habilitaciones y t\u00edtulos, abre su ficha, otorga t\u00edtulos locales.'],
-    's-assign': ['Assigning: offer game slots to referees, watch accepts and declines come back, fill the slots that still need a person.',
-      'Asignaciones: ofrece espacios de partido a los \u00e1rbitros, mira llegar aceptaciones y rechazos, cubre los espacios que a\u00fan necesitan a alguien.'],
-    's-setup': ['Program configuration: events and leagues, venues with their drawn field maps, and which tools each event turns on.',
-      'Configuraci\u00f3n del programa: eventos y ligas, sedes con sus mapas de canchas dibujados y qu\u00e9 herramientas activa cada evento.'],
-    's-eod': ['The Site Coordinator\'s end of day report: hours on site, for pay.',
-      'El informe de fin del d\u00eda del coordinador de sede: horas en la sede, para el pago.'],
-    's-eval': ['A formal evaluation: the match log, ratings by area, key incidents, and the written report.',
-      'Una evaluaci\u00f3n formal: la bit\u00e1cora del partido, calificaciones por \u00e1rea, incidentes clave y el informe escrito.'],
-    's-upgrade': ['The upgrade tracker: games counted live from the schedule and the log, the fitness pass, formal evaluations, all against the official requirements.',
-      'El rastreador de ascenso: partidos contados en vivo desde el calendario y el registro, la prueba f\u00edsica, las evaluaciones formales, todo contra los requisitos oficiales.'],
-    's-map': ['The venue map, drawn to the real layout: every field with its live game state, Referee HQ, parking and landmarks.',
-      'El mapa de la sede, dibujado a su trazado real: cada cancha con su estado en vivo, la carpa de \u00e1rbitros, el estacionamiento y los puntos de referencia.'],
-    's-ref': ['A referee\'s card: their games, released feedback, licenses and clearances, evaluations, continuing education, all in one place.',
-      'La ficha de un \u00e1rbitro: sus partidos, comentarios entregados, licencias y habilitaciones, evaluaciones y educaci\u00f3n continua, todo en un lugar.'],
-    's-help': ['Game day help: one tap reaches the program for emergencies and field problems, logged and acknowledged in the Command Center.',
-      'Ayuda el d\u00eda de juego: un toque avisa al programa de emergencias y problemas de cancha, registrado y confirmado en el Centro de mando.']
+    's-day': [
+      { lead: 'Home base. Open it on game morning and your whole day is already here.', points: [
+        'Countdown, field, matchup and your crew for the next game, with one-tap check-in when you arrive.',
+        'Running late? One tap tells the Site Coordinator; the card shows when they have seen it.',
+        'Your season as the Colorado flag: games, your rank statewide, your busiest months, badges earned.',
+        'Colorado, today: how many officials and games are on fields across the state right now.',
+        'Released coaching feedback, program bulletins, fitness sign-ups and registration reminders.',
+        'Staff tools sit in the grid below; the tab bar at the bottom jumps anywhere.'] },
+      { lead: 'Tu base. Ábrela la mañana del partido y todo tu día ya está aquí.', points: [
+        'Cuenta regresiva, cancha, enfrentamiento y tu equipo arbitral, con registro de un toque al llegar.',
+        '¿Vas tarde? Un toque avisa al coordinador de sede; la tarjeta muestra cuándo lo vio.',
+        'Tu temporada como la bandera de Colorado: partidos, tu lugar estatal, tus meses, insignias.',
+        'Colorado, hoy: cuántos oficiales y partidos hay en canchas de todo el estado ahora mismo.',
+        'Comentarios de coaching entregados, avisos del programa, pruebas físicas y registro.',
+        'Las herramientas del personal están en la cuadrícula de abajo; la barra inferior salta a todo.'] }],
+    's-game': [
+      { lead: 'Everything about one game, before and after the whistle.', points: [
+        'Matchup, crew and who has arrived, at a glance.',
+        'Check in, open the venue map to your field, read this competition’s rules.',
+        'After the final whistle: enter the score, request a formal evaluation, file an incident report.'] },
+      { lead: 'Todo sobre un partido, antes y después del silbatazo.', points: [
+        'Enfrentamiento, equipo arbitral y quién ya llegó, de un vistazo.',
+        'Regístrate, abre el mapa de la sede hasta tu cancha, lee las reglas de esta competencia.',
+        'Tras el silbatazo final: captura el marcador, pide una evaluación formal, reporta un incidente.'] }],
+    's-notes': [
+      { lead: 'Your coaching file: every released note ever written for you.', points: [
+        'Newest first, with who wrote it and from which game.',
+        'A note only lands here after Review approves it; what you read is what the program stands behind.'] },
+      { lead: 'Tu expediente de coaching: cada nota entregada que se ha escrito para ti.', points: [
+        'La más reciente primero, con quién la escribió y de qué partido.',
+        'Una nota llega aquí solo después de que Revisión la aprueba; lo que lees, el programa lo respalda.'] }],
+    's-coach': [
+      { lead: 'The referee coach’s working day.', points: [
+        'Pick a venue and block; games assigned to you are already marked.',
+        'Tap a crew member and speak or type a short note; the program tidies it into clean feedback.',
+        'See which referees have never been seen by a coach, and mark the days you can coach.'] },
+      { lead: 'El día de trabajo del coach de árbitros.', points: [
+        'Elige sede y bloque; los partidos asignados a ti ya están marcados.',
+        'Toca a un oficial y dicta o escribe una nota corta; el programa la pule en un comentario limpio.',
+        'Mira qué árbitros nunca han sido vistos por un coach y marca los días que puedes acudir.'] }],
+    's-coachgame': [
+      { lead: 'One game from the coach’s chair.', points: [
+        'The crew, with each official’s coaching history beside the name.',
+        'Write for one official at a time; talk to text works on the field.',
+        'A formal evaluation assigned to you opens the Evaluator from here.'] },
+      { lead: 'Un partido desde la silla del coach.', points: [
+        'El equipo arbitral, con el historial de coaching de cada oficial junto al nombre.',
+        'Escribe para un oficial a la vez; el dictado por voz funciona en la cancha.',
+        'Una evaluación formal asignada a ti abre el Evaluador desde aquí.'] }],
+    's-mynotes': [
+      { lead: 'Your own notes and where each one stands.', points: [
+        'Raw beside cleaned, so you see exactly what changed.',
+        'Pending, cleaned, released, read: the whole journey of every note you wrote.'] },
+      { lead: 'Tus propias notas y el estado de cada una.', points: [
+        'El original junto al pulido, para ver exactamente qué cambió.',
+        'Pendiente, pulida, entregada, leída: el viaje completo de cada nota que escribiste.'] }],
+    's-review': [
+      { lead: 'Quality control before feedback reaches a referee.', points: [
+        'The cleaned note sits beside the coach’s original.',
+        'Approve, edit, or release as written; nothing reaches a referee unreviewed.',
+        'The coverage board shows who is writing and which referees are being seen.'] },
+      { lead: 'Control de calidad antes de que un comentario llegue al árbitro.', points: [
+        'La nota pulida junto al original del coach.',
+        'Aprueba, edita o entrega tal cual; nada llega a un árbitro sin revisión.',
+        'El tablero de cobertura muestra quién escribe y a qué árbitros se está viendo.'] }],
+    's-state': [
+      { lead: 'The whole program on one screen, live from the database.', points: [
+        'Referees by year and age, first-year pipeline, and retention against the official national yardstick.',
+        '2027 registration pace: brand new, returning, and who has gone quiet since last season.',
+        'The state map: where every official lives, laid against where the games are.',
+        'Every count uses one definition and one source; what changed today is already in these numbers.',
+        'This is the screen the program’s leadership reads; what it says is what is true.'] },
+      { lead: 'Todo el programa en una pantalla, en vivo desde la base de datos.', points: [
+        'Árbitros por año y edad, el canal de primer año y la retención contra la vara nacional oficial.',
+        'Ritmo de registro 2027: nuevos, los que regresan y quiénes se han quedado callados.',
+        'El mapa estatal: dónde vive cada oficial, contra dónde están los partidos.',
+        'Cada cifra usa una definición y una fuente; lo que cambió hoy ya está en estos números.',
+        'Esta es la pantalla que lee la dirección del programa; lo que dice es lo que es.'] }],
+    's-family': [
+      { lead: 'The family screen: a parent or guardian’s own view.', points: [
+        'Approve or revoke game day texting for each of your referees, one tap each way.',
+        'Read every text the program has ever sent them: when, what, and who sent it.',
+        'Texts only go out between 7am and 10pm, and never without your approval.'] },
+      { lead: 'La pantalla familiar: la vista propia de un padre o tutor.', points: [
+        'Autoriza o revoca los mensajes del día de partido para cada uno de tus árbitros, un toque.',
+        'Lee cada mensaje que el programa les ha enviado: cuándo, qué y quién lo mandó.',
+        'Los mensajes solo salen entre 7am y 10pm, y nunca sin tu autorización.'] }],
+    's-center': [
+      { lead: 'The development desk: where referee growth is run.', points: [
+        'Formal evaluation requests: assign a coach, follow the report through to done.',
+        'Upgrade candidates with live progress against the official requirements.',
+        'Continuing education: record credits one at a time or a whole clinic at once.',
+        'Fitness tests and classes: post a session, run the day, record the results.'] },
+      { lead: 'La mesa de desarrollo: donde se dirige el crecimiento arbitral.', points: [
+        'Solicitudes de evaluación formal: asigna un coach y sigue el informe hasta terminarlo.',
+        'Candidatos a ascenso con progreso en vivo contra los requisitos oficiales.',
+        'Educación continua: registra créditos uno por uno o una clínica entera de una vez.',
+        'Pruebas físicas y clases: publica una sesión, dirige el día, registra los resultados.'] }],
+    's-ops': [
+      { lead: 'The live board for running a game day.', points: [
+        'Needs attention shows only the fields to walk to, each with a map stamp of exactly where.',
+        'Yellow card: not checked in or running late. Red card: a Help call or protection alert.',
+        'Check a referee in, switch a crew, move a field, post a bulletin, all from here.',
+        'Staff messages, premium applications and protection live in the tabs above.'] },
+      { lead: 'El tablero en vivo para dirigir un día de partidos.', points: [
+        'Requiere atención muestra solo las canchas a las que hay que caminar, cada una con su mapa.',
+        'Tarjeta amarilla: sin registrar o va tarde. Tarjeta roja: una llamada de ayuda o alerta.',
+        'Registra a un árbitro, cambia un equipo, mueve una cancha, publica un aviso, todo desde aquí.',
+        'Mensajes del personal, solicitudes premium y protección viven en las pestañas de arriba.'] }],
+    's-people': [
+      { lead: 'The whole pool, one search away.', points: [
+        'Licenses, clearances, titles and history on every card.',
+        'Grant or remove local titles; generate a sign-in code or text a one-tap link.',
+        'Names to link ties game-sheet spellings to real people, so history follows the person.'] },
+      { lead: 'Todo el padrón, a una búsqueda.', points: [
+        'Licencias, habilitaciones, títulos e historial en cada ficha.',
+        'Otorga o quita títulos locales; genera un código de acceso o envía un enlace de un toque.',
+        'Nombres por vincular une las grafias de las planillas con personas reales.'] }],
+    's-assign': [
+      { lead: 'Assigning without the phone tree.', points: [
+        'Offer slots, watch accepts and declines land, see exactly what still needs a person.',
+        'Referees mark the hours they can work; offers respect those hours.',
+        'A change or cancel texts everyone affected once, automatically, and is logged.'] },
+      { lead: 'Asignar sin la cadena de llamadas.', points: [
+        'Ofrece espacios, mira llegar aceptaciones y rechazos, ve exactamente qué falta por cubrir.',
+        'Los árbitros marcan las horas que pueden trabajar; las ofertas las respetan.',
+        'Un cambio o cancelación avisa a todos los afectados una vez, automáticamente, y queda registrado.'] }],
+    's-setup': [
+      { lead: 'Program configuration, no engineer needed.', points: [
+        'Events and leagues, each with its rules page and the tools it turns on.',
+        'Venues with drawn field maps; edit a layout right here and the map updates everywhere.',
+        'Sessions: post fitness tests and classes, and download the official state fitness workbook.',
+        'The Assignr sync, watched: every group, every week, when it last ran, what failed.'] },
+      { lead: 'Configuración del programa, sin necesitar un ingeniero.', points: [
+        'Eventos y ligas, cada uno con su página de reglas y las herramientas que activa.',
+        'Sedes con mapas dibujados; edita un trazado aquí y el mapa se actualiza en todas partes.',
+        'Sesiones: publica pruebas físicas y clases, y descarga el libro estatal oficial de pruebas.',
+        'La sincronización con Assignr, vigilada: cada grupo, cada semana, cuándo corrió, qué falló.'] }],
+    's-eod': [
+      { lead: 'End of day: hours on site, for pay.', points: [
+        'Time in, time out; the hours compute themselves and go straight to payroll’s report.',
+        'Administrators can file for any staff member with Filing for.'] },
+      { lead: 'Fin del día: horas en la sede, para el pago.', points: [
+        'Hora de entrada y salida; las horas se calculan solas y van directo al informe de nómina.',
+        'Los administradores pueden capturar por cualquier miembro del personal con Capturando por.'] }],
+    's-eval': [
+      { lead: 'A formal evaluation, the official way.', points: [
+        'The match log, ratings by area, critical incidents and clear errors, exactly as the national framework defines them.',
+        'The written report follows the four-step debrief and ends with at most two next steps.'] },
+      { lead: 'Una evaluación formal, a la manera oficial.', points: [
+        'La bitácora, calificaciones por área, incidentes críticos y errores claros, tal como los define el marco nacional.',
+        'El informe escrito sigue la charla de cuatro pasos y cierra con máximo dos próximos pasos.'] }],
+    's-upgrade': [
+      { lead: 'Your path to the next badge, counted live.', points: [
+        'Centers and lines from the real schedule plus your own verified log.',
+        'Fitness pass, formal evaluations and clearances, all against the official requirements.',
+        'Export your game log in the official workbook shape, ready to submit.'] },
+      { lead: 'Tu camino a la siguiente insignia, contado en vivo.', points: [
+        'Centros y bandas desde el calendario real más tu propio registro verificado.',
+        'Prueba física, evaluaciones formales y habilitaciones, todo contra los requisitos oficiales.',
+        'Exporta tu registro de partidos en el formato oficial, listo para enviar.'] }],
+    's-map': [
+      { lead: 'The venue as it really lies.', points: [
+        'Every field with its live state: gold needs eyes, red needs feet, green is handled.',
+        'Referee HQ, parking and landmarks drawn in; search any field by name.',
+        'Staff see check-ins ring the fields; referees see the walk to their own.'] },
+      { lead: 'La sede tal como es en realidad.', points: [
+        'Cada cancha con su estado en vivo: dorado pide ojos, rojo pide pasos, verde está resuelto.',
+        'La carpa de árbitros, el estacionamiento y los puntos de referencia; busca cualquier cancha.',
+        'El personal ve los registros rodear las canchas; el árbitro ve el camino a la suya.'] }],
+    's-ref': [
+      { lead: 'One official’s whole story on one card.', points: [
+        'Games, released feedback, licenses, clearances, evaluations, continuing education.',
+        'Staff text from the program number; a minor only with a guardian approval on file.',
+        'The sign-in code and the one-tap link for this person live here too.'] },
+      { lead: 'Toda la historia de un oficial en una ficha.', points: [
+        'Partidos, comentarios entregados, licencias, habilitaciones, evaluaciones, educación continua.',
+        'El personal envía textos desde el número del programa; a un menor solo con autorización.',
+        'El código de acceso y el enlace de un toque de esta persona también viven aquí.'] }],
+    's-help': [
+      { lead: 'Help, one tap away, logged and answered.', points: [
+        'Pick the reason; the right people are texted immediately.',
+        'The Command Center sees it and acknowledges; your screen shows when they have.'] },
+      { lead: 'Ayuda a un toque, registrada y respondida.', points: [
+        'Elige el motivo; las personas correctas reciben un texto de inmediato.',
+        'El Centro de mando lo ve y lo confirma; tu pantalla muestra cuándo lo hizo.'] }]
   };
   function guideOff() { try { return localStorage.getItem(GUIDE_OFF_KEY) === '1'; } catch (e) { return false; } }
   function hubGuide(id) {
@@ -102,8 +252,10 @@
     var es = (S.lang || 'en') === 'es';
     var d = document.createElement('div');
     d.className = 'sbx-guide';
-    d.innerHTML = '<button type="button" class="sbx-g-btn">&#9432; ' + (es ? 'Qu\u00e9 es esta pantalla' : 'What is this screen') + '</button><div class="sbx-g-body" hidden>' + esc(es ? g[1] : g[0]) +
-      ' <button type="button" class="linkbtn sbx-g-off">' + (es ? 'Ocultar estos consejos' : 'Hide these tips') + '</button></div>';
+    var g2 = es ? g[1] : g[0];
+    d.innerHTML = '<button type="button" class="sbx-g-btn">&#9432; ' + (es ? 'Qu\u00e9 es esta pantalla' : 'What is this screen') + '</button><div class="sbx-g-body" hidden><div class="sbx-g-lead">' + esc(g2.lead) + '</div>' +
+      (g2.points || []).map(function (pt) { return '<div class="sbx-g-pt">' + esc(pt) + '</div>'; }).join('') +
+      '<button type="button" class="linkbtn sbx-g-off">' + (es ? 'Ocultar estos consejos' : 'Hide these tips') + '</button></div>';
     var top = sec.querySelector('.top');
     if (top) top.insertAdjacentElement('afterend', d); else sec.insertAdjacentElement('afterbegin', d);
     d.querySelector('.sbx-g-btn').onclick = function () { var b = d.querySelector('.sbx-g-body'); b.hidden = !b.hidden; };

@@ -1,4 +1,4 @@
-/* app.css · Colorado Referees Hub · 2026.11.08-k
+/* app.css · Colorado Referees Hub · 2026.11.08-l
    Tokens once, two themes, every component. Nothing page-specific.
    2026.11.08-h: the Matchday layer. Broadcast hero with the Front Range
    ridgeline, fixtures-board stat strips, notched primary buttons, the
@@ -546,3 +546,10 @@ body.tabbed .screen { padding-bottom: 84px; }
 .card.attn .why { display: flex; gap: 8px; align-items: flex-start; }
 .card.attn .why .cardglyph { width: 9px; height: 13px; margin-top: 3px; }
 .card.attn .why.late-ok .cardglyph { background: var(--green); }
+
+/* What is this screen: the glance card (2026.11.08-l). A bold purpose
+   line, then points each marked with a small gold referee card. */
+.sbx-guide .sbx-g-lead { font-weight: 700; color: var(--ink); font-size: 15px; padding-bottom: 4px; }
+.sbx-guide .sbx-g-pt { position: relative; padding: 3px 0 0 18px; }
+.sbx-guide .sbx-g-pt::before { content: ""; position: absolute; left: 2px; top: 8px; width: 7px; height: 10px; border-radius: 1.5px; background: var(--gold); transform: rotate(-8deg); }
+.sbx-guide .sbx-g-off { margin-top: 6px; }
