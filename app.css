@@ -1,4 +1,4 @@
-/* app.css · Colorado Referees Hub · 2026.11.08-n
+/* app.css · Colorado Referees Hub · 2026.11.08-o
    Tokens once, two themes, every component. Nothing page-specific.
    2026.11.08-h: the Matchday layer. Broadcast hero with the Front Range
    ridgeline, fixtures-board stat strips, notched primary buttons, the
@@ -494,6 +494,10 @@ details.fold > .fold-body > .list { padding-top: 8px; }
 .cardglyph.r { background: var(--red); }
 .badges { display: flex; gap: 18px; margin-top: 12px; flex-wrap: wrap; }
 .badge { display: flex; align-items: center; gap: 7px; font-weight: 800; font-size: 14px; color: var(--green); }
+/* The RenRef monogram: a small Colorado C of their own. Gold ring, red
+   letters, same palette as the season ring. */
+.badge.rrbadge { color: var(--gold); }
+.rrmark { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--gold); background: color-mix(in srgb, var(--gold) 14%, transparent); color: #C8102E; font-weight: 900; font-size: 10.5px; letter-spacing: .4px; flex: none; }
 
 /* Season board: ring drawn as the Colorado flag's C, rank bar, months */
 .board { margin: 12px 20px 0; background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--line); border-radius: 3px; padding: 16px; }

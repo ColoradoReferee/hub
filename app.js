@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.08-n';
+  var VERSION = '2026.11.08-o';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -943,7 +943,8 @@
         '</svg><div class="lbl"><span>' + esc(mon(0)) + '</span><span>' + esc(mon(11)) + '</span></div></div>';
     }
     var badges = (hit ? '<span class="badge"><span class="cardglyph"></span>' + esc(t('seasonBadgeGames').replace('{m}', hit)) + '</span>' : '') +
-      (m.fitness_date ? '<span class="badge"><span class="cardglyph"></span>' + esc(t('seasonBadgeFit')) + '</span>' : '');
+      (m.fitness_date ? '<span class="badge"><span class="cardglyph"></span>' + esc(t('seasonBadgeFit')) + '</span>' : '') +
+      ((S.me && (S.me.titles || []).indexOf('RenRef') >= 0) ? '<span class="badge rrbadge"><span class="rrmark" aria-hidden="true">RR</span>' + esc(t('seasonBadgeRR')) + '</span>' : '');
     el.innerHTML = '<div class="pad" style="padding-top:20px"><div class="slab"><span>' + esc(t('seasonTitle').replace('{y}', y)) + '</span></div></div>' +
       '<div class="board gold" style="margin-top:10px"><div class="ringrow">' + ring +
       '<div class="ringtext">' + rankLine + (mileLine ? '<span>' + mileLine + '</span>' : '') +
