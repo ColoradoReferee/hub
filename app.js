@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.08-m';
+  var VERSION = '2026.11.08-n';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -3707,6 +3707,7 @@
     // Live season numbers from the same view the Coverage tab uses.
     try { var cov = await sb.rpc('coverage_rows'); ST.cov = cov.data || []; } catch (e) { ST.cov = []; }
     try { var fs = await sb.rpc('fitness_summary'); ST.fit = fs.data || []; } catch (e) { ST.fit = []; }
+    try { var ac = await sb.rpc('crest_academy_stats'); ST.acad = ac.data || null; } catch (e) { ST.acad = null; }
     try { var sn = await sb.from('registration_snapshots').select('season,taken_on,licensed,first_year,continuing,gap_return').order('taken_on'); ST.snaps = sn.data || []; } catch (e) { ST.snaps = []; }
     // ZIP centroids and the fields we use, static files in this folder.
     if (!ST.zips) { try { ST.zips = await fetch('zips.json?v=' + VERSION).then(function (x) { return x.json(); }); } catch (e) { ST.zips = {}; } }
@@ -3854,6 +3855,15 @@
       '<div class="stat"><b>3,066</b><i>' + esc(t('ussfLic')) + '</i><div class="sub"><span class="delta up">+0.2%</span></div></div>' +
       '<div class="stat"><b>1,559</b><i>' + esc(t('ussfYouth')) + '</i><div class="sub"><span class="delta down">-2.5%</span></div></div>' +
       '</div><div class="hint">' + esc(t('ussfSrc')) + '</div></div>';
+    // The Academy pipeline: cohort sizes and who still holds a badge.
+    // Positive numbers only by design; campaign tracking stays off screens.
+    if (ST.acad && ST.acad.length) {
+      var acTot = 0, acAct = 0;
+      html += '<div class="card" style="gap:6px"><b>' + esc(t('acadTitle')) + '</b><div class="stats" style="margin:0">' +
+        ST.acad.map(function (a) { acTot += a.students; acAct += a.active; return '<div class="stat"><b>' + fmtN(a.students) + '</b><i>' + esc(t('acadClass').replace('{y}', a.class_year)) + '</i></div>'; }).join('') +
+        '</div><div>' + esc(t('acadActive').replace('{n}', fmtN(acAct)).replace('{t}', fmtN(acTot))) + '</div>' +
+        '<div class="hint">' + esc(t('acadHint')) + '</div></div>';
+    }
     if (open) html += '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('stOpenTitle').replace('{y}', open)) + '</b><div>' + esc(t('stOpenBody').replace('{n}', fmtN(stVal(open, 'referees'))).replace('{r}', fmtN(stVal(open, 'retained_from_prev'))).replace('{f}', fmtN(stVal(open, 'new')))) + '</div><div class="hint">' + esc(stNote(open)) + '</div></div>';
     // 1. Referees by year
     var trendYears = allYears.filter(function (y) { return y !== open; });
