@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.09-c';
+  var VERSION = '2026.11.09-d';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1518,7 +1518,7 @@
       var ws2 = dayWins(AV.day);
       var dowName = new Date(AV.day + 'T12:00:00').toLocaleDateString(S.lang === 'es' ? 'es-US' : 'en-US', { weekday: 'long' });
       ed = '<div class="card" style="gap:8px;margin-top:10px"><b>' + esc(dayLong(AV.day)) + '</b>' +
-        (ws2.length ? ws2.map(function (x) { return '<div class="rowline"><div>' + esc(minClock(x.from_min) + ' ' + t('avToWord') + ' ' + minClock(x.to_min)) + '</div><button class="chip-btn small" data-avdel="' + x.id + '" aria-label="' + esc(t('avRemove')) + '">✕</button></div>'; }).join('') : '<div class="hint">' + esc(t('avNoneDay')) + '</div>') +
+        (ws2.length ? ws2.map(function (x) { return '<div class="rowline"><div>' + esc(minClock(x.from_min) + ' · ' + t('avDoneBy').replace('{t}', minClock(x.to_min))) + '</div><button class="chip-btn small" data-avdel="' + x.id + '" aria-label="' + esc(t('avRemove')) + '">✕</button></div>'; }).join('') : '<div class="hint">' + esc(t('avNoneDay')) + '</div>') +
         '<div class="chips"><button class="chip-btn small" data-avpre="0|1440">' + esc(t('avAllDay')) + '</button><button class="chip-btn small" data-avpre="0|720">' + esc(t('avMorning')) + '</button><button class="chip-btn small" data-avpre="720|1440">' + esc(t('avAfternoon')) + '</button></div>' +
         '<div class="grid2"><div><label class="hint" for="avFrom">' + esc(t('avFrom')) + '</label><input id="avFrom" type="time" value="' + esc(AV.from) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div><div><label class="hint" for="avTo">' + esc(t('avTo')) + '</label><input id="avTo" type="time" value="' + esc(AV.to) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div></div>' +
         '<div class="actions" style="padding:0"><button class="btn primary small" id="avAddW">' + esc(t('avAdd')) + '</button>' + (ws2.length ? '<button class="btn outline small" id="avCopyW">' + esc(t('avCopyDow').replace('{dow}', dowName)) + '</button>' : '') + '</div>' +
@@ -1528,7 +1528,10 @@
         '<div class="msg" id="avWMsg" hidden></div></div>';
     }
     var n = ((a && a.availability) || []).length;
-    return fold('asgavail', t('asgAvailTitle'), n, '<div class="avcal"><div class="avweek head">' + dows.map(function (x) { return '<div class="avdow">' + x + '</div>'; }).join('') + '</div>' + cells + '</div><div class="hint">' + esc(t('avPick')) + '</div>' + ed + '<div class="hint">' + esc(t('asgAvailHint')) + '</div>', n === 0);
+    var mFmt = function (ds) { return new Date(ds + 'T12:00:00').toLocaleDateString(S.lang === 'es' ? 'es-US' : 'en-US', { month: 'long' }); };
+    var m1 = mFmt(weeks[0][0]), m2 = mFmt(weeks[weeks.length - 1][6]);
+    var caption = '<div class="avmonth">' + esc(m1 === m2 ? m1 : m1 + ' · ' + m2) + '</div>';
+    return fold('asgavail', t('asgAvailTitle'), n, caption + '<div class="avcal"><div class="avweek head">' + dows.map(function (x) { return '<div class="avdow">' + x + '</div>'; }).join('') + '</div>' + cells + '</div><div class="hint">' + esc(t('avPick')) + '</div>' + ed + '<div class="hint">' + esc(t('asgAvailHint')) + '</div>', n === 0);
   }
   function asgDayHtml() {
     var a = S.asg;
@@ -1751,7 +1754,7 @@
           var x = byDay[d];
           var h = '<div style="padding-top:10px"><b>' + esc(dayLong(d)) + '</b>';
           var wnotes = []; x.w.forEach(function (w) { if (w.note && wnotes.indexOf(w.note) < 0) wnotes.push(w.note); });
-          h += '<div class="hint">' + (x.w.length ? x.w.map(function (w) { return esc(minClock(w.from_min) + ' - ' + minClock(w.to_min)); }).join(', ') + (wnotes.length ? ' · <b>' + esc(wnotes.join(' · ')) + '</b>' : '') : esc(t('asgNoAvail'))) + '</div>';
+          h += '<div class="hint">' + (x.w.length ? x.w.map(function (w) { return esc(minClock(w.from_min) + ' · ' + t('avDoneBy').replace('{t}', minClock(w.to_min))); }).join(', ') + (wnotes.length ? ' · <b>' + esc(wnotes.join(' · ')) + '</b>' : '') : esc(t('asgNoAvail'))) + '</div>';
           x.g.forEach(function (g) { h += '<div class="hint">' + esc(clock(g.kickoff)) + ' <b>' + esc(g.role) + '</b> · ' + esc(g.competition || '') + ' · ' + esc(g.venue || '') + (g.hub ? ' · Hub' : '') + '</div>'; });
           x.o.forEach(function (o) { h += '<div class="hint">' + esc(clock(o.kickoff)) + ' ' + asgSlotWord(o.slot) + ' · ' + esc(t('brSt.' + o.status)) + ' · ' + esc(o.venue || '') + '</div>'; });
           var opens = openBy[d] || [];

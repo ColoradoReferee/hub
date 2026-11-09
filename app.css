@@ -1,4 +1,4 @@
-/* app.css · 2026.11.09-c */
+/* app.css · Colorado Referees Hub · 2026.11.09-d
    Tokens once, two themes, every component. Nothing page-specific.
    2026.11.08-h: the Matchday layer. Broadcast hero with the Front Range
    ridgeline, fixtures-board stat strips, notched primary buttons, the
@@ -449,22 +449,27 @@ details.fold > .fold-body > .list { padding-top: 8px; }
 .btn.small { white-space: nowrap; }
 
 /* Coach availability calendar (2026.10.20-i) */
-/* Availability calendar, Matchday treatment: slab numerals, gold for
-   the selected day, green solid for days with hours marked. */
-.avcal { display: flex; flex-direction: column; gap: 5px; }
-.avweek { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
-.avweek.head .avdow { text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .4px; color: var(--gold); padding-bottom: 2px; }
-.avday { display: flex; flex-direction: column; gap: 3px; padding: 5px 3px 4px; border-radius: 3px; border: 1px solid var(--line); border-top: 3px solid var(--line); background: var(--surface); min-width: 0; }
-.avday .n { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 12px; text-align: center; color: var(--muted); white-space: nowrap; overflow: hidden; }
-.avday.games { border-color: var(--gold); border-top-color: var(--gold); }
+/* Availability: a real wall calendar. One ruled grid, dark month-bar
+   header, day number in the corner, green hour chips in the cell,
+   gold wash on the selected day. */
+.avmonth { margin: 10px 0 0; font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 15px; letter-spacing: .3px; color: var(--ink); text-transform: capitalize; }
+.avcal { display: flex; flex-direction: column; gap: 0; margin-top: 6px; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; background: var(--line); border-top: 3px solid var(--gold); }
+.avweek { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--line); }
+.avweek + .avweek { margin-top: 1px; }
+.avweek.head .avdow { text-align: center; font-size: 10.5px; font-weight: 800; letter-spacing: 1.2px; color: #FFC400; background: #0A1220; padding: 8px 0 6px; }
+.avday { display: flex; flex-direction: column; gap: 3px; padding: 4px 4px 4px; border: 0; border-radius: 0; background: var(--surface); min-width: 0; min-height: 60px; }
+.avday .n { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 12px; text-align: left; padding-left: 2px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.avday.games { background: color-mix(in srgb, var(--gold) 14%, var(--surface)); box-shadow: inset 0 0 0 2px var(--gold); }
 .avday.games .n { color: var(--ink); }
-.avday.today { box-shadow: inset 0 0 0 2px var(--gold); }
-.avday.past { opacity: .3; min-height: 64px; border-top-width: 1px; }
-.avh { min-height: 32px; border-radius: 3px; border: 1.5px dashed var(--line); background: transparent; color: var(--muted); font: 800 11px/1 inherit; font-family: inherit; cursor: pointer; padding: 0; }
-.avh.on { border-style: solid; border-color: var(--green); background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--ink); font-weight: 700; }
+.avday.today .n { color: var(--gold); }
+.avday.today:not(.games) { box-shadow: inset 3px 0 0 var(--gold); }
+.avday.past { opacity: .3; }
+.avh { flex: 1; min-height: 32px; border-radius: 2px; border: 0; background: transparent; color: var(--line); font: 800 13px/1 inherit; font-family: inherit; cursor: pointer; padding: 0; }
+.avday:not(.past) .avh:hover { color: var(--muted); }
+.avh.on { background: color-mix(in srgb, var(--green) 18%, transparent); box-shadow: inset 0 0 0 1.5px var(--green); color: var(--ink); font-weight: 700; }
 .avh:active { transform: translateY(1px); }
 
-.avday.none { border-color: transparent; background: transparent; min-height: 62px; }
+.avday.none { background: var(--surface); min-height: 60px; }
 .avday.none .n { color: var(--muted); opacity: .6; }
 .avh.off { visibility: hidden; min-height: 30px; }
 
