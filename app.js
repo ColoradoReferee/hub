@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.09-d';
+  var VERSION = '2026.11.09-e';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1509,7 +1509,15 @@
         var past = ds < today, dt = new Date(ds + 'T12:00:00');
         if (past) return '<div class="avday past"><span class="n">' + dt.getDate() + '</span></div>';
         var ws = dayWins(ds);
-        var lbl = !ws.length ? '+' : (ws.length === 1 && ws[0].from_min === 0 && ws[0].to_min === 1440) ? esc(t('avAllShort')) : ws.slice(0, 2).map(function (x) { return short(x.from_min) + '-' + (x.to_min === 1440 ? '12a' : short(x.to_min)); }).join('<br>') + (ws.length > 2 ? '…' : '');
+        // Marked days draw their windows as a 24-hour rail: the day at a
+        // glance, like a broadcast schedule.
+        var lbl;
+        if (!ws.length) lbl = '+';
+        else {
+          var segs = ws.map(function (x) { return '<i style="left:' + (100 * x.from_min / 1440).toFixed(1) + '%;width:' + (100 * (x.to_min - x.from_min) / 1440).toFixed(1) + '%"></i>'; }).join('');
+          var wtxt = (ws.length === 1 && ws[0].from_min === 0 && ws[0].to_min === 1440) ? esc(t('avAllShort')) : short(ws[0].from_min) + '-' + (ws[0].to_min === 1440 ? '12a' : short(ws[0].to_min)) + (ws.length > 1 ? ' +' + (ws.length - 1) : '');
+          lbl = '<span class="avtl">' + segs + '</span><span class="avtlbl">' + wtxt + '</span>';
+        }
         return '<div class="avday' + (ds === AV.day ? ' games' : '') + (ds === today ? ' today' : '') + '"><span class="n">' + (dt.getDate() === 1 || ds === today ? monthOf(ds) + ' ' : '') + dt.getDate() + '</span><button class="avh' + (ws.length ? ' on' : '') + '" data-avday="' + ds + '" aria-label="' + esc(dayLong(ds)) + '" style="font-size:10px;line-height:1.25;min-height:34px;padding:2px 1px">' + lbl + '</button></div>';
       }).join('') + '</div>';
     }).join('');

@@ -1,4 +1,4 @@
-/* app.css · Colorado Referees Hub · 2026.11.09-d
+/* app.css · Colorado Referees Hub · 2026.11.09-e
    Tokens once, two themes, every component. Nothing page-specific.
    2026.11.08-h: the Matchday layer. Broadcast hero with the Front Range
    ridgeline, fixtures-board stat strips, notched primary buttons, the
@@ -464,9 +464,13 @@ details.fold > .fold-body > .list { padding-top: 8px; }
 .avday.today .n { color: var(--gold); }
 .avday.today:not(.games) { box-shadow: inset 3px 0 0 var(--gold); }
 .avday.past { opacity: .3; }
-.avh { flex: 1; min-height: 32px; border-radius: 2px; border: 0; background: transparent; color: var(--line); font: 800 13px/1 inherit; font-family: inherit; cursor: pointer; padding: 0; }
+.avh { flex: 1; min-height: 32px; border-radius: 2px; border: 0; background: transparent; color: var(--line); font: 800 13px/1 inherit; font-family: inherit; cursor: pointer; padding: 0 2px; display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 3px; }
 .avday:not(.past) .avh:hover { color: var(--muted); }
-.avh.on { background: color-mix(in srgb, var(--green) 18%, transparent); box-shadow: inset 0 0 0 1.5px var(--green); color: var(--ink); font-weight: 700; }
+.avh.on { background: transparent; color: var(--ink); }
+/* The 24-hour rail: midnight to midnight, green where the referee can work. */
+.avtl { position: relative; display: block; height: 7px; border-radius: 2px; background: color-mix(in srgb, var(--ink) 10%, transparent); overflow: hidden; }
+.avtl i { position: absolute; top: 0; bottom: 0; border-radius: 2px; background: var(--green); }
+.avtlbl { font-size: 10px; font-weight: 800; color: var(--ink); line-height: 1.1; }
 .avh:active { transform: translateY(1px); }
 
 .avday.none { background: var(--surface); min-height: 60px; }

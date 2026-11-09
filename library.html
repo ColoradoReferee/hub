@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- library.html v2026.11.08-b · 2026-10-23 · Colorado Referees Library -->
+<!-- library.html v2026.11.09-a · 2026-10-23 · Colorado Referees Library -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -21,7 +21,7 @@
   --c-guide:#D9A400;--c-laws:#2F7FD6;--c-gameday:#2E8B4E;
   --c-career:#D9731A;--c-policy:#C8102E;--c-contacts:#7E57C2;--c-hub:#1B2F55;--c-usrw:#4A5FC1;
 }
-/* What is this screen: the glance card, same as the Hub (v2026.11.08-b) */
+/* What is this screen: the glance card, same as the Hub (v2026.11.09-a) */
 .sbx-guide{max-width:1060px;margin:10px auto 0;padding:0 16px}
 .sbx-guide .sbx-g-btn{font:700 13px/1 var(--font);color:var(--gold);background:none;border:1.5px solid var(--gold);border-radius:999px;padding:7px 14px;cursor:pointer}
 .sbx-guide .sbx-g-body{font-size:14.5px;line-height:1.45;color:var(--muted);padding:10px 2px 0}
@@ -158,9 +158,9 @@ a{color:inherit;text-decoration:none;}
   width:10px;height:10px;border-radius:50%;flex-shrink:0;
 }
 .section-title{
-  font-family:var(--bebas);font-size:14px;
-  letter-spacing:.16em;text-transform:uppercase;
-  color:var(--faint);
+  font-family:var(--bebas);font-size:16px;
+  letter-spacing:.14em;text-transform:uppercase;
+  color:var(--gold);
 }
 .section-header::after{
   content:'';flex:1;height:1px;
@@ -203,11 +203,11 @@ a{color:inherit;text-decoration:none;}
 }
 .mod-info{flex:1;min-width:0;}
 .mod-title{
-  font-size:13px;font-weight:700;color:var(--ink);
+  font-size:18px;font-weight:800;letter-spacing:.015em;color:var(--ink);
   margin-bottom:2px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.mod-sub{font-size:10px;color:var(--muted);line-height:1.4;}
+.mod-sub{font-size:13px;color:var(--muted);line-height:1.4;}
 .mod-arrow{
   font-size:18px;color:var(--faint);flex-shrink:0;
   transition:color .15s,transform .15s;
@@ -293,7 +293,7 @@ a{color:inherit;text-decoration:none;}
 .detail-body{padding:16px 20px 20px;}
 .detail-section{margin-bottom:22px;}
 .detail-section-title{
-  font-size:10px;font-weight:700;
+  font-size:12px;font-weight:700;
   letter-spacing:.16em;text-transform:uppercase;
   color:var(--gold);margin-bottom:10px;
   padding-bottom:6px;
@@ -355,7 +355,7 @@ a{color:inherit;text-decoration:none;}
 </div>
 <script>
 (function () {
-  var KEY = 'hub-guide-off:lib-v2026.11.08-b';
+  var KEY = 'hub-guide-off:lib-v2026.11.09-a';
   var off = false; try { off = localStorage.getItem(KEY) === '1'; } catch (e) {}
   if (off) return;
   var es = false; try { es = localStorage.getItem('hub-lang') === 'es'; } catch (e) {}
@@ -491,7 +491,7 @@ a{color:inherit;text-decoration:none;}
       <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program">
     </div>
     <div class="footer-text">
-      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.08-b<br>
+      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.09-a<br>
       <a href="https://coloradosoccer.org" class="footer-link">ColoradoSoccer.org</a> &middot;
       <span data-l="questions">Questions:</span> <a href="mailto:refeducation@coloradoreferees.com" class="footer-link">refeducation@coloradoreferees.com</a> &middot; 303.888.6863
     </div>
@@ -579,9 +579,9 @@ var MODULES = [
     keywords:"tutorial how to start sign in install home screen phone language spanish dark mode version",
     build: function() {
       return ds("Sign in once",
-        stp(1, "Open the Hub and type the email you use in Assignr. Tap <strong>Send link</strong>.") +
-        stp(2, "Open the email on the same phone and tap the link. No password, ever. The Hub keeps you signed in.") +
-        stp(3, "If the Hub does not know your email, it tells you who to contact. Your name has to match Assignr.")) +
+        stp(1, "Open the Hub and type your email: the one on your U.S. Soccer Learning Center account. If the Hub does not know it, it tells you who to contact.") +
+        stp(2, "Tap <strong>Email me a code</strong>, then type the six digit code from the email and tap Sign in. No password, ever. The Hub keeps you signed in.") +
+        stp(3, "No code in your inbox? Check junk first. Hotmail and outlook addresses may not receive program mail; at a field, Referee HQ can read you a one time code instead.")) +
       ds("Put it on your phone",
         bul("<strong>iPhone:</strong> in Safari tap Share, then <strong>Add to Home Screen</strong>.") +
         bul("<strong>Android:</strong> in Chrome tap the three dots, then <strong>Install app</strong> or <strong>Add to Home screen</strong>.") +
@@ -2063,9 +2063,9 @@ var ES = {
     keywords: "tutorial cómo empezar iniciar sesión instalar pantalla de inicio teléfono idioma español modo oscuro versión",
     build: function() {
       return ds("Inicia sesión una sola vez",
-        stp(1, "Abre el Hub y escribe el correo que usas en Assignr. Toca <strong>Enviar enlace</strong>.") +
-        stp(2, "Abre el correo en el mismo teléfono y toca el enlace. Sin contraseña, nunca. El Hub te mantiene conectado.") +
-        stp(3, "Si el Hub no reconoce tu correo, te dice a quién contactar. Tu nombre tiene que coincidir con Assignr.")) +
+        stp(1, "Abre el Hub y escribe tu correo: el de tu cuenta del Learning Center de U.S. Soccer. Si el Hub no lo conoce, te dice a quién contactar.") +
+        stp(2, "Toca <strong>Envíame un código</strong>, escribe el código de seis dígitos del correo y toca Entrar. Sin contraseña, nunca. El Hub te mantiene conectado.") +
+        stp(3, "¿No llega el código? Revisa el correo no deseado. Las direcciones de hotmail y outlook pueden no recibir correos del programa; en la cancha, Referee HQ puede leerte un código de un solo uso."))) +
       ds("Ponlo en tu teléfono",
         bul("<strong>iPhone:</strong> en Safari toca Compartir y luego <strong>Agregar a pantalla de inicio</strong>.") +
         bul("<strong>Android:</strong> en Chrome toca los tres puntos y luego <strong>Instalar app</strong> o <strong>Agregar a pantalla de inicio</strong>.") +
