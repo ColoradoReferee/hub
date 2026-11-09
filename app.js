@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.09-e';
+  var VERSION = '2026.11.09-f';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1737,12 +1737,38 @@
         return x.game_id !== g.game_id && x.status !== 'C' && x.venue === g.venue && new Date(x.kickoff) > new Date(g.kickoff);
       }).sort(function (x, y) { return new Date(x.kickoff) - new Date(y.kickoff); })[0] || null;
     };
+  function avReadCal(avail) {
+    var today = todayStr();
+    var start = new Date(today + 'T12:00:00'); start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+    var weeks = [], d = new Date(start), end = shiftDate(today, 27);
+    for (var w = 0; w < 5; w++) { var row = []; for (var i = 0; i < 7; i++) { row.push(iso(d)); d.setDate(d.getDate() + 1); } weeks.push(row); if (row[6] >= end) break; }
+    var byDate = {}; (avail || []).forEach(function (x) { (byDate[x.date] = byDate[x.date] || []).push(x); });
+    var dows = S.lang === 'es' ? ['L', 'M', 'X', 'J', 'V', 'S', 'D'] : ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    var short = function (m) { var h = Math.floor(m / 60), mm = m % 60, h12 = h % 12 === 0 ? 12 : h % 12; return h12 + (mm ? ':' + (mm < 10 ? '0' : '') + mm : '') + (h < 12 ? 'a' : 'p'); };
+    var cells = weeks.map(function (row) {
+      return '<div class="avweek">' + row.map(function (ds) {
+        var past = ds < today, dt = new Date(ds + 'T12:00:00');
+        var ws = (byDate[ds] || []).sort(function (x, y) { return x.from_min - y.from_min; });
+        var inner = '';
+        if (!past && ws.length) {
+          var segs = ws.map(function (x) { return '<i style="left:' + (100 * x.from_min / 1440).toFixed(1) + '%;width:' + (100 * (x.to_min - x.from_min) / 1440).toFixed(1) + '%"></i>'; }).join('');
+          var wtxt = (ws.length === 1 && ws[0].from_min === 0 && ws[0].to_min === 1440) ? esc(t('avAllShort')) : short(ws[0].from_min) + '-' + (ws[0].to_min === 1440 ? '12a' : short(ws[0].to_min)) + (ws.length > 1 ? ' +' + (ws.length - 1) : '');
+          inner = '<div class="avh on"><span class="avtl">' + segs + '</span><span class="avtlbl">' + wtxt + '</span></div>';
+        } else if (!past) inner = '<div class="avh"></div>';
+        return '<div class="avday' + (past ? ' past' : '') + (ds === today ? ' today' : '') + '"><span class="n">' + dt.getDate() + '</span>' + inner + '</div>';
+      }).join('') + '</div>';
+    }).join('');
+    var mFmt = function (ds) { return new Date(ds + 'T12:00:00').toLocaleDateString(S.lang === 'es' ? 'es-US' : 'en-US', { month: 'long' }); };
+    var m1 = mFmt(weeks[0][0]), m2 = mFmt(weeks[weeks.length - 1][6]);
+    return '<div class="avmonth">' + esc(m1 === m2 ? m1 : m1 + ' · ' + m2) + '</div><div class="avcal"><div class="avweek head">' + dows.map(function (x) { return '<div class="avdow">' + x + '</div>'; }).join('') + '</div>' + cells + '</div>';
+  }
     var brFold = function () {
       var inner = '<div class="hint">' + esc(t('asgByRefHint')) + '</div>' +
         '<input id="asgBrQ" value="' + esc(ASG.brQ) + '" placeholder="' + esc(t('coachSearch')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink);margin-top:8px">' +
         '<div class="chips" style="padding-top:8px">' + (ASG.brCand || []).map(function (x) { return '<button class="chip-btn small' + (ASG.brSel && ASG.brSel.person_id === x.person_id ? ' on' : '') + '" data-asg-brsel="' + x.person_id + '" data-asg-nm="' + esc(x.name) + '">' + esc(x.name) + (x.minor ? ' ●' : '') + esc(licTag(x)) + '</button>'; }).join('') + '</div>';
       if (ASG.brSel && ASG.br) {
         var br = ASG.br;
+        inner += avReadCal(br.availability);
         var byDay = {};
         (br.availability || []).forEach(function (w) { (byDay[w.date] = byDay[w.date] || { w: [], g: [], o: [] }).w.push(w); });
         (br.games || []).forEach(function (g) { (byDay[g.date] = byDay[g.date] || { w: [], g: [], o: [] }).g.push(g); });
@@ -1967,7 +1993,7 @@
       var pid = parseInt(b.getAttribute('data-asg-brsel'), 10);
       ASG.brSel = { person_id: pid, name: b.getAttribute('data-asg-nm') || '' };
       ASG.brPick = null;
-      var r = await sb.rpc('asg_person_week', { p_person: pid });
+      var r = await sb.rpc('asg_person_week', { p_person: pid, p_days: 27 });
       ASG.br = r.data || null;
       renderAssign();
     }; });
@@ -1983,7 +2009,7 @@
       if (r.error) { say('asgBrMsg', r.error.message, 'bad'); return; }
       ASG.brPick = null;
       await loadAssign();
-      var rw = await sb.rpc('asg_person_week', { p_person: ASG.brSel.person_id });
+      var rw = await sb.rpc('asg_person_week', { p_person: ASG.brSel.person_id, p_days: 27 });
       ASG.br = rw.data || null;
       renderAssign();
     };
