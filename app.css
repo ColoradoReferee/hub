@@ -1,4 +1,4 @@
-/* app.css · 2026.11.09-b */
+/* app.css · 2026.11.09-c */
    Tokens once, two themes, every component. Nothing page-specific.
    2026.11.08-h: the Matchday layer. Broadcast hero with the Front Range
    ridgeline, fixtures-board stat strips, notched primary buttons, the
@@ -449,17 +449,19 @@ details.fold > .fold-body > .list { padding-top: 8px; }
 .btn.small { white-space: nowrap; }
 
 /* Coach availability calendar (2026.10.20-i) */
-.avcal { display: flex; flex-direction: column; gap: 4px; }
-.avweek { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-.avweek.head .avdow { text-align: center; font-size: 11px; font-weight: 700; color: var(--muted); padding-bottom: 2px; }
-.avday { display: flex; flex-direction: column; gap: 3px; padding: 4px 3px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); min-width: 0; }
-.avday .n { font-size: 11px; font-weight: 700; text-align: center; color: var(--muted); white-space: nowrap; overflow: hidden; }
-.avday.games { border-color: var(--navy); }
+/* Availability calendar, Matchday treatment: slab numerals, gold for
+   the selected day, green solid for days with hours marked. */
+.avcal { display: flex; flex-direction: column; gap: 5px; }
+.avweek { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.avweek.head .avdow { text-align: center; font-size: 11px; font-weight: 800; letter-spacing: .4px; color: var(--gold); padding-bottom: 2px; }
+.avday { display: flex; flex-direction: column; gap: 3px; padding: 5px 3px 4px; border-radius: 3px; border: 1px solid var(--line); border-top: 3px solid var(--line); background: var(--surface); min-width: 0; }
+.avday .n { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 12px; text-align: center; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.avday.games { border-color: var(--gold); border-top-color: var(--gold); }
 .avday.games .n { color: var(--ink); }
 .avday.today { box-shadow: inset 0 0 0 2px var(--gold); }
-.avday.past { opacity: .35; min-height: 62px; }
-.avh { min-height: 30px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 700 11px/1 inherit; font-family: inherit; cursor: pointer; padding: 0; }
-.avh.on { background: var(--green); border-color: var(--green); color: #fff; }
+.avday.past { opacity: .3; min-height: 64px; border-top-width: 1px; }
+.avh { min-height: 32px; border-radius: 3px; border: 1.5px dashed var(--line); background: transparent; color: var(--muted); font: 800 11px/1 inherit; font-family: inherit; cursor: pointer; padding: 0; }
+.avh.on { border-style: solid; border-color: var(--green); background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--ink); font-weight: 700; }
 .avh:active { transform: translateY(1px); }
 
 .avday.none { border-color: transparent; background: transparent; min-height: 62px; }

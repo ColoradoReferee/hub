@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.09-b';
+  var VERSION = '2026.11.09-c';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1522,6 +1522,9 @@
         '<div class="chips"><button class="chip-btn small" data-avpre="0|1440">' + esc(t('avAllDay')) + '</button><button class="chip-btn small" data-avpre="0|720">' + esc(t('avMorning')) + '</button><button class="chip-btn small" data-avpre="720|1440">' + esc(t('avAfternoon')) + '</button></div>' +
         '<div class="grid2"><div><label class="hint" for="avFrom">' + esc(t('avFrom')) + '</label><input id="avFrom" type="time" value="' + esc(AV.from) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div><div><label class="hint" for="avTo">' + esc(t('avTo')) + '</label><input id="avTo" type="time" value="' + esc(AV.to) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div></div>' +
         '<div class="actions" style="padding:0"><button class="btn primary small" id="avAddW">' + esc(t('avAdd')) + '</button>' + (ws2.length ? '<button class="btn outline small" id="avCopyW">' + esc(t('avCopyDow').replace('{dow}', dowName)) + '</button>' : '') + '</div>' +
+        '<label class="hint" for="avNote" style="display:block;margin-top:2px">' + esc(t('avNoteLbl')) + '</label>' +
+        '<input id="avNote" maxlength="140" value="' + esc((ws2.filter(function (x) { return x.note; })[0] || {}).note || '') + '" placeholder="' + esc(t('avNotePh')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' +
+        (ws2.length ? '<div class="actions" style="padding:0"><button class="btn outline small" id="avNoteSave">' + esc(t('avNoteSave')) + '</button></div>' : '<div class="hint">' + esc(t('avNoteRides')) + '</div>') +
         '<div class="msg" id="avWMsg" hidden></div></div>';
     }
     var n = ((a && a.availability) || []).length;
@@ -1569,8 +1572,9 @@
     var addWins = async function (dates, from, to) {
       var have = {};
       (S.asg.availability || []).forEach(function (x) { have[x.date + '|' + x.from_min + '|' + x.to_min] = 1; });
+      var nv = null; var ni = $('avNote'); if (ni && ni.value.trim()) nv = ni.value.trim();
       var rows = dates.filter(function (ds) { return !have[ds + '|' + from + '|' + to]; })
-        .map(function (ds) { return { org_id: S.me.org_id, person_id: S.me.person_id, date: ds, from_min: from, to_min: to }; });
+        .map(function (ds) { return { org_id: S.me.org_id, person_id: S.me.person_id, date: ds, from_min: from, to_min: to, note: nv }; });
       if (!rows.length) return null;
       return await sb.from('ref_availability').insert(rows);
     };
@@ -1601,6 +1605,13 @@
       if (r.error) { b.disabled = false; say('avWMsg', r.error.message, 'bad'); return; }
       redraw(true);
     }; });
+    var ns = $('avNoteSave'); if (ns) ns.onclick = async function () {
+      var v = $('avNote').value.trim() || null;
+      ns.disabled = true;
+      var r = await sb.from('ref_availability').update({ note: v }).eq('person_id', S.me.person_id).eq('date', AV.day);
+      if (r.error) { ns.disabled = false; say('avWMsg', r.error.message, 'bad'); return; }
+      redraw(true);
+    };
     var cp = $('avCopyW'); if (cp) cp.onclick = async function () {
       cp.disabled = true;
       var today = todayStr(), targets = [];
@@ -1739,7 +1750,8 @@
         inner += days.map(function (d) {
           var x = byDay[d];
           var h = '<div style="padding-top:10px"><b>' + esc(dayLong(d)) + '</b>';
-          h += '<div class="hint">' + (x.w.length ? x.w.map(function (w) { return esc(minClock(w.from_min) + ' - ' + minClock(w.to_min)); }).join(', ') : esc(t('asgNoAvail'))) + '</div>';
+          var wnotes = []; x.w.forEach(function (w) { if (w.note && wnotes.indexOf(w.note) < 0) wnotes.push(w.note); });
+          h += '<div class="hint">' + (x.w.length ? x.w.map(function (w) { return esc(minClock(w.from_min) + ' - ' + minClock(w.to_min)); }).join(', ') + (wnotes.length ? ' · <b>' + esc(wnotes.join(' · ')) + '</b>' : '') : esc(t('asgNoAvail'))) + '</div>';
           x.g.forEach(function (g) { h += '<div class="hint">' + esc(clock(g.kickoff)) + ' <b>' + esc(g.role) + '</b> · ' + esc(g.competition || '') + ' · ' + esc(g.venue || '') + (g.hub ? ' · Hub' : '') + '</div>'; });
           x.o.forEach(function (o) { h += '<div class="hint">' + esc(clock(o.kickoff)) + ' ' + asgSlotWord(o.slot) + ' · ' + esc(t('brSt.' + o.status)) + ' · ' + esc(o.venue || '') + '</div>'; });
           var opens = openBy[d] || [];
