@@ -1,4 +1,4 @@
-/* app.css · 2026.11.09-a */
+/* app.css · 2026.11.09-b */
    Tokens once, two themes, every component. Nothing page-specific.
    2026.11.08-h: the Matchday layer. Broadcast hero with the Front Range
    ridgeline, fixtures-board stat strips, notched primary buttons, the
@@ -404,6 +404,19 @@ details.fold > .fold-body > .list { padding-top: 8px; }
   #stateBody { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; align-items: start; }
   #stateBody > .stats, #stateBody > .disp.h2, #stateBody > .pad, #stateBody > table, #stateBody > .card.chartcard.wide { grid-column: 1 / -1; }
   #stateBody > .stats.two { grid-template-columns: repeat(4, 1fr); }
+  /* The hero spans the page and grows into the width; the mini row
+     spreads under it. Detection is automatic: same page, wider glass. */
+  #stateBody > .stathero, #stateBody > .statsmini { grid-column: 1 / -1; }
+  .stathero { grid-template-columns: 2fr 1.1fr; }
+  .stathero .sh { padding: 28px 16px 22px; }
+  .stathero .sh b { font-size: 78px; }
+  .stathero .sh.side b { font-size: 46px; }
+  .stathero .sh i { font-size: 13px; }
+  .stathero .sh .sub { font-size: 13px; }
+  .statsmini { gap: 40px; }
+  .statsmini .mstat { flex: 0 0 auto; }
+  .statsmini .mstat b { font-size: 20px; }
+  .statsmini .mstat i { font-size: 12px; }
 }
 
 /* The Hub on a desktop (2026.10.28-g): every screen gets a wider centered
