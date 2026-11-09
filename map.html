@@ -22,6 +22,44 @@
 <body class="pub">
 <div class="app">
   <div class="top"><div><div class="lead" id="eventName"></div><div class="disp" style="font-size:34px" id="venueName" data-t="fieldMap">Field map</div></div><div style="display:flex;align-items:center;gap:10px"><button class="linkbtn" id="langBtn" style="background:none;border:0;cursor:pointer;color:var(--ink)">Español</button><img id="mark" alt=""></div></div>
+
+<style>
+/* What is this screen: the glance card, same as the Hub (v2026.11.08-a) */
+.sbx-guide{margin:10px 16px 0}
+.sbx-guide .sbx-g-btn{font:700 13px/1 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--gold,#C8921A);background:none;border:1.5px solid var(--gold,#C8921A);border-radius:999px;padding:7px 14px;cursor:pointer}
+.sbx-guide .sbx-g-body{font:14.5px/1.45 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--muted,#4A5060);padding:10px 2px 0}
+.sbx-guide .sbx-g-lead{font-weight:700;color:var(--ink,#1B1F2A);font-size:15px;padding-bottom:4px}
+.sbx-guide .sbx-g-pt{position:relative;padding:3px 0 0 18px}
+.sbx-guide .sbx-g-pt::before{content:"";position:absolute;left:2px;top:8px;width:7px;height:10px;border-radius:1.5px;background:var(--gold,#C8921A);transform:rotate(-8deg)}
+.sbx-guide .sbx-g-off{font:700 13px/1 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--gold,#C8921A);background:none;border:none;text-decoration:underline;cursor:pointer;padding:0;margin-top:6px;display:inline-block}
+</style>
+<!-- WHAT IS THIS SCREEN: the glance card, matching the Hub's -->
+<div class="sbx-guide" id="pgGuide" hidden>
+  <button type="button" class="sbx-g-btn" id="pgGuideBtn">&#9432; <span id="pgGuideWord"></span></button>
+  <div class="sbx-g-body" id="pgGuideBody" hidden></div>
+</div>
+<script>
+(function () {
+  var KEY = 'hub-guide-off:map-v2026.11.08-a';
+  var off = false; try { off = localStorage.getItem(KEY) === '1'; } catch (e) {}
+  if (off) return;
+  var es = false; try { es = localStorage.getItem('hub-lang') === 'es'; } catch (e) {}
+  var G = es ? {"word": "Qué es esta pantalla", "hide": "Ocultar estos consejos", "lead": "La sede, dibujada a su trazado real.", "pts": ["Cada cancha por nombre, la carpa de árbitros, el estacionamiento y los puntos de referencia; busca cualquier cancha.", "Toca una cancha para ver sus partidos de hoy y cómo llegar desde donde estás.", "Escaneado de un letrero QR en la entrada: sin app, sin cuenta, funciona en cualquier teléfono."]} : {"word": "What is this screen", "hide": "Hide these tips", "lead": "The venue, drawn to its real layout.", "pts": ["Every field by name, Referee HQ, parking and landmarks; search any field.", "Tap a field for its games today and directions from where you stand.", "Scanned from a QR sign at the gate: no app, no sign-in, works on any phone."]};
+  var wrap = document.getElementById('pgGuide');
+  document.getElementById('pgGuideWord').textContent = G.word;
+  var body = document.getElementById('pgGuideBody');
+  var esc = function (x) { return String(x).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  body.innerHTML = '<div class="sbx-g-lead">' + esc(G.lead) + '</div>' +
+    G.pts.map(function (p) { return '<div class="sbx-g-pt">' + esc(p) + '</div>'; }).join('') +
+    '<button type="button" class="sbx-g-off" id="pgGuideOff">' + esc(G.hide) + '</button>';
+  wrap.hidden = false;
+  document.getElementById('pgGuideBtn').onclick = function () { body.hidden = !body.hidden; };
+  document.getElementById('pgGuideOff').onclick = function () {
+    try { localStorage.setItem(KEY, '1'); } catch (e) {}
+    wrap.remove();
+  };
+})();
+</script>
   <div class="pad" id="tools" style="padding-top:8px"></div>
   <div class="pad" id="canvas" style="padding-top:0"></div>
   <div id="sheet"></div>
@@ -53,7 +91,7 @@
   applyLang();
   try { var th = localStorage.getItem('hub-theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}
   if (C && C.marks) $('mark').src = C.marks.program || C.marks.ja;
-  document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v2026.10.30-c'; });
+  document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v2026.11.08-a'; });
 
   var ALL = null, LAYOUT = null, GAMES = [], FM = null, TEAM = '';
   function timeOf(g) { var m = /(\d{1,2}):(\d{2})\s*(AM|PM)?/i.exec(g.time || ''); if (!m) return null; var h = Number(m[1]) % 12 + (/pm/i.test(m[3] || '') ? 12 : 0); var d = new Date(DATE + 'T00:00:00'); d.setHours(h, Number(m[2]), 0, 0); return d.getTime(); }

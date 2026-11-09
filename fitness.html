@@ -50,6 +50,44 @@
     </div>
   </div>
 
+
+<style>
+/* What is this screen: the glance card, same as the Hub (v2026.11.08-b) */
+.sbx-guide{margin:10px 16px 0}
+.sbx-guide .sbx-g-btn{font:700 13px/1 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--gold,#C8921A);background:none;border:1.5px solid var(--gold,#C8921A);border-radius:999px;padding:7px 14px;cursor:pointer}
+.sbx-guide .sbx-g-body{font:14.5px/1.45 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--muted,#4A5060);padding:10px 2px 0}
+.sbx-guide .sbx-g-lead{font-weight:700;color:var(--ink,#1B1F2A);font-size:15px;padding-bottom:4px}
+.sbx-guide .sbx-g-pt{position:relative;padding:3px 0 0 18px}
+.sbx-guide .sbx-g-pt::before{content:"";position:absolute;left:2px;top:8px;width:7px;height:10px;border-radius:1.5px;background:var(--gold,#C8921A);transform:rotate(-8deg)}
+.sbx-guide .sbx-g-off{font:700 13px/1 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--gold,#C8921A);background:none;border:none;text-decoration:underline;cursor:pointer;padding:0;margin-top:6px;display:inline-block}
+</style>
+<!-- WHAT IS THIS SCREEN: the glance card, matching the Hub's -->
+<div class="sbx-guide" id="pgGuide" hidden>
+  <button type="button" class="sbx-g-btn" id="pgGuideBtn">&#9432; <span id="pgGuideWord"></span></button>
+  <div class="sbx-g-body" id="pgGuideBody" hidden></div>
+</div>
+<script>
+(function () {
+  var KEY = 'hub-guide-off:fit-v2026.11.08-b';
+  var off = false; try { off = localStorage.getItem(KEY) === '1'; } catch (e) {}
+  if (off) return;
+  var es = false; try { es = localStorage.getItem('hub-lang') === 'es'; } catch (e) {}
+  var G = es ? {"word": "Qué es esta pantalla", "hide": "Ocultar estos consejos", "lead": "Todo sobre la prueba física, antes de correrla.", "pts": ["Las dos pruebas explicadas paso a paso: seis sprints y luego las carreras de 75 metros.", "Los protocolos de diciembre de 2024 con los tiempos exactos de cada prueba de Colorado.", "El marcapasos reproduce los tonos reales: entrena en casa con el mismo audio del día de la prueba.", "Inscíbete desde Tu día en el Hub cuando se publique una sesión."]} : {"word": "What is this screen", "hide": "Hide these tips", "lead": "Everything about the fitness test, before you run it.", "pts": ["Both tests explained step by step: six sprints, then the 75 meter runs.", "The December 2024 protocols with the exact times each Colorado test uses.", "The pacer plays the real tones: train at home with the same audio as test day.", "Sign up from Your day in the Hub when a session is posted."]};
+  var wrap = document.getElementById('pgGuide');
+  document.getElementById('pgGuideWord').textContent = G.word;
+  var body = document.getElementById('pgGuideBody');
+  var esc = function (x) { return String(x).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  body.innerHTML = '<div class="sbx-g-lead">' + esc(G.lead) + '</div>' +
+    G.pts.map(function (p) { return '<div class="sbx-g-pt">' + esc(p) + '</div>'; }).join('') +
+    '<button type="button" class="sbx-g-off" id="pgGuideOff">' + esc(G.hide) + '</button>';
+  wrap.hidden = false;
+  document.getElementById('pgGuideBtn').onclick = function () { body.hidden = !body.hidden; };
+  document.getElementById('pgGuideOff').onclick = function () {
+    try { localStorage.setItem(KEY, '1'); } catch (e) {}
+    wrap.remove();
+  };
+})();
+</script>
   <div class="pad" style="padding-top:16px">
     <div class="lead" data-t="program">Colorado Soccer Referee Program</div>
     <div class="disp" style="font-size:44px" data-t="title">FITNESS TEST</div>
@@ -136,7 +174,7 @@
 
   <div class="pad hint" style="margin-top:18px" data-t="foot">Standards from FIFA Fitness Tests for Referees (2016). Colorado's choice of the men's and women's international times for the National and Regional tests is set by the Referee Department. Questions: refeducation@coloradoreferees.com.</div>
   <div class="foot" style="flex-direction:column"><a class="btn help" href="index.html#help" data-t="help">I NEED HELP</a></div>
-  <div class="credit"><span class="chip"><img src="assets/jareferee-mark.png" alt=""></span><a href="https://jareferee.com">Built with JAReferee</a><span class="ver">v2026.11.08-a</span></div>
+  <div class="credit"><span class="chip"><img src="assets/jareferee-mark.png" alt=""></span><a href="https://jareferee.com">Built with JAReferee</a><span class="ver">v2026.11.08-b</span></div>
 </div>
 <script src="pacer.js?v=2026.11.08-k"></script>
 <script>

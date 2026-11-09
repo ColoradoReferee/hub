@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Evaluator v2026.11.08-a · 2026-11-05 · the coach's live log, post-match ratings and PDF. The formal evaluation is written by the coach in the Hub. -->
+<!-- Evaluator v2026.11.08-b · 2026-11-08 · the coach's live log, post-match ratings and PDF. The formal evaluation is written by the coach in the Hub. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1304,6 +1304,44 @@ function setLang(l) { LANG = l; try { localStorage.setItem('hub-lang', l); } cat
 </script>
 
 <div class="hubtop"><a href="index.html#coach" id="evBack" data-t="coaching">&#8249; Coaching</a><div class="hubr"><button class="themebtn" id="themeBtn" type="button" onclick="toggleTheme()" aria-label="Light or dark" data-t-aria-label="light_dark">&#9728;</button><button class="langbtn" id="langBtn" type="button" onclick="setLang(LANG === 'es' ? 'en' : 'es')">Español</button><img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program"></div></div>
+
+<style>
+/* What is this screen: the glance card, same as the Hub (v2026.11.08-b) */
+.sbx-guide{margin:10px 16px 0}
+.sbx-guide .sbx-g-btn{font:700 13px/1 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--gold,#C8921A);background:none;border:1.5px solid var(--gold,#C8921A);border-radius:999px;padding:7px 14px;cursor:pointer}
+.sbx-guide .sbx-g-body{font:14.5px/1.45 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--muted,#4A5060);padding:10px 2px 0}
+.sbx-guide .sbx-g-lead{font-weight:700;color:var(--ink,#1B1F2A);font-size:15px;padding-bottom:4px}
+.sbx-guide .sbx-g-pt{position:relative;padding:3px 0 0 18px}
+.sbx-guide .sbx-g-pt::before{content:"";position:absolute;left:2px;top:8px;width:7px;height:10px;border-radius:1.5px;background:var(--gold,#C8921A);transform:rotate(-8deg)}
+.sbx-guide .sbx-g-off{font:700 13px/1 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--gold,#C8921A);background:none;border:none;text-decoration:underline;cursor:pointer;padding:0;margin-top:6px;display:inline-block}
+</style>
+<!-- WHAT IS THIS SCREEN: the glance card, matching the Hub's -->
+<div class="sbx-guide" id="pgGuide" hidden>
+  <button type="button" class="sbx-g-btn" id="pgGuideBtn">&#9432; <span id="pgGuideWord"></span></button>
+  <div class="sbx-g-body" id="pgGuideBody" hidden></div>
+</div>
+<script>
+(function () {
+  var KEY = 'hub-guide-off:eval-v2026.11.08-b';
+  var off = false; try { off = localStorage.getItem(KEY) === '1'; } catch (e) {}
+  if (off) return;
+  var es = false; try { es = localStorage.getItem('hub-lang') === 'es'; } catch (e) {}
+  var G = es ? {"word": "Qué es esta pantalla", "hide": "Ocultar estos consejos", "lead": "La herramienta de evaluación formal, construida sobre el marco nacional.", "pts": ["Configura el partido una vez; el reloj, la bitácora con tiempos y las calificaciones te siguen los dos tiempos.", "Los incidentes críticos y los errores claros salen de las listas oficiales; la puntuación antes de ajustes y la final siguen la secuencia oficial.", "Cuida la batería todo el partido y la sesión sobrevive a un teléfono muerto: abre el mismo enlace en otro aparato y continúa donde quedó.", "Tras el silbatazo: calificaciones por oficial, las preguntas de capacidad y el Redactor prepara tu informe en tu propia voz, listo para RefEval."]} : {"word": "What is this screen", "hide": "Hide these tips", "lead": "The formal evaluation tool, built on the national framework.", "pts": ["Set up the match once; the clock, the time-stamped log and the ratings follow you through both halves.", "Critical match incidents and clear errors come from the prescribed lists; score before adjustments and final score follow the official sequence.", "Battery-safe for a full match, and the session survives a dead phone: open the same game link on any device and pick up where it stopped.", "After the whistle: ratings by official, the capacity questions, and the Writer drafts your report in your own voice, RefEval-ready."]};
+  var wrap = document.getElementById('pgGuide');
+  document.getElementById('pgGuideWord').textContent = G.word;
+  var body = document.getElementById('pgGuideBody');
+  var esc = function (x) { return String(x).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  body.innerHTML = '<div class="sbx-g-lead">' + esc(G.lead) + '</div>' +
+    G.pts.map(function (p) { return '<div class="sbx-g-pt">' + esc(p) + '</div>'; }).join('') +
+    '<button type="button" class="sbx-g-off" id="pgGuideOff">' + esc(G.hide) + '</button>';
+  wrap.hidden = false;
+  document.getElementById('pgGuideBtn').onclick = function () { body.hidden = !body.hidden; };
+  document.getElementById('pgGuideOff').onclick = function () {
+    try { localStorage.setItem(KEY, '1'); } catch (e) {}
+    wrap.remove();
+  };
+})();
+</script>
 <div class="gate" id="gate" hidden></div>
 <div class="saved-pill" id="savedPill" data-t="saved">Saved</div>
 
