@@ -1,4 +1,4 @@
-/* app.css · Colorado Referees Hub · 2026.11.08-q
+/* app.css · 2026.11.09-a */
    Tokens once, two themes, every component. Nothing page-specific.
    2026.11.08-h: the Matchday layer. Broadcast hero with the Front Range
    ridgeline, fixtures-board stat strips, notched primary buttons, the
@@ -325,6 +325,19 @@ table.fit tr.failed td:last-child { color: var(--red); }
 
 /* State view charts */
 .stats.two { grid-template-columns: repeat(2, 1fr); }
+/* State hero: the pool and the registration race lead; everything else
+   on the screen reads smaller. */
+.stathero { display: grid; grid-template-columns: 3fr 2fr; gap: 2px; margin: 14px 20px 0; background: var(--line); padding: 2px; border-radius: 3px; }
+.stathero .sh { background: #0A1220; padding: 18px 12px 14px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+.stathero .sh b { display: block; font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 54px; line-height: 1; color: #FFC400; font-variant-numeric: tabular-nums; }
+.stathero .sh.side b { font-size: 32px; }
+.stathero .sh i { font-style: normal; font-size: 12px; color: #8FA0C4; font-weight: 700; margin-top: 5px; }
+.stathero .sh .sub { color: #8FA0C4; font-size: 12px; margin-top: 4px; }
+.statsmini { display: flex; gap: 16px; margin: 8px 20px 0; flex-wrap: wrap; }
+.statsmini .mstat { flex: 1; min-width: 88px; }
+.statsmini .mstat b { font-family: var(--disp); font-weight: 800; font-size: 17px; color: var(--ink); }
+.statsmini .mstat i { font-style: normal; font-size: 11px; color: var(--muted); font-weight: 700; display: block; }
+.statsmini .mstat .sub { font-size: 11px; margin-top: 1px; }
 .stat .sub { font-size: 12px; margin-top: 4px; }
 .delta { font-weight: 700; color: var(--muted); }
 .delta.up { color: var(--green); } .delta.down { color: var(--red); }

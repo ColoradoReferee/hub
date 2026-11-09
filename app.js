@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.08-q';
+  var VERSION = '2026.11.09-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -3847,9 +3847,25 @@
     var ret = pct(stVal(latest, 'retained_from_prev'), stVal(latest, 'prev_total')), retP = pct(stVal(prev, 'retained_from_prev'), stVal(prev, 'prev_total'));
     var u18 = pct(stVal(latest, 'age', 'u18'), tot), u18P = pct(stVal(prev, 'age', 'u18'), totP);
     var nw = stVal(latest, 'new'), nwP = stVal(prev, 'new');
+    // The hero carries the two numbers that matter on a phone: the pool
+    // today and the registration race for next year. Everything else on
+    // this screen is context, so it reads smaller (.statsmini) or lives
+    // in the charts below.
     var tile = function (big, label, sub) { return '<div class="stat"><b>' + big + '</b><i>' + esc(label) + '</i>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>'; };
-    var html = '<div class="stats two">' + tile(fmtN(tot), t('stReferees').replace('{y}', latest), arrow(tot, totP)) + tile(ret == null ? '' : ret + '%', t('stRetention'), pctArrow(ret, retP)) + tile(u18 == null ? '' : u18 + '%', t('stUnder18'), pctArrow(u18, u18P)) + tile(fmtN(nw), t('stNew'), arrow(nw, nwP)) + '</div>' +
-      '<div class="pad hint" style="padding-top:8px">' + esc(stNote(latest)) + '</div>';
+    var mtile = function (big, label, sub) { return '<div class="mstat"><b>' + big + '</b><i>' + esc(label) + '</i>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>'; };
+    var openN = open ? stVal(open, 'referees') : null;
+    var html = '<div class="stathero">' +
+      '<div class="sh"><b>' + fmtN(tot) + '</b><i>' + esc(t('stReferees').replace('{y}', latest)) + '</i><div class="sub">' + arrow(tot, totP) + '</div></div>' +
+      (openN != null
+        ? '<div class="sh side"><b>' + fmtN(openN) + '</b><i>' + esc(t('stRegSo').replace('{y}', open)) + '</i><div class="sub">' + esc(t('stRegSub').replace('{r}', fmtN(stVal(open, 'retained_from_prev'))).replace('{f}', fmtN(stVal(open, 'new')))) + '</div></div>'
+        : '<div class="sh side"><b>' + (ret == null ? '' : ret + '%') + '</b><i>' + esc(t('stRetention')) + '</i><div class="sub">' + pctArrow(ret, retP) + '</div></div>') +
+      '</div>' +
+      '<div class="statsmini">' +
+      mtile(ret == null ? '' : ret + '%', t('stRetention'), pctArrow(ret, retP)) +
+      mtile(u18 == null ? '' : u18 + '%', t('stUnder18'), pctArrow(u18, u18P)) +
+      mtile(fmtN(nw), t('stNew'), arrow(nw, nwP)) +
+      '</div>' +
+      '<div class="pad hint" style="padding-top:8px">' + esc(stNote(latest)) + (open ? ' ' + esc(stNote(open)) : '') + '</div>';
     // Official US Soccer State Referee Report, RY 25-26 Colorado page, received
     // 28 Oct 2026. Static by design; replace when the next annual report lands.
     html += '<div class="card" style="border-color:var(--gold);gap:6px"><b>' + esc(t('ussfTitle').replace('{y}', '25-26')) + '</b>' +
@@ -3873,7 +3889,7 @@
         '</div><div>' + esc(t('acadActive').replace('{n}', fmtN(acAct)).replace('{t}', fmtN(acTot))) + '</div>' +
         '<div class="hint">' + esc(t('acadHint')) + '</div></div>';
     }
-    if (open) html += '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('stOpenTitle').replace('{y}', open)) + '</b><div>' + esc(t('stOpenBody').replace('{n}', fmtN(stVal(open, 'referees'))).replace('{r}', fmtN(stVal(open, 'retained_from_prev'))).replace('{f}', fmtN(stVal(open, 'new')))) + '</div><div class="hint">' + esc(stNote(open)) + '</div></div>';
+    // The open-year card moved into the hero; its note rides the hint line.
     // 1. Referees by year
     var trendYears = allYears.filter(function (y) { return y !== open; });
     var tv = trendYears.map(function (y) { return stVal(y, 'referees'); });
