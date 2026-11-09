@@ -1,4 +1,4 @@
-/* app.css · Colorado Referees Hub · 2026.11.08-l
+/* app.css · Colorado Referees Hub · 2026.11.08-m
    Tokens once, two themes, every component. Nothing page-specific.
    2026.11.08-h: the Matchday layer. Broadcast hero with the Front Range
    ridgeline, fixtures-board stat strips, notched primary buttons, the
@@ -553,3 +553,12 @@ body.tabbed .screen { padding-bottom: 84px; }
 .sbx-guide .sbx-g-pt { position: relative; padding: 3px 0 0 18px; }
 .sbx-guide .sbx-g-pt::before { content: ""; position: absolute; left: 2px; top: 8px; width: 7px; height: 10px; border-radius: 1.5px; background: var(--gold); transform: rotate(-8deg); }
 .sbx-guide .sbx-g-off { margin-top: 6px; }
+
+/* All your notes: tappable rows (2026.11.08-m) */
+.note.notef { padding: 0; overflow: hidden; }
+.note.notef .note-head { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; width: 100%; min-height: 50px; padding: 10px 40px 10px 14px; background: none; border: 0; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.note.notef .who { flex: 1 1 calc(100% - 34px); min-width: 0; }
+.note.notef .note-pills { display: flex; gap: 6px; flex-wrap: wrap; flex-basis: 100%; }
+.note.notef .note-chev { position: absolute; right: 14px; top: 16px; color: var(--muted); transition: transform .15s; }
+.note.notef.open .note-chev { transform: rotate(180deg); }
+.note.notef .text { padding: 0 14px 12px; }

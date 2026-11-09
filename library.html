@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- library.html v2026.11.08-a · 2026-10-23 · Colorado Referees Library -->
+<!-- library.html v2026.11.08-b · 2026-10-23 · Colorado Referees Library -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -21,6 +21,14 @@
   --c-guide:#D9A400;--c-laws:#2F7FD6;--c-gameday:#2E8B4E;
   --c-career:#D9731A;--c-policy:#C8102E;--c-contacts:#7E57C2;--c-hub:#1B2F55;--c-usrw:#4A5FC1;
 }
+/* What is this screen: the glance card, same as the Hub (v2026.11.08-b) */
+.sbx-guide{max-width:1060px;margin:10px auto 0;padding:0 16px}
+.sbx-guide .sbx-g-btn{font:700 13px/1 var(--font);color:var(--gold);background:none;border:1.5px solid var(--gold);border-radius:999px;padding:7px 14px;cursor:pointer}
+.sbx-guide .sbx-g-body{font-size:14.5px;line-height:1.45;color:var(--muted);padding:10px 2px 0}
+.sbx-guide .sbx-g-lead{font-weight:700;color:var(--ink);font-size:15px;padding-bottom:4px}
+.sbx-guide .sbx-g-pt{position:relative;padding:3px 0 0 18px}
+.sbx-guide .sbx-g-pt::before{content:"";position:absolute;left:2px;top:8px;width:7px;height:10px;border-radius:1.5px;background:var(--gold);transform:rotate(-8deg)}
+.sbx-guide .sbx-g-off{font:700 13px/1 var(--font);color:var(--gold);background:none;border:none;text-decoration:underline;cursor:pointer;padding:0;margin-top:6px;display:inline-block}
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#0D1525;--surface:#1B2F55;--ink:#FFFFFF;--muted:#BFC9E0;--line:rgba(255,255,255,.08);
@@ -340,6 +348,52 @@ a{color:inherit;text-decoration:none;}
   </div>
 </header>
 
+<!-- WHAT IS THIS SCREEN: the glance card, matching the Hub's -->
+<div class="sbx-guide" id="libGuide" hidden>
+  <button type="button" class="sbx-g-btn" id="libGuideBtn">&#9432; <span id="libGuideWord"></span></button>
+  <div class="sbx-g-body" id="libGuideBody" hidden></div>
+</div>
+<script>
+(function () {
+  var KEY = 'hub-guide-off:lib-v2026.11.08-b';
+  var off = false; try { off = localStorage.getItem(KEY) === '1'; } catch (e) {}
+  if (off) return;
+  var es = false; try { es = localStorage.getItem('hub-lang') === 'es'; } catch (e) {}
+  var G = es ? {
+    word: 'Qu\u00e9 es esta pantalla',
+    lead: 'Toda la biblioteca del programa, hecha para la cancha.',
+    pts: ['Las Reglas, los reglamentos de ligas y torneos, la gu\u00eda oficial y el d\u00eda de partido.',
+      'El U.S. Refereeing Way: manejo del juego, mano, posicionamiento y trabajo de asistentes.',
+      'Carrera: gu\u00edas de ascenso, pago premium y est\u00e1ndares f\u00edsicos, con los formatos oficiales.',
+      'La b\u00fasqueda encuentra lo que sea; cada m\u00f3dulo se lee en ingl\u00e9s y en espa\u00f1ol.',
+      'Funciona sin conexi\u00f3n: c\u00e1rgala en casa y l\u00e9ela en la cancha sin se\u00f1al.'],
+    hide: 'Ocultar estos consejos'
+  } : {
+    word: 'What is this screen',
+    lead: 'The program\u2019s whole bookshelf, built for the field.',
+    pts: ['The Laws, league and tournament rules, the official guide, and game day how-tos.',
+      'The U.S. Refereeing Way: game management, handball, positioning, assistant referee work.',
+      'Career: upgrade guides, premium pay and fitness standards, with the official forms.',
+      'Search finds anything; every module reads in English and Spanish.',
+      'It works offline: load it at home, read it at the field with no signal.'],
+    hide: 'Hide these tips'
+  };
+  var wrap = document.getElementById('libGuide');
+  document.getElementById('libGuideWord').textContent = G.word;
+  var body = document.getElementById('libGuideBody');
+  var esc = function (x) { return String(x).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  body.innerHTML = '<div class="sbx-g-lead">' + esc(G.lead) + '</div>' +
+    G.pts.map(function (p) { return '<div class="sbx-g-pt">' + esc(p) + '</div>'; }).join('') +
+    '<button type="button" class="sbx-g-off" id="libGuideOff">' + esc(G.hide) + '</button>';
+  wrap.hidden = false;
+  document.getElementById('libGuideBtn').onclick = function () { body.hidden = !body.hidden; };
+  document.getElementById('libGuideOff').onclick = function () {
+    try { localStorage.setItem(KEY, '1'); } catch (e) {}
+    wrap.remove();
+  };
+})();
+</script>
+
 <!-- SEARCH -->
 <div class="search-bar">
   <div class="search-inner">
@@ -437,7 +491,7 @@ a{color:inherit;text-decoration:none;}
       <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program">
     </div>
     <div class="footer-text">
-      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.08-a<br>
+      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.08-b<br>
       <a href="https://coloradosoccer.org" class="footer-link">ColoradoSoccer.org</a> &middot;
       <span data-l="questions">Questions:</span> <a href="mailto:refeducation@coloradoreferees.com" class="footer-link">refeducation@coloradoreferees.com</a> &middot; 303.888.6863
     </div>

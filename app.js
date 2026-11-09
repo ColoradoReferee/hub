@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.08-l';
+  var VERSION = '2026.11.08-m';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -407,7 +407,7 @@
         .eq('date', today).not('status', 'in', '(C,X,canceled_no_pay)').or(mineOr()).order('kickoff'); }),
       sb.from('events').select('id,name,game_prefix,venues,blurb,tools,rules_url'),
       sb.from('checkins').select('game_id,created_at,ref_name').eq('date', today),
-      sb.from('observations').select('id,date,observer,rater_role,final_note,cleaned_note,game_id,field').order('date', { ascending: false }).limit(50),
+      sb.from('observations').select('id,date,observer,rater_role,final_note,cleaned_note,public_notes,cleanup_status,area,game_id,field').order('date', { ascending: false }).limit(50),
       sb.from('announcements').select('title,body,severity,created_at,venue,event_id,start_date,end_date').lte('start_date', today).gte('end_date', today).order('created_at', { ascending: false }).limit(5),
       sb.from('scores').select('game_id,home_score,away_score,status,entered_by,created_at').eq('date', today),
       loadEvalRequests(),
@@ -4346,12 +4346,36 @@
       } catch (e) { b.disabled = false; b.textContent = t('scoreSend'); say('scMsg', (e.message || t('scoreFailed')), 'bad'); }
     };
   }
+  // Each note is a tappable row: who, when, where collapsed; the text
+  // opens on tap, so a long history scans without scrolling through
+  // every body. Staff also see rows still in the pipeline, with a
+  // pill saying so and the raw note as the body meanwhile.
   function renderNotes() {
     markRead(S.notes);
     var cut = shiftDate(todayStr(), -30);
-    var noteCard = function (n) { return '<div class="note"><div class="who">' + esc(n.observer || '') + (n.rater_role ? ', ' + esc(n.rater_role) : '') + (n.date ? ', ' + esc(dayLong(n.date)) : '') + (n.field ? ', ' + esc(n.field) : '') + '</div><div class="text">' + esc(n.final_note || n.cleaned_note || '') + '</div></div>'; };
+    var noteCard = function (n) {
+      var body = n.final_note || n.cleaned_note || n.public_notes || '';
+      var released = !n.cleanup_status || ['approved', 'edited'].indexOf(n.cleanup_status) >= 0;
+      var aw = n.area ? areaWord(n.area) : '';
+      if (aw && aw.indexOf('co90Area.') === 0) aw = n.area;
+      var pills = (aw ? '<span class="pill">' + esc(aw) + '</span>' : '') +
+        (released ? '' : '<span class="pill" style="border:1px solid var(--gold);background:transparent">' + esc(t('noteUnreleased')) + '</span>');
+      return '<div class="note notef"><button type="button" class="note-head" data-note-open aria-expanded="false">' +
+        '<span class="who">' + esc(n.observer || '') + (n.rater_role ? ', ' + esc(n.rater_role) : '') + (n.date ? ', ' + esc(dayLong(n.date)) : '') + (n.field ? ', ' + esc(n.field) : '') + '</span>' +
+        (pills ? '<span class="note-pills">' + pills + '</span>' : '') +
+        '<svg class="note-chev" width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>' +
+        '<div class="text" hidden>' + esc(body || t('noteNoText')) + '</div></div>';
+    };
     var recent = S.notes.filter(function (n) { return !n.date || n.date >= cut; }), older = S.notes.filter(function (n) { return n.date && n.date < cut; });
     $('notesList').innerHTML = S.notes.length ? recent.map(noteCard).join('') + (older.length ? fold('notes-older', t('olderNotes'), older.length, older.map(noteCard).join(''), !recent.length) : '') : '<div class="note"><div class="text hint">' + esc(t('noNotes')) + '</div></div>';
+    $('notesList').querySelectorAll('[data-note-open]').forEach(function (b) {
+      b.onclick = function () {
+        var tx = b.parentElement.querySelector('.text');
+        tx.hidden = !tx.hidden;
+        b.setAttribute('aria-expanded', tx.hidden ? 'false' : 'true');
+        b.parentElement.classList.toggle('open', !tx.hidden);
+      };
+    });
   }
 
   // ── Help ─────────────────────────────────────────────────────────
