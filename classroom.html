@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Classroom board</title>
+<meta name="description" content="The referee class, day by day: who has done their Learning Center work, who is certified, and where the class should be today.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="assets/jareferee-mark.png">
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="app.css?v=2026.11.08-o">
+<style>
+  .pub .top { padding: 10px 20px 0; display: flex; justify-content: space-between; align-items: center; }
+  .pub .top img { width: 36px; height: 40px; object-fit: contain; }
+  .dayline { padding: 2px 20px 0; font-weight: 800; }
+  .dayline .mut { color: var(--muted); font-weight: 400; }
+  .paceband { margin: 10px 20px 0; padding: 12px 14px; border-radius: 3px; border-top: 3px solid var(--gold); background: var(--surface); }
+  .paceband b { font-size: 22px; font-family: var(--disp); }
+  .roster { padding: 10px 20px 0; display: grid; gap: 8px; }
+  .srow { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; padding: 10px 12px; border-radius: 3px; border-top: 3px solid var(--line); background: var(--surface); }
+  .srow.cert { border-top-color: var(--gold); }
+  .srow .nm { font-weight: 800; display: flex; align-items: center; gap: 8px; }
+  .srow .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex: none; }
+  .srow .cnt { font-family: var(--disp); font-weight: 800; font-size: 18px; white-space: nowrap; }
+  .modbar { grid-column: 1 / -1; display: flex; gap: 3px; }
+  .modbar i { flex: 1; height: 8px; border-radius: 2px; background: var(--line); }
+  .modbar i.on { background: var(--green); }
+  .modbar i.gold { background: var(--gold); }
+  .certpill { font-size: 12px; font-weight: 800; color: var(--gold); border: 1.5px solid var(--gold); border-radius: 999px; padding: 2px 8px; }
+  .report { padding: 10px 20px 20px; }
+  .pick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pick button { font: 800 15px/1.2 inherit; padding: 14px 10px; border-radius: 3px; border: 1px solid var(--line); border-top: 3px solid var(--gold); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .nums { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .nums button { width: 46px; height: 46px; font: 800 17px/1 var(--disp); border-radius: 3px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .nums button.on { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 16%, transparent); }
+  .nums button:disabled { opacity: .3; cursor: default; }
+  .certrow { margin-top: 12px; display: flex; align-items: center; gap: 10px; font-weight: 800; }
+  .certrow input { width: 22px; height: 22px; accent-color: var(--gold); }
+  .foot { padding: 20px; font-size: 13px; color: var(--muted); text-align: center; }
+  .demotag { font-size: 12px; font-weight: 800; color: var(--muted); border: 1px dashed var(--muted); border-radius: 999px; padding: 2px 8px; margin-left: 8px; vertical-align: middle; }
+</style>
+</head>
+<body class="pub">
+<div class="app">
+  <div class="top"><div><div class="lead" id="clsLead" data-t="lead">Referee class</div><div class="disp" style="font-size:34px" id="clsName">&nbsp;</div></div><div style="display:flex;align-items:center;gap:10px"><button class="linkbtn" id="langBtn" style="background:none;border:0;cursor:pointer;color:var(--ink)">Español</button><img id="mark" alt=""></div></div>
+
+<style>
+/* What is this screen: the glance card, same as the Hub */
+.sbx-guide{margin:10px 16px 0}
+.sbx-guide .sbx-g-btn{font:700 13px/1 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--gold,#C8921A);background:none;border:1.5px solid var(--gold,#C8921A);border-radius:999px;padding:7px 14px;cursor:pointer}
+.sbx-guide .sbx-g-body{font:14.5px/1.45 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--muted,#4A5060);padding:10px 2px 0}
+.sbx-guide .sbx-g-lead{font-weight:700;color:var(--ink,#1B1F2A);font-size:15px;padding-bottom:4px}
+.sbx-guide .sbx-g-pt{position:relative;padding:3px 0 0 18px}
+.sbx-guide .sbx-g-pt::before{content:"";position:absolute;left:2px;top:8px;width:7px;height:10px;border-radius:1.5px;background:var(--gold,#C8921A);transform:rotate(-8deg)}
+.sbx-guide .sbx-g-off{font:700 13px/1 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--gold,#C8921A);background:none;border:none;text-decoration:underline;cursor:pointer;padding:0;margin-top:6px;display:inline-block}
+</style>
+<!-- WHAT IS THIS SCREEN: the glance card, matching the Hub's -->
+<div class="sbx-guide" id="pgGuide" hidden>
+  <button type="button" class="sbx-g-btn" id="pgGuideBtn">&#9432; <span id="pgGuideWord"></span></button>
+  <div class="sbx-g-body" id="pgGuideBody" hidden></div>
+</div>
+<script>
+(function () {
+  var KEY = 'hub-guide-off:classroom-v2026.11.08-a';
+  var off = false; try { off = localStorage.getItem(KEY) === '1'; } catch (e) {}
+  if (off) return;
+  var es = false; try { es = localStorage.getItem('hub-lang') === 'es'; } catch (e) {}
+  var G = es ? {"word": "Qué es esta pantalla", "hide": "Ocultar estos consejos", "lead": "La clase de arbitraje, día a día.", "pts": ["Cada estudiante reporta su propio avance en el Learning Center: toca Reportar mi avance, elige tu nombre y di cuántos módulos llevas.", "El tablero muestra a toda la clase contra el ritmo del día: dónde debería ir cada quien hoy.", "El número solo puede subir; un mentor corrige cualquier error. Decir tu propio número cada día es parte de ser árbitro."]} : {"word": "What is this screen", "hide": "Hide these tips", "lead": "The referee class, day by day.", "pts": ["Every student reports their own Learning Center progress: tap Report my progress, pick your name, say how many modules you have finished.", "The board shows the whole class against the day's pace line: where everyone should be today.", "Your number only goes up; a mentor corrects any mistake. Owning your own number every day is part of being a referee."]};
+  var wrap = document.getElementById('pgGuide');
+  document.getElementById('pgGuideWord').textContent = G.word;
+  var body = document.getElementById('pgGuideBody');
+  var esc = function (x) { return String(x).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  body.innerHTML = '<div class="sbx-g-lead">' + esc(G.lead) + '</div>' +
+    G.pts.map(function (p) { return '<div class="sbx-g-pt">' + esc(p) + '</div>'; }).join('') +
+    '<button type="button" class="sbx-g-off" id="pgGuideOff">' + esc(G.hide) + '</button>';
+  wrap.hidden = false;
+  document.getElementById('pgGuideBtn').onclick = function () { body.hidden = !body.hidden; };
+  document.getElementById('pgGuideOff').onclick = function () {
+    try { localStorage.setItem(KEY, '1'); } catch (e) {}
+    wrap.remove();
+  };
+})();
+</script>
+
+  <div class="dayline" id="dayline"></div>
+  <div class="paceband" id="paceband" hidden></div>
+  <div class="roster" id="roster"></div>
+  <div class="report" id="report"></div>
+  <div class="foot"><span class="ver"></span> · Built with JAReferee</div>
+</div>
+<div id="busy" style="display:none" aria-live="polite"><span class="ball">&#9917;</span></div>
+<script src="config.js"></script>
+<script>
+(function () {
+  var C = window.HUB, q = new URLSearchParams(location.search);
+  var CLASS = q.get('c') || '';
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  var T = {
+    en: { lead: 'Referee class', demo: 'DEMO', noClass: 'No class on this link. Scan the QR sign in your classroom.', notStarted: 'Class starts {d}.', dayOf: 'Day {d} of {n}', ended: 'The class has finished. The board stays up.', paceLead: 'Where the class should be today', paceBody: 'Module {m} of {t} by now; everything done by Day {c}.', reportBtn: 'Report my progress', whoAre: 'Who are you?', howMany: 'How many modules have you finished in the Learning Center?', nowAt: 'You are recorded at {n}.', certQ: 'I passed the assessment and my certification shows in my account', save: 'Save my progress', saved: 'Saved. {n} of {t} on the board.', savedCert: 'Saved, and marked certified. Welcome to the crew.', back: 'Back to the board', cancel: 'Cancel', onlyUp: 'Your number only goes up. Tell a mentor if something is wrong.', certified: 'Certified', reportedToday: 'reported today', err: 'Could not save. Try again, or tell a mentor.', lang: 'Español' },
+    es: { lead: 'Clase de arbitraje', demo: 'DEMO', noClass: 'No hay clase en este enlace. Escanea el letrero QR de tu salón.', notStarted: 'La clase comienza el {d}.', dayOf: 'Día {d} de {n}', ended: 'La clase terminó. El tablero sigue aquí.', paceLead: 'Dónde debería ir la clase hoy', paceBody: 'Módulo {m} de {t} a esta altura; todo terminado para el Día {c}.', reportBtn: 'Reportar mi avance', whoAre: '¿Quién eres?', howMany: '¿Cuántos módulos has terminado en el Learning Center?', nowAt: 'Estás registrado con {n}.', certQ: 'Aprobé la evaluación y mi certificación aparece en mi cuenta', save: 'Guardar mi avance', saved: 'Guardado. {n} de {t} en el tablero.', savedCert: 'Guardado, y marcado como certificado. Bienvenido al equipo.', back: 'Volver al tablero', cancel: 'Cancelar', onlyUp: 'Tu número solo puede subir. Avisa a un mentor si algo está mal.', certified: 'Certificado', reportedToday: 'reportó hoy', err: 'No se pudo guardar. Intenta de nuevo o avisa a un mentor.', lang: 'English' }
+  };
+  var LANG = 'en';
+  try { LANG = localStorage.getItem('hub-lang') || ((navigator.language || '').toLowerCase().indexOf('es') === 0 ? 'es' : 'en'); } catch (e) {}
+  if (!T[LANG]) LANG = 'en';
+  function t(k) { return T[LANG][k] || T.en[k] || k; }
+  function tr(k, map) { var s = t(k); Object.keys(map || {}).forEach(function (x) { s = s.replace('{' + x + '}', map[x]); }); return s; }
+  $('langBtn').textContent = t('lang');
+  $('langBtn').onclick = function () { LANG = LANG === 'es' ? 'en' : 'es'; try { localStorage.setItem('hub-lang', LANG); } catch (e) {} location.reload(); };
+  document.documentElement.lang = LANG;
+  $('clsLead').textContent = t('lead');
+  try { var th = localStorage.getItem('hub-theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}
+  if (C && C.marks) $('mark').src = C.marks.program || C.marks.ja;
+  document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v2026.11.08-a'; });
+
+  async function rpc(name, args) {
+    var r = await fetch(C.supabaseUrl + '/rest/v1/rpc/' + name, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: C.publishableKey, Authorization: 'Bearer ' + C.publishableKey },
+      body: JSON.stringify(args || {})
+    });
+    if (!r.ok) throw new Error('rpc ' + name + ' ' + r.status);
+    return r.json();
+  }
+
+  var B = null, PICK = null, NUM = null;
+  function fmtDate(iso) { try { return new Date(iso + 'T12:00:00').toLocaleDateString(LANG === 'es' ? 'es-US' : 'en-US', { month: 'long', day: 'numeric' }); } catch (e) { return iso; } }
+  function expected() {
+    if (!B || !B.day_today) return 0;
+    return Math.min(B.target_modules, Math.ceil(B.target_modules * B.day_today / B.cert_target_day));
+  }
+  function board() {
+    PICK = null; NUM = null;
+    if (!B) { $('dayline').textContent = t('noClass'); $('roster').innerHTML = ''; $('report').innerHTML = ''; $('paceband').hidden = true; return; }
+    $('clsName').innerHTML = esc(B.name) + (B.demo ? '<span class="demotag">' + esc(t('demo')) + '</span>' : '');
+    document.title = B.name;
+    var day = B.day_today;
+    $('dayline').innerHTML = day == null
+      ? '<span class="mut">' + esc(tr('notStarted', { d: fmtDate(B.starts_on) })) + '</span>'
+      : esc(tr('dayOf', { d: day, n: B.days_total })) + (day >= B.days_total ? ' <span class="mut">' + esc(t('ended')) + '</span>' : '');
+    var exp = expected();
+    if (day != null && day < B.days_total) {
+      $('paceband').hidden = false;
+      $('paceband').innerHTML = '<div class="hint">' + esc(t('paceLead')) + '</div><b>' + esc(tr('paceBody', { m: exp, t: B.target_modules, c: B.cert_target_day })) + '</b>';
+    } else { $('paceband').hidden = true; }
+    $('roster').innerHTML = (B.students || []).map(function (s) {
+      var cells = '';
+      for (var i = 1; i <= B.target_modules; i++) cells += '<i class="' + (i <= s.done ? (s.certified ? 'gold on' : 'on') : '') + '"></i>';
+      return '<div class="srow' + (s.certified ? ' cert' : '') + '"><div class="nm">' + esc(s.name) + (s.today ? '<span class="dot" title="' + esc(t('reportedToday')) + '"></span>' : '') + '</div><div class="cnt">' + (s.certified ? '<span class="certpill">' + esc(t('certified')) + '</span>' : s.done + ' / ' + B.target_modules) + '</div><div class="modbar">' + cells + '</div></div>';
+    }).join('');
+    $('report').innerHTML = '<button class="btn primary" id="go" style="width:100%">' + esc(t('reportBtn')) + '</button>';
+    $('go').onclick = pickView;
+  }
+  function pickView() {
+    $('report').innerHTML = '<div class="disp h2" style="padding:0 0 8px">' + esc(t('whoAre')) + '</div><div class="pick">' +
+      (B.students || []).map(function (s) { return '<button data-sid="' + s.id + '">' + esc(s.name) + '</button>'; }).join('') +
+      '</div><div style="margin-top:10px"><button class="btn outline" id="cxl">' + esc(t('cancel')) + '</button></div>';
+    $('report').querySelectorAll('[data-sid]').forEach(function (b) {
+      b.onclick = function () { PICK = (B.students || []).filter(function (s) { return String(s.id) === b.getAttribute('data-sid'); })[0]; numView(); };
+    });
+    $('cxl').onclick = board;
+    $('report').scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+  function numView() {
+    if (!PICK) return board();
+    NUM = PICK.done;
+    var btns = '';
+    for (var i = 0; i <= B.target_modules; i++) btns += '<button data-n="' + i + '"' + (i < PICK.done ? ' disabled' : '') + (i === NUM ? ' class="on"' : '') + '>' + i + '</button>';
+    $('report').innerHTML = '<div class="disp h2" style="padding:0 0 4px">' + esc(PICK.name) + '</div>' +
+      '<div class="hint">' + esc(tr('nowAt', { n: PICK.done })) + ' ' + esc(t('onlyUp')) + '</div>' +
+      '<div style="margin-top:10px;font-weight:800">' + esc(t('howMany')) + '</div>' +
+      '<div class="nums">' + btns + '</div>' +
+      '<label class="certrow"><input type="checkbox" id="certbox"' + (PICK.certified ? ' checked disabled' : '') + '><span>' + esc(t('certQ')) + '</span></label>' +
+      '<div style="margin-top:14px;display:flex;gap:10px"><button class="btn primary" id="save" style="flex:1">' + esc(t('save')) + '</button><button class="btn outline" id="cxl2">' + esc(t('cancel')) + '</button></div>' +
+      '<div id="msg" style="margin-top:10px"></div>';
+    $('report').querySelectorAll('[data-n]').forEach(function (b) {
+      b.onclick = function () { if (b.disabled) return; NUM = Number(b.getAttribute('data-n')); $('report').querySelectorAll('[data-n]').forEach(function (x) { x.classList.toggle('on', Number(x.getAttribute('data-n')) === NUM); }); };
+    });
+    $('cxl2').onclick = board;
+    $('save').onclick = async function () {
+      $('save').disabled = true;
+      try {
+        var cert = $('certbox').checked && !PICK.certified;
+        var out = await rpc('classroom_report', { p_class: CLASS, p_student: PICK.id, p_done: NUM, p_certified: cert ? true : null });
+        await load();
+        $('report').insertAdjacentHTML('afterbegin', '<div class="msg ok">' + esc(out && out.certified && cert ? t('savedCert') : tr('saved', { n: (out && out.done != null ? out.done : NUM), t: B.target_modules })) + '</div>');
+        setTimeout(board, 1600);
+      } catch (e) {
+        $('msg').innerHTML = '<div class="msg bad">' + esc(t('err')) + '</div>';
+        $('save').disabled = false;
+      }
+    };
+  }
+  async function load() {
+    try { B = await rpc('classroom_board', { p_class: CLASS }); } catch (e) { B = null; }
+  }
+  async function boot() {
+    if (!CLASS) { $('dayline').textContent = t('noClass'); return; }
+    $('busy').style.display = 'flex';
+    await load();
+    board();
+    $('busy').style.display = 'none';
+    // The projected board ticks along; nothing runs while the tab is hidden.
+    setInterval(function () { if (document.hidden || PICK) return; load().then(function () { if (!PICK) board(); }); }, 60000);
+  }
+  boot();
+})();
+</script>
+</body>
+</html>
