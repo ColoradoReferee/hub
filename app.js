@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.08-o';
+  var VERSION = '2026.11.08-p';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -126,12 +126,14 @@
         'Referees by year and age, first-year pipeline, and retention against the official national yardstick.',
         '2027 registration pace: brand new, returning, and who has gone quiet since last season.',
         'The state map: where every official lives, laid against where the games are.',
+        'The Academy pipeline: each school class, how many certified, how many still hold a badge today.',
         'Every count uses one definition and one source; what changed today is already in these numbers.',
         'This is the screen the program’s leadership reads; what it says is what is true.'] },
       { lead: 'Todo el programa en una pantalla, en vivo desde la base de datos.', points: [
         'Árbitros por año y edad, el canal de primer año y la retención contra la vara nacional oficial.',
         'Ritmo de registro 2027: nuevos, los que regresan y quiénes se han quedado callados.',
         'El mapa estatal: dónde vive cada oficial, contra dónde están los partidos.',
+        'La cantera de la Academia: cada clase escolar, cuántos certificaron y cuántos siguen con credencial hoy.',
         'Cada cifra usa una definición y una fuente; lo que cambió hoy ya está en estos números.',
         'Esta es la pantalla que lee la dirección del programa; lo que dice es lo que es.'] }],
     's-family': [
