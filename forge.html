@@ -1,0 +1,313 @@
+<!doctype html>
+<!-- forge.html · State Forge · 2026-11-10
+     The pitch instrument: pick a state, or type one in, and watch the Hub
+     wear its colors. Standalone; touches nothing in the app. The point it
+     makes is true: a state is a config file, six colors and a crest, and
+     the data layer underneath is multi-tenant already (Hawaii runs on it).
+     Demo data only. No live reads, no secrets, works offline. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>State Forge</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+:root {
+  --bench: #10131C; --bench2: #181D2B; --benchline: #2A3146; --benchink: #F2F4FA;
+  --benchmut: #9AA3BD; --spark: #F5C842;
+  --disp: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --body: 'Atkinson Hyperlegible', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bench); color: var(--benchink); font: 16px/1.45 var(--body); -webkit-text-size-adjust: 100%; }
+.disp { font-family: var(--disp); font-style: italic; font-weight: 800; line-height: 1; }
+.wrap { max-width: 1060px; margin: 0 auto; padding: 20px 16px 48px; }
+header .kicker { font-size: 11px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--spark); }
+header h1 { margin: 6px 0 4px; font-size: 52px; }
+header .lead { color: var(--benchmut); max-width: 560px; margin: 0; }
+.langbtn { position: absolute; top: 18px; right: 16px; background: none; border: 1px solid var(--benchline); color: var(--benchink); font: 700 14px var(--body); padding: 8px 14px; border-radius: 999px; cursor: pointer; }
+.langbtn:focus-visible, .chip:focus-visible, button:focus-visible, input:focus-visible { outline: 3px solid var(--spark); outline-offset: 2px; }
+.cols { display: flex; gap: 28px; margin-top: 26px; align-items: flex-start; flex-wrap: wrap; }
+.rail { flex: 1 1 340px; min-width: 300px; }
+.stage { flex: 0 1 430px; min-width: 300px; margin: 0 auto; }
+.rail h2 { font-size: 26px; margin: 0 0 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: flex; align-items: center; gap: 8px; background: var(--bench2); border: 1px solid var(--benchline); color: var(--benchink); font: 700 15px var(--body); padding: 9px 14px 9px 9px; border-radius: 999px; cursor: pointer; }
+.chip .dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); }
+.chip.on { border-color: var(--spark); background: #23293C; }
+.chip .tag { font-size: 11px; font-weight: 700; color: var(--spark); letter-spacing: .06em; }
+.fields { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.fields .full { grid-column: 1 / -1; }
+.fields label { display: block; font-size: 12px; font-weight: 700; color: var(--benchmut); letter-spacing: .04em; margin-bottom: 4px; }
+.fields input[type=text], .fields input[type=url] { width: 100%; font: inherit; padding: 10px; border-radius: 8px; border: 1px solid var(--benchline); background: var(--bench2); color: var(--benchink); }
+.fields input[type=color] { width: 100%; height: 42px; padding: 2px; border-radius: 8px; border: 1px solid var(--benchline); background: var(--bench2); }
+.forgebtn { margin-top: 16px; width: 100%; border: 0; cursor: pointer; background: var(--spark); color: #1B1F2A; font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 26px; padding: 12px 10px 14px; border-radius: 0; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%); }
+.steps { margin-top: 12px; min-height: 66px; font-size: 14px; color: var(--benchmut); }
+.steps div { opacity: 0; transform: translateY(3px); transition: opacity .25s, transform .25s; }
+.steps div.on { opacity: 1; transform: none; }
+.steps .ok { color: var(--spark); font-weight: 700; margin-right: 6px; }
+.truth { margin-top: 22px; border-left: 3px solid var(--spark); padding: 2px 0 2px 14px; color: var(--benchmut); font-size: 14px; }
+.truth b { color: var(--benchink); }
+@media (prefers-reduced-motion: reduce) { .steps div { transition: none; } .phone { transition: none !important; } }
+
+/* ── The phone: the Hub's own grammar, rethemed by variables ── */
+.phone { --p: #1B2F55; --a: #C8921A; --alt: #F5C842; --act: #C8102E;
+  --pbg: #F6F3EC; --psurf: #FFFFFF; --pink: #1B1F2A; --pmut: #4A5060; --pline: #DDD8CC;
+  background: var(--pbg); color: var(--pink); border-radius: 36px; border: 1px solid #000;
+  box-shadow: 0 0 0 10px #060810, 0 0 0 12px #2A3146, 0 30px 60px rgba(0,0,0,.55);
+  overflow: hidden; max-width: 400px; margin: 0 auto; transition: background .4s; }
+.ribbon { height: 5px; background: linear-gradient(90deg, var(--a), var(--alt) 50%, var(--a)); }
+.phead { display: flex; align-items: center; gap: 10px; padding: 14px 16px 10px; }
+.crest { width: 44px; height: 48px; flex-shrink: 0; }
+.crest img { width: 44px; height: 48px; object-fit: contain; }
+.pname { font-size: 24px; color: var(--p); }
+.psub { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--pmut); }
+.pbody { padding: 0 14px 14px; min-height: 400px; }
+.pcard { background: var(--psurf); border: 1px solid var(--pline); border-radius: 12px; padding: 12px 14px; margin-top: 10px; }
+.pcard.hero { border-top: 3px solid var(--a); }
+.phero { background: #0C101E; color: #FFFFFF; border-radius: 12px; padding: 14px; margin-top: 10px; position: relative; overflow: hidden; }
+.phero .ridge { position: absolute; inset: auto 0 0 0; height: 46px; opacity: .5; }
+.pkick { font-size: 10px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--a); }
+.phero .pkick { color: var(--heroa); }
+.pnum { font-size: 44px; }
+.pstats { display: flex; gap: 8px; margin-top: 10px; position: relative; }
+.pstat { flex: 1; background: #1A2030; border-radius: 8px; padding: 8px 10px; }
+.feat { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.feat span { font-size: 12px; font-weight: 700; color: var(--p); border: 1px solid var(--pline); border-radius: 999px; padding: 4px 10px; }
+.pstat .n { font-size: 24px; }
+.pstat .l { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #C8CFE2; }
+.game { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-top: 1px solid var(--pline); }
+.game:first-of-type { border-top: 0; }
+.game .fld { font-size: 13px; color: var(--pmut); }
+.game .tm { font-size: 20px; color: var(--p); }
+.pbtn { display: block; width: 100%; border: 0; margin-top: 12px; background: var(--act); color: #FFFFFF; font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 24px; padding: 12px 8px 14px; cursor: pointer; border-radius: 0; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%); }
+.ptabs { display: flex; border-top: 1px solid var(--pline); background: var(--psurf); }
+.ptab { flex: 1; border: 0; background: none; cursor: pointer; padding: 10px 4px 12px; font: 700 12px var(--body); color: var(--pmut); }
+.ptab.on { color: var(--p); border-top: 3px solid var(--a); margin-top: -1px; }
+.pfoot { text-align: center; font-size: 10px; color: var(--pmut); padding: 0 0 10px; background: var(--psurf); }
+.stageline { text-align: center; color: var(--benchmut); font-size: 13px; margin-top: 14px; }
+footer { margin-top: 40px; border-top: 1px solid var(--benchline); padding-top: 14px; color: var(--benchmut); font-size: 13px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.ver { font-family: ui-monospace, monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <button class="langbtn" id="lang" aria-label="Español">ES</button>
+  <header>
+    <div class="kicker" data-b="kick"></div>
+    <h1 class="disp" data-b="title"></h1>
+    <p class="lead" data-b="lead"></p>
+  </header>
+
+  <div class="cols">
+    <div class="rail">
+      <h2 class="disp" data-b="pick"></h2>
+      <div class="chips" id="chips"></div>
+      <div class="fields">
+        <div class="full"><label for="fName" data-b="fName"></label><input type="text" id="fName"></div>
+        <div><label for="fInit" data-b="fInit"></label><input type="text" id="fInit" maxlength="3"></div>
+        <div><label for="fLogo" data-b="fLogo"></label><input type="url" id="fLogo" placeholder="https://"></div>
+        <div><label for="fP" data-b="fP"></label><input type="color" id="fP"></div>
+        <div><label for="fA" data-b="fA"></label><input type="color" id="fA"></div>
+      </div>
+      <button class="forgebtn" id="go" data-b="go"></button>
+      <div class="steps" id="steps" aria-live="polite"></div>
+      <div class="truth" data-b="truth"></div>
+    </div>
+
+    <div class="stage">
+      <div class="phone" id="phone">
+        <div class="ribbon"></div>
+        <div class="phead">
+          <div class="crest" id="crest"></div>
+          <div>
+            <div class="disp pname" id="pname"></div>
+            <div class="psub" id="psub"></div>
+          </div>
+        </div>
+        <div class="pbody" id="pbody"></div>
+        <div class="ptabs" id="ptabs"></div>
+        <div class="pfoot"><span class="ver">v2026.11.10-a</span></div>
+      </div>
+      <div class="stageline" data-b="sample"></div>
+    </div>
+  </div>
+
+  <footer>
+    <span data-b="foot"></span>
+    <span class="ver">forge.html · v2026.11.10-a</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+
+  // ── Every word, twice ──
+  var STR = {
+    en: {
+      kick: 'State Forge', title: 'A new state in minutes.',
+      lead: 'The program runs on one data layer that already serves more than one state. Point it at a state site, take the crest and the colors, and the app is theirs.',
+      pick: 'Pick a state', fName: 'State program name', fInit: 'Initials', fLogo: 'Crest image URL (optional)',
+      fP: 'Primary color', fA: 'Accent color', go: 'FORGE IT',
+      s1: 'Reading the state site...', s2: 'Pulling the crest and colors...', s3: 'Writing the config...', s4: 'Ready.',
+      truth: '<b>This is not a mockup trick.</b> Colorado runs live today and a second state runs in a sandbox on the same schema. A new fork is a config file, six colors and a crest.',
+      sample: 'Sample data. Tap the tabs.',
+      foot: 'Built on the referee program platform. English and Spanish ship on day one.',
+      tabs: ['Today', 'Check in', 'State'],
+      hubSub: 'Referee Hub', today: 'Saturday, 3 games', checkin: 'CHECK IN', signedin: 'Field 6 at 9:00 AM. Have a great match.',
+      heroKick: 'State of the program', refs: 'Registered referees', renewed: 'Renewed', firstyear: 'First year',
+      games: [['9:00 AM', 'U15B Premier, Field 6'], ['11:20 AM', 'U17G Premier, Field 2'], ['1:40 PM', 'U13B Select, Field 6']],
+      ciKick: 'Game day', ciLead: 'One tap when you arrive. The venue team sees it at once.',
+      inclKick: 'In the box', feats: ['Check in', 'Live ops', 'Coaching notes', 'Evaluations', 'Fitness tests', 'Venue maps', 'Library', 'Registration']
+    },
+    es: {
+      kick: 'Forja de estados', title: 'Un estado nuevo en minutos.',
+      lead: 'El programa corre sobre una sola capa de datos que ya sirve a mas de un estado. Apuntala al sitio del estado, toma el escudo y los colores, y la app es suya.',
+      pick: 'Elige un estado', fName: 'Nombre del programa estatal', fInit: 'Iniciales', fLogo: 'URL del escudo (opcional)',
+      fP: 'Color primario', fA: 'Color de acento', go: 'FORJAR',
+      s1: 'Leyendo el sitio del estado...', s2: 'Tomando el escudo y los colores...', s3: 'Escribiendo la configuracion...', s4: 'Listo.',
+      truth: '<b>No es un truco de maqueta.</b> Colorado corre en vivo hoy y un segundo estado corre en un sandbox sobre el mismo esquema. Un fork nuevo es un archivo de configuracion, seis colores y un escudo.',
+      sample: 'Datos de muestra. Toca las pestanas.',
+      foot: 'Construido sobre la plataforma del programa de arbitros. Ingles y espanol desde el primer dia.',
+      tabs: ['Hoy', 'Registrarse', 'Estado'],
+      hubSub: 'Hub de Arbitros', today: 'Sabado, 3 partidos', checkin: 'REGISTRARME', signedin: 'Cancha 6 a las 9:00 AM. Buen partido.',
+      heroKick: 'Estado del programa', refs: 'Arbitros registrados', renewed: 'Renovaron', firstyear: 'Primer ano',
+      games: [['9:00 AM', 'U15B Premier, Cancha 6'], ['11:20 AM', 'U17G Premier, Cancha 2'], ['1:40 PM', 'U13B Select, Cancha 6']],
+      ciKick: 'Dia de partido', ciLead: 'Un toque al llegar. El equipo de la sede lo ve al instante.',
+      inclKick: 'Incluido', feats: ['Registro de llegada', 'Operaciones en vivo', 'Notas de coaching', 'Evaluaciones', 'Pruebas fisicas', 'Mapas de sedes', 'Biblioteca', 'Registraciones']
+    }
+  };
+  var L = 'en';
+  var t = function (k) { return STR[L][k]; };
+
+  // ── The states. Colorado is the live reference; Hawaii is the running sandbox. ──
+  var PRESETS = [
+    { id: 'co', name: 'Colorado Referees', init: 'CO', p: '#1B2F55', a: '#C8921A', alt: '#F5C842', tag: { en: 'live', es: 'en vivo' }, n: [845, 132, 611] },
+    { id: 'hi', name: 'Hawaii Referees', init: 'HI', p: '#12757E', a: '#E5457A', alt: '#F27BA3', tag: { en: 'sandbox', es: 'sandbox' }, n: [486, 301, 112] },
+    { id: 'ga', name: 'Georgia Referees', init: 'GA', p: '#9D2235', a: '#1B1B1B', alt: '#4A4A4A', n: [3120, 2204, 648] },
+    { id: 'wa', name: 'Washington Referees', init: 'WA', p: '#1D5B3C', a: '#0E2A47', alt: '#2E5E8F', n: [2410, 1702, 509] },
+    { id: 'xx', name: 'Your State Referees', init: 'US', p: '#3A2E6E', a: '#B36A00', alt: '#E09A2F', n: [1482, 1015, 390], custom: true }
+  ];
+  var cur = Object.assign({}, PRESETS[0]), tab = 0;
+
+  function mix(hex, withHex, amt) { // amt of withHex into hex
+    var h = function (x) { return [parseInt(x.slice(1, 3), 16), parseInt(x.slice(3, 5), 16), parseInt(x.slice(5, 7), 16)]; };
+    var a = h(hex), b = h(withHex);
+    return '#' + a.map(function (v, i) { return ('0' + Math.round(v + (b[i] - v) * amt).toString(16)).slice(-2); }).join('');
+  }
+  function lighten(hex) { return mix(hex, '#FFFFFF', 0.45); }
+
+  function crestSvg(c) {
+    return '<svg viewBox="0 0 44 48" role="img" aria-label="' + esc(c.init) + '">' +
+      '<path d="M2 4 L42 4 L42 30 Q42 42 22 46 Q2 42 2 30 Z" fill="' + esc(c.p) + '" stroke="' + esc(c.a) + '" stroke-width="2"/>' +
+      '<path d="M2 12 L42 12" stroke="' + esc(c.a) + '" stroke-width="3"/>' +
+      '<text x="22" y="36" text-anchor="middle" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-style="italic" font-weight="800" font-size="19" fill="#FFFFFF">' + esc(c.init) + '</text></svg>';
+  }
+
+  function applyTheme() {
+    var ph = $('phone');
+    ph.style.setProperty('--p', cur.p);
+    ph.style.setProperty('--a', cur.a);
+    ph.style.setProperty('--alt', cur.alt || lighten(cur.a));
+    ph.style.setProperty('--heroa', mix(cur.a, '#FFFFFF', 0.55));
+    ph.style.setProperty('--pbg', mix(cur.p, '#FFFFFF', 0.94));
+    ph.style.setProperty('--pline', mix(cur.p, '#FFFFFF', 0.82));
+    $('pname').textContent = cur.name;
+    $('psub').textContent = t('hubSub');
+    $('crest').innerHTML = cur.logo
+      ? '<img src="' + esc(cur.logo) + '" alt="" onerror="this.parentNode.innerHTML=window.__crest()">'
+      : crestSvg(cur);
+  }
+  window.__crest = function () { return crestSvg(cur); };
+
+  function ridge(color) {
+    return '<svg class="ridge" viewBox="0 0 400 46" preserveAspectRatio="none" aria-hidden="true"><path d="M0 46 L0 30 L60 12 L110 26 L170 4 L230 24 L300 10 L360 26 L400 16 L400 46 Z" fill="' + esc(color) + '"/></svg>';
+  }
+
+  function renderPhone() {
+    var tb = STR[L].tabs, g = t('games');
+    $('ptabs').innerHTML = tb.map(function (x, i) { return '<button class="ptab' + (i === tab ? ' on' : '') + '" data-tab="' + i + '">' + esc(x) + '</button>'; }).join('');
+    var b = '';
+    if (tab === 0) {
+      b = '<div class="pcard hero"><div class="pkick">' + esc(t('today')) + '</div>' +
+        g.map(function (x) { return '<div class="game"><span class="disp tm">' + esc(x[0]) + '</span><span class="fld">' + esc(x[1]) + '</span></div>'; }).join('') +
+        '</div><button class="pbtn">' + esc(t('checkin')) + '</button>';
+    } else if (tab === 1) {
+      b = '<div class="pcard hero"><div class="pkick">' + esc(t('ciKick')) + '</div><div style="margin-top:6px">' + esc(t('ciLead')) + '</div></div>' +
+        '<button class="pbtn">' + esc(t('checkin')) + '</button>' +
+        '<div class="pcard"><div class="pkick" style="color:var(--a)">' + esc(tb[0]) + '</div><div style="margin-top:4px">' + esc(t('signedin')) + '</div></div>';
+    } else {
+      b = '<div class="phero">' + ridge(cur.p) + '<div class="pkick">' + esc(t('heroKick')) + '</div>' +
+        '<div class="disp pnum">' + cur.n[0].toLocaleString() + '</div><div class="pkick" style="color:#C8CFE2">' + esc(t('refs')) + '</div>' +
+        '<div class="pstats"><div class="pstat"><div class="disp n">' + cur.n[1].toLocaleString() + '</div><div class="l">' + esc(t('renewed')) + '</div></div>' +
+        '<div class="pstat"><div class="disp n">' + cur.n[2].toLocaleString() + '</div><div class="l">' + esc(t('firstyear')) + '</div></div></div></div>' +
+        '<div class="pcard"><div class="pkick">' + esc(t('inclKick')) + '</div><div class="feat">' + t('feats').map(function (x) { return '<span>' + esc(x) + '</span>'; }).join('') + '</div></div>';
+    }
+    $('pbody').innerHTML = b;
+    $('ptabs').querySelectorAll('[data-tab]').forEach(function (x) { x.onclick = function () { tab = Number(x.getAttribute('data-tab')); renderPhone(); }; });
+  }
+
+  function renderChips() {
+    $('chips').innerHTML = PRESETS.map(function (p, i) {
+      return '<button class="chip' + (p.id === cur.id ? ' on' : '') + '" data-pick="' + i + '"><span class="dot" style="background:' + esc(p.p) + '"></span>' + esc(p.custom ? (L === 'es' ? 'Tu estado' : 'Your state') : p.name.replace(/ Referees| Arbitros/, '')) + (p.tag ? ' <span class="tag">' + esc(p.tag[L]) + '</span>' : '') + '</button>';
+    }).join('');
+    $('chips').querySelectorAll('[data-pick]').forEach(function (x) {
+      x.onclick = function () { pick(PRESETS[Number(x.getAttribute('data-pick'))]); };
+    });
+  }
+
+  function fieldsFrom() {
+    $('fName').value = cur.name; $('fInit').value = cur.init;
+    $('fP').value = cur.p; $('fA').value = cur.a; $('fLogo').value = cur.logo || '';
+  }
+  function fieldsTo() {
+    cur.name = $('fName').value.trim() || cur.name;
+    cur.init = ($('fInit').value.trim() || cur.init).toUpperCase().slice(0, 3);
+    cur.p = $('fP').value; cur.a = $('fA').value; cur.alt = lighten($('fA').value);
+    cur.logo = $('fLogo').value.trim() || null;
+  }
+
+  var forging = false;
+  function forge() {
+    if (forging) return; forging = true;
+    fieldsTo();
+    var st = $('steps'), keys = ['s1', 's2', 's3', 's4'];
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    st.innerHTML = keys.map(function (k) { return '<div><span class="ok">&#10003;</span>' + esc(t(k)) + '</div>'; }).join('');
+    var rows = st.querySelectorAll('div'), i = 0;
+    var tick = function () {
+      if (i < rows.length) { rows[i].classList.add('on'); i++; setTimeout(tick, reduce ? 0 : 420); }
+      else { applyTheme(); renderPhone(); renderChips(); forging = false; }
+    };
+    if (reduce) { rows.forEach(function (r) { r.classList.add('on'); }); applyTheme(); renderPhone(); renderChips(); forging = false; }
+    else tick();
+  }
+
+  function pick(p) {
+    cur = Object.assign({}, p);
+    fieldsFrom(); renderChips(); forge();
+  }
+
+  function renderBench() {
+    document.querySelectorAll('[data-b]').forEach(function (el) {
+      var k = el.getAttribute('data-b');
+      if (k === 'truth') el.innerHTML = t(k); else el.textContent = t(k);
+    });
+    $('lang').textContent = L === 'en' ? 'ES' : 'EN';
+    $('lang').setAttribute('aria-label', L === 'en' ? 'Español' : 'English');
+    document.documentElement.lang = L;
+    renderChips(); applyTheme(); renderPhone();
+  }
+
+  $('lang').onclick = function () { L = L === 'en' ? 'es' : 'en'; renderBench(); };
+  $('go').onclick = forge;
+  ['fName', 'fInit', 'fP', 'fA', 'fLogo'].forEach(function (id) { $(id).onchange = function () { fieldsTo(); applyTheme(); renderPhone(); }; });
+
+  fieldsFrom(); renderBench();
+})();
+</script>
+</body>
+</html>
