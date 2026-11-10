@@ -1,11 +1,11 @@
-// app.js · Colorado Referees Hub · 2026-11-05
+// app.js · Colorado Referees Hub · 2026-11-10
 // Reads from the database as the signed-in person. Writes (check-in, Help)
 // go through the current backend this week so the sheet and the database
 // both get them.
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.09-f';
+  var VERSION = '2026.11.10-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -992,6 +992,107 @@
     $('wrapGo').onclick = go; $('wrapClub').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } };
   }
   function ago(ts) { var m = Math.round((Date.now() - Date.parse(ts)) / 60000); if (m < 2) return t('agoNow'); if (m < 60) return t('agoMin').replace('{n}', m); var h = Math.round(m / 60); if (h < 36) return t('agoHour').replace('{n}', h); return t('agoDay').replace('{n}', Math.round(h / 24)); }
+  // ── Setup: the Learning Center import. The registration refresh, in app. ──
+  // Drop the Learning Center export on this card and the Hub does what three
+  // tools used to do: parse the CSV here in the browser, stage the rows in
+  // lc_export, then two RPCs (112) run the same refresh the migrations ran.
+  // No Table Editor, no SQL, nobody waiting on a developer.
+  var LC = { rows: null, file: '', skipped: 0, msg: '', bad: false, report: null, busy: false };
+  var LC_HEADERS = { 'ussf-id': 'ussf_id', 'first name': 'first_name', 'last name': 'last_name', 'dob': 'dob', 'is a minor': 'is_minor', 'gender': 'gender', 'ethnicity': 'ethnicity', 'email': 'email', 'secondary email': 'secondary_email', 'address': 'address', 'apt/suite/unit': 'apt', 'city': 'city', 'state': 'state', 'zip': 'zip', 'country': 'country', 'phone': 'phone', 'mobile phone': 'mobile_phone', 'license': 'license', 'status': 'status', 'issue date': 'issue_date', 'expiration date': 'expiration_date', 'issuer': 'issuer', 'curriculum': 'curriculum', 'background screening': 'background_screening', 'background screening expiration date': 'background_expires', 'safesport': 'safesport', 'safesport expiration date': 'safesport_expires', 'intro to player safety': 'player_safety', 'intro to player safety expiration date': 'player_safety_expires', 'safe soccer': 'safe_soccer', 'safe soccer expiration date': 'safe_soccer_expires', 'provisional status': 'provisional_status', 'referee years exp': 'years_exp' };
+  var LC_DATES = { dob: 1, issue_date: 1, expiration_date: 1, background_expires: 1, safesport_expires: 1, player_safety_expires: 1, safe_soccer_expires: 1 };
+  function lcParseCsv(text) { // quoted fields; commas and newlines inside quotes; CRLF; BOM; a sep= first line
+    var rows = [], row = [], cur = '', q = false, i, c;
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    if (/^sep=/i.test(text)) text = text.slice(text.indexOf('\n') + 1);
+    for (i = 0; i < text.length; i++) {
+      c = text[i];
+      if (q) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+      else if (c === '"') q = true;
+      else if (c === ',') { row.push(cur); cur = ''; }
+      else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); if (row.length > 1 || row[0] !== '') rows.push(row); row = []; cur = ''; }
+      else cur += c;
+    }
+    if (cur !== '' || row.length) { row.push(cur); if (row.length > 1 || row[0] !== '') rows.push(row); }
+    return rows;
+  }
+  function lcDate(v) { v = (v || '').trim(); if (!v) return null; var m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(v); if (m) return m[3] + '-' + ('0' + m[1]).slice(-2) + '-' + ('0' + m[2]).slice(-2); if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v; return null; }
+  function lcMap(raw) {
+    var head = raw[0].map(function (h) { return h.trim().toLowerCase(); });
+    var cols = head.map(function (h) { return LC_HEADERS[h] || null; });
+    var missing = ['ussf_id', 'first_name', 'last_name', 'license', 'expiration_date'].filter(function (k) { return cols.indexOf(k) < 0; });
+    var out = [], skipped = 0, r, ci, k, v, rec;
+    for (r = 1; r < raw.length; r++) {
+      rec = { org_id: S.me.org_id };
+      for (ci = 0; ci < cols.length; ci++) {
+        k = cols[ci]; if (!k) continue;
+        v = (raw[r][ci] == null ? '' : String(raw[r][ci])).trim();
+        if (LC_DATES[k]) rec[k] = lcDate(v);
+        else if (k === 'years_exp') rec[k] = v === '' ? null : (parseInt(v, 10) || 0);
+        else rec[k] = v || null;
+      }
+      if (!rec.ussf_id || !rec.expiration_date) { skipped++; continue; }
+      out.push(rec);
+    }
+    return { rows: out, skipped: skipped, missing: missing };
+  }
+  function lcReportLabel(what) {
+    var k = { 'import rows': 'lcR_importrows', 'people in import': 'lcR_people_in_import', 'season': 'lcR_season', 'people': 'lcR_people', 'referees': 'lcR_referees', 'renewed': 'lcR_renewed', 'first year': 'lcR_firstyear', 'alumni registered': 'lcR_alumni' }[what];
+    if (k) return t(k);
+    if (/^licenses season /.test(what)) return t('lcR_licenses');
+    return what;
+  }
+  function importSetupHtml() {
+    var people = 0, seen = {};
+    (LC.rows || []).forEach(function (x) { if (!seen[x.ussf_id]) { seen[x.ussf_id] = 1; people++; } });
+    var inner = '<div class="hint">' + esc(t('lcImpHint')) + '</div>' +
+      '<div style="margin-top:8px"><input type="file" id="lcFile" accept=".csv,text/csv" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div>' +
+      (LC.rows ? '<div style="margin-top:8px"><b>' + esc(t('lcImpReady').replace('{n}', LC.rows.length).replace('{p}', people).replace('{f}', LC.file)) + '</b>' +
+        (LC.skipped ? '<br><span class="hint">' + esc(t('lcImpSkipped').replace('{n}', LC.skipped)) + '</span>' : '') +
+        '<br><span class="hint">' + esc(t('lcImpAgain')) + '</span></div>' +
+        '<button class="btn primary" id="lcGo" style="width:100%;margin-top:10px"' + (LC.busy ? ' disabled' : '') + '>' + esc(t('lcImpGo')) + '</button>' : '') +
+      (LC.msg ? '<div class="msg' + (LC.bad ? ' bad' : '') + '" style="margin-top:8px">' + esc(LC.msg) + '</div>' : '') +
+      (LC.report && LC.report.length ? '<table class="dt" style="margin-top:8px;width:100%"><tbody>' + LC.report.map(function (r) { return '<tr><td>' + esc(lcReportLabel(r.what)) + '</td><td class="n"><b>' + esc(r.n == null ? '' : String(r.n)) + '</b></td></tr>'; }).join('') + '</tbody></table>' : '');
+    return fold('lcimp', t('lcImpTitle'), LC.report ? t('lcImpDoneMsg') : '', inner, !!(LC.rows || LC.report || LC.msg));
+  }
+  function wireImport(root) {
+    var f = $('lcFile'); if (!f) return;
+    f.onchange = function () {
+      var file = f.files && f.files[0]; if (!file) return;
+      var rd = new FileReader();
+      rd.onload = function () {
+        var raw = lcParseCsv(String(rd.result || ''));
+        if (raw.length < 2) { LC.rows = null; LC.msg = t('lcImpEmpty'); LC.bad = true; renderSetup(); return; }
+        var m = lcMap(raw);
+        if (m.missing.length) { LC.rows = null; LC.msg = t('lcImpMissing') + ' ' + m.missing.join(', '); LC.bad = true; renderSetup(); return; }
+        LC.rows = m.rows; LC.skipped = m.skipped; LC.file = file.name; LC.msg = ''; LC.bad = false; LC.report = null;
+        renderSetup();
+      };
+      rd.readAsText(file);
+    };
+    var go = $('lcGo'); if (go) go.onclick = async function () {
+      if (!LC.rows || LC.busy) return;
+      LC.busy = true;
+      var stamp = new Date().toISOString();
+      var rows = LC.rows.map(function (x) { var y = Object.assign({}, x); y.loaded_at = stamp; return y; });
+      var step = function (txt) { go.disabled = true; go.textContent = txt; };
+      try {
+        for (var i = 0; i < rows.length; i += 400) {
+          step(t('lcImpUploading').replace('{a}', Math.min(i + 400, rows.length)).replace('{b}', rows.length));
+          var r = await sb.from('lc_export').insert(rows.slice(i, i + 400));
+          if (r.error) throw new Error(r.error.message);
+        }
+        step(t('lcImpRefreshing'));
+        var rr = await sb.rpc('lc_refresh', { p_batch: stamp });
+        if (rr.error) throw new Error(rr.error.message);
+        LC.report = rr.data || [];
+        step(t('lcImpLinking'));
+        await sb.rpc('lc_link_names');
+        LC.msg = t('lcImpDoneMsg'); LC.bad = false; LC.rows = null; LC.file = '';
+      } catch (e) { LC.msg = t('lcImpFailed') + ' ' + (e && e.message || ''); LC.bad = true; }
+      LC.busy = false;
+      renderSetup();
+    };
+  }
   // ── Setup: the Assignr sync, read-only. One row per group-week; red when a unit failed. ──
   function syncSetupHtml() {
     var rows = SU.sync || [], sites = {}; (SU.sites2 || []).forEach(function (x) { sites[String(x.site_id)] = x.name; });
@@ -3523,8 +3624,8 @@
       var evPick = '<div class="pad" style="padding-top:10px"><select id="evJump" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><option value="">' + esc(t('evJump')) + '</option>' + [[t('evCurrent'), evLive], [t('evOffTitle'), evOff], [t('evCompleted'), evDone]].map(function (grp) { return grp[1].length ? '<optgroup label="' + esc(grp[0]) + '">' + grp[1].map(function (e) { return '<option value="' + esc(e.id) + '">' + esc(e.name || e.id) + '</option>'; }).join('') + '</optgroup>' : ''; }).join('') + '</select></div>';
       $('setupBody').innerHTML = rulesCard + feesSetupHtml() + sessionsSetupHtml() + '<div class="disp h2">' + esc(t('setupEventsTitle')) + '</div><div class="pad" style="padding-top:12px"><button class="btn primary" id="evNew" style="width:100%">' + esc(t('newEvent')) + '</button></div>' + evPick + '<div class="list">' + evLive.map(evItem).join('') + '</div>' +
         (evOff.length ? fold('evoff', t('evOffTitle'), evOff.length, '<div class="list">' + evOff.map(evItem).join('') + '</div>', false) : '') +
-        (evDone.length ? fold('evdone', t('evCompleted'), evDone.length, '<div class="list">' + evDone.map(evItem).join('') + '</div>', false) : '') + venuesSetupHtml() + syncSetupHtml();
-      wireSessionsSetup($('setupBody')); wireVenuesSetup($('setupBody')); wireFees($('setupBody'));
+        (evDone.length ? fold('evdone', t('evCompleted'), evDone.length, '<div class="list">' + evDone.map(evItem).join('') + '</div>', false) : '') + venuesSetupHtml() + importSetupHtml() + syncSetupHtml();
+      wireSessionsSetup($('setupBody')); wireVenuesSetup($('setupBody')); wireFees($('setupBody')); wireImport($('setupBody'));
       $('evNew').onclick = function () { SU.ev = blankEvent(); SU.check = null; renderSetup(); };
       $('evJump').onchange = function () { var src = SU.events.filter(function (x) { return x.id === $('evJump').value; })[0]; if (!src) return; SU.ev = JSON.parse(JSON.stringify(src)); SU.ev.venues = SU.ev.venues || []; SU.ev.tools = SU.ev.tools || []; SU.ev.alert_emails = SU.ev.alert_emails || []; SU.check = null; renderSetup(); };
       $('setupBody').querySelectorAll('[data-ev]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); var src = SU.events.filter(function (x) { return x.id === a.getAttribute('data-ev'); })[0]; SU.ev = JSON.parse(JSON.stringify(src)); SU.ev.venues = SU.ev.venues || []; SU.ev.tools = SU.ev.tools || []; SU.ev.alert_emails = SU.ev.alert_emails || []; SU.check = null; renderSetup(); }; });
