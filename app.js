@@ -1,11 +1,11 @@
-// app.js · Colorado Referees Hub · 2026-11-10
+// app.js · Colorado Referees Hub · 2026-11-11
 // Reads from the database as the signed-in person. Writes (check-in, Help)
 // go through the current backend this week so the sheet and the database
 // both get them.
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.10-a';
+  var VERSION = '2026.11.11-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -894,7 +894,7 @@
   // ── Your year: the wrap-up and the games leaderboard ─────────────
   // Shown from WRAP_FROM (month, day) through January of the next year. Everyone sees the
   // leaderboard; a club name filters it to games that club played, for club bonuses.
-  var WRAP_FROM = [11, 15], WRAP = { me: null, board: null, club: '', year: null, open: false };
+  var WRAP_FROM = [11, 15], WRAP = { me: null, board: null, club: '', year: null, open: false, pick: null };
   // The compact year-round version: three numbers, standing, and the next
   // milestone. The full wrap with the leaderboard still arrives Nov 15.
   var SEAS = { year: null, data: null, tried: false, months: null, mTried: false };
@@ -973,7 +973,11 @@
   function wrapYear() { var d = new Date(), m = d.getMonth() + 1, day = d.getDate(); if (m === 1) return d.getFullYear() - 1; if (m > WRAP_FROM[0] || (m === WRAP_FROM[0] && day >= WRAP_FROM[1])) return d.getFullYear(); return null; }
   async function renderWrap() {
     var el = $('wrapLine'); if (!el) return;
-    var y = wrapYear(); if (!y) { el.innerHTML = ''; return; }
+    // The history backfill reaches 2024, so every year since is a wrap.
+    // Default: the current year once its wrap window opens, last year before.
+    var curY = new Date().getFullYear(), years = [];
+    for (var yy = curY; yy >= 2024; yy--) years.push(yy);
+    var y = WRAP.pick || wrapYear() || (curY - 1);
     if (WRAP.year !== y || !WRAP.me) {
       WRAP.year = y;
       var r = await Promise.all([sb.rpc('my_season', { p_year: y }), sb.rpc('leaderboard', { p_year: y, p_club: WRAP.club || null, p_limit: 25 })]);
@@ -987,9 +991,11 @@
     var board = '<div class="pad" style="padding-top:10px"><div class="go"><input id="wrapClub" type="search" value="' + esc(WRAP.club) + '" placeholder="' + esc(t('wrapClubPh')) + '" autocomplete="off" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn outline small" id="wrapGo">' + esc(t('go')) + '</button></div></div>' +
       (WRAP.board.length ? '<table class="dt" style="margin:8px 20px 0;width:calc(100% - 40px)"><thead><tr><th class="n">#</th><th>' + esc(t('fitName')) + '</th><th class="n">' + esc(t('wrapGames')) + '</th><th class="n">' + esc(t('refCenter')) + '</th></tr></thead><tbody>' + WRAP.board.map(function (r, i) { return '<tr' + (r.is_me ? ' class="mine"' : '') + '><td class="n">' + (i + 1) + '</td><td>' + esc(r.name) + '</td><td class="n">' + esc(String(r.games)) + '</td><td class="n">' + esc(String(r.as_center)) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="pad hint">' + esc(t('wrapNobody')) + '</div>') +
       '<div class="pad hint" style="padding-top:8px">' + esc(t('wrapBoardHint')) + '</div>';
-    el.innerHTML = fold('wrap', t('wrapTitle').replace('{y}', y), m.games || '', mine + '<div class="disp h2 print-keep" style="padding-top:10px">' + esc(t('wrapBoard').replace('{y}', y)) + '</div>' + board, true);
+    var chips = '<div class="pad" style="padding-top:6px;display:flex;gap:8px;flex-wrap:wrap">' + years.map(function (yy2) { return '<button class="btn small ' + (yy2 === y ? 'primary' : 'outline') + '" data-wy="' + yy2 + '" style="flex-grow:0;min-height:36px;font-size:' + (yy2 === y ? '18px' : '14px') + '">' + yy2 + '</button>'; }).join('') + '</div>';
+    el.innerHTML = fold('wrap', t('wrapTitle').replace('{y}', y), m.games || '', chips + mine + '<div class="disp h2 print-keep" style="padding-top:10px">' + esc(t('wrapBoard').replace('{y}', y)) + '</div>' + board, true);
     var go = async function () { WRAP.club = $('wrapClub').value.trim(); WRAP.open = true; busy(true); var r = await sb.rpc('leaderboard', { p_year: y, p_club: WRAP.club || null, p_limit: 25 }); busy(false); WRAP.board = r.data || []; renderWrap(); };
     $('wrapGo').onclick = go; $('wrapClub').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } };
+    el.querySelectorAll('[data-wy]').forEach(function (b) { b.onclick = function () { WRAP.pick = parseInt(b.getAttribute('data-wy'), 10); WRAP.me = null; WRAP.open = true; renderWrap(); }; });
   }
   function ago(ts) { var m = Math.round((Date.now() - Date.parse(ts)) / 60000); if (m < 2) return t('agoNow'); if (m < 60) return t('agoMin').replace('{n}', m); var h = Math.round(m / 60); if (h < 36) return t('agoHour').replace('{n}', h); return t('agoDay').replace('{n}', Math.round(h / 24)); }
   // ── Setup: the Learning Center import. The registration refresh, in app. ──
@@ -1095,12 +1101,19 @@
   }
   // ── Setup: the Assignr sync, read-only. One row per group-week; red when a unit failed. ──
   function syncSetupHtml() {
-    var rows = SU.sync || [], sites = {}; (SU.sites2 || []).forEach(function (x) { sites[String(x.site_id)] = x.name; });
-    if (!rows.length) return '';
-    var last = rows.slice().sort(function (a, b) { return String(b.synced_at || '') < String(a.synced_at || '') ? -1 : 1; })[0];
-    var bad = rows.filter(function (r) { return r.error; }).length, stale = rows.filter(function (r) { return !r.synced_at || Date.now() - Date.parse(r.synced_at) > 14 * 3600000; }).length;
+    var all = SU.sync || [], sites = {}; (SU.sites2 || []).forEach(function (x) { sites[String(x.site_id)] = x.name; });
+    if (!all.length) return '';
+    // History cursors (bf| keys) are the backfill, not the live window:
+    // never stale, shown as their own rows at the bottom of the table.
+    var rows = all.filter(function (r) { return !/^bf\|/.test(r.key || ''); });
+    var hist = all.filter(function (r) { return /^bf\|/.test(r.key || ''); });
+    var last = all.slice().sort(function (a, b) { return String(b.synced_at || '') < String(a.synced_at || '') ? -1 : 1; })[0];
+    var bad = rows.filter(function (r) { return r.error; }).length + hist.filter(function (r) { return r.error; }).length;
+    var stale = rows.filter(function (r) { return !r.synced_at || Date.now() - Date.parse(r.synced_at) > 14 * 3600000; }).length;
+    var cell = function (r, wk) { return '<tr' + (r.error ? ' class="failed"' : '') + '><td>' + esc(sites[String(r.site_id)] || r.site_id) + '</td><td>' + wk + '</td><td class="n">' + esc(r.games == null ? '' : String(r.games)) + '</td><td>' + (r.error ? '<span style="color:var(--red)">' + esc(r.error.slice(0, 80)) + '</span>' : (r.synced_at ? esc(ago(r.synced_at)) : '')) + '</td></tr>'; };
     var inner = '<div class="hint">' + esc(t('syncHint')) + '</div><table class="dt" style="margin-top:8px;width:100%"><thead><tr><th>' + esc(t('syncGroup')) + '</th><th>' + esc(t('syncWeek')) + '</th><th class="n">' + esc(t('stGames')) + '</th><th>' + esc(t('syncWhen')) + '</th></tr></thead><tbody>' +
-      rows.map(function (r) { return '<tr' + (r.error ? ' class="failed"' : '') + '><td>' + esc(sites[String(r.site_id)] || r.site_id) + '</td><td>' + esc(String(r.from_date).slice(5)) + ' to ' + esc(String(r.to_date).slice(5)) + '</td><td class="n">' + esc(r.games == null ? '' : String(r.games)) + '</td><td>' + (r.error ? '<span style="color:var(--red)">' + esc(r.error.slice(0, 80)) + '</span>' : (r.synced_at ? esc(ago(r.synced_at)) : '')) + '</td></tr>'; }).join('') + '</tbody></table>';
+      rows.map(function (r) { return cell(r, esc(String(r.from_date).slice(5)) + ' to ' + esc(String(r.to_date).slice(5))); }).join('') +
+      hist.map(function (r) { return cell(r, esc(r.from_date == null ? t('syncHistDone') : t('syncHistTo').replace('{d}', String(r.from_date)))); }).join('') + '</tbody></table>';
     return fold('sync', t('syncTitle') + (last && last.synced_at ? ', ' + ago(last.synced_at) : ''), bad ? bad + ' ' + t('syncFailed') : (stale ? stale + ' ' + t('syncStale') : t('syncOk')), inner, !!bad);
   }
   // ── Setup: venues. Coordinates for the State map, a layout for the venue map. ──
@@ -4231,6 +4244,18 @@
       '<div class="disp h2">' + esc(t('refSeason')) + '</div>' +
       '<div class="stats">' + stat(c.games, t('refGames')) + stat(c.as_center, t('refCenter')) + stat(c.evaluations, t('refEvals')) + '</div>' +
       '<div class="stats">' + stat(c.notes, t('refSeen'), c.notes ? 'green' : 'red') + stat(c.released, t('refReleased')) + stat(c.coaches, t('refCoaches')) + '</div>' +
+      (function () {
+        // Career: every season on record since the history backfill (113).
+        var cs = c.career || [];
+        if (cs.length < 2) return '';
+        var y0 = cs[cs.length - 1].year;
+        return '<div class="disp h2">' + esc(t('refCareer')) + '</div><div class="card" style="gap:6px">' +
+          '<table class="dt" style="width:100%"><thead><tr><th>' + esc(t('packSeason')) + '</th><th class="n">' + esc(t('wrapGames')) + '</th><th class="n">' + esc(t('refCenter')) + '</th></tr></thead><tbody>' +
+          cs.map(function (x) { return '<tr><td>' + esc(String(x.year)) + '</td><td class="n">' + esc(String(x.games)) + '</td><td class="n">' + esc(String(x.as_center)) + '</td></tr>'; }).join('') +
+          '</tbody></table>' +
+          '<div class="hint">' + esc(t('refCareerLine').replace('{n}', c.career_games).replace('{y}', y0)) + '</div>' +
+          '<button class="btn outline" id="refPack" style="width:100%">' + esc(t('packBtn')) + '</button></div>';
+      })() +
       '<div class="pad hint" style="padding-top:8px">' + (c.first_game ? esc(t('refFirst')) + ' ' + esc(dayLong(c.first_game)) + ', ' : '') + (c.last_game ? esc(t('refLast')) + ' ' + esc(dayLong(c.last_game)) : '') + (c.last_seen ? '. ' + esc(t('refLastSeen')) + ' ' + esc(dayLong(c.last_seen)) : '') + '</div>' +
       (c.next_game ? '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('refNext')) + '</b><div>' + esc(dayLong(c.next_game)) + ', ' + esc(clock(c.next_kickoff)) + ', ' + esc(c.next_venue || '') + (c.next_field ? ', ' + esc(c.next_field) : '') + '</div><div class="hint">' + esc(t('refNextHint')) + '</div></div>' : '') +
       '<div class="disp h2">' + esc(t('upTitle')) + '</div><div id="refUpcoming"><div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div></div>' +
@@ -4283,9 +4308,47 @@
       renderRef(name);
     };
     wireSeasonCard(name, c.person_id);
+    var pk = $('refPack'); if (pk) pk.onclick = async function () {
+      pk.disabled = true; busy(true);
+      var pr = await sb.rpc('evidence_pack', { p_name: name });
+      busy(false); pk.disabled = false;
+      if (pr.error || !pr.data) { pk.textContent = t('packFail'); return; }
+      packShow(pr.data);
+    };
     Promise.all([upcomingFor(name, 90), loadCoachNames()]).then(function (x) { var list = x[0]; var el = $('refUpcoming'); if (el) el.innerHTML = upcomingHtml(list, name); }).catch(function (e) { var el = $('refUpcoming'); if (el) el.innerHTML = '<div class="msg bad">' + esc(e.message || '') + '</div>'; });
   }
   var REF = { from: '' };
+
+  // ── The evidence pack: one printable page per referee (113) ──────
+  // Everything on record, rendered clean and printed from the browser;
+  // Save as PDF makes it a file. Section titles carry no names; the
+  // names inside are the data itself (who coached, who observed).
+  function packShow(d) {
+    var old = document.getElementById('packPrint'); if (old) old.remove();
+    var div = document.createElement('div'); div.id = 'packPrint';
+    var row = function (cells, th) { return '<tr>' + cells.map(function (x, i) { return '<' + (th ? 'th' : 'td') + (i ? ' class="n"' : '') + '>' + x + '</' + (th ? 'th' : 'td') + '>'; }).join('') + '</tr>'; };
+    var sec = function (title, body) { return '<h2>' + esc(title) + '</h2>' + (body || '<p class="pnone">' + esc(t('packNone')) + '</p>'); };
+    var cs = d.career || [], evs = d.evaluations || [], fits = d.fitness || [], nts = d.notes || [];
+    div.innerHTML =
+      '<div class="packhead"><div class="porg">' + esc(t('appName')) + '</div><h1>' + esc(t('packTitle')) + '</h1>' +
+      '<div class="pwho disp">' + esc(d.name) + '</div>' +
+      '<div class="pmeta">' + (d.city ? esc(d.city) + '. ' : '') + (d.titles || []).map(function (x) { return esc(x.label); }).join(', ') + '</div>' +
+      '<div class="pgen">' + esc(t('packGenerated')) + ' ' + esc(dayLong(d.generated_on)) + '</div></div>' +
+      sec(t('refCareer') + (d.career_games ? ', ' + d.career_games + ' ' + t('wrapGames') : ''),
+        cs.length ? '<table>' + row([esc(t('packSeason')), esc(t('wrapGames')), esc(t('refCenter')), esc(t('wrapVenues'))], true) +
+          cs.map(function (x) { return row([esc(String(x.year)), esc(String(x.games)), esc(String(x.as_center)), esc(String(x.venues))]); }).join('') + '</table>' : '') +
+      sec(t('packEvals') + (evs.length ? ', ' + evs.length : ''),
+        evs.length ? '<table>' + evs.map(function (x) { return row([esc(dayLong(x.date)), esc(x.competition || ''), esc(x.venue || ''), esc(x.purpose || ''), esc(x.coach || '')]); }).join('') + '</table>' : '') +
+      sec(t('packFitness'),
+        fits.length ? '<table>' + fits.map(function (x) { return row([esc(dayLong(x.date)), esc(x.standard || ''), esc(x.status || '')]); }).join('') + '</table>' : '') +
+      sec(t('packNotes') + (nts.length ? ', ' + nts.length : ''),
+        nts.length ? nts.map(function (x) { return '<div class="pnote"><div class="pn-who">' + esc(x.observer || '') + (x.role ? ', ' + esc(x.role) : '') + ', ' + esc(dayLong(x.date)) + '</div><div>' + esc(x.text || '') + '</div></div>'; }).join('') : '');
+    document.body.appendChild(div);
+    document.body.classList.add('packmode');
+    var done = function () { document.body.classList.remove('packmode'); window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    window.print();
+  }
 
   // ── A coach's card: who they are, what they wrote ────────────────
   async function renderCoachCard(name) {

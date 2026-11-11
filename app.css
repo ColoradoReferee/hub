@@ -1,4 +1,4 @@
-/* app.css · Colorado Referees Hub · 2026.11.09-f
+/* app.css · Colorado Referees Hub · 2026.11.11-a
    Tokens once, two themes, every component. Nothing page-specific.
    2026.11.08-h: the Matchday layer. Broadcast hero with the Front Range
    ridgeline, fixtures-board stat strips, notched primary buttons, the
@@ -305,6 +305,24 @@ table.fit tr.premium td:last-child { color: #8a6500; }
 .pill.fitbadge { align-self: flex-start; }
 table.fit tr.failed td:last-child { color: var(--red); }
 .print-only { display: none; }
+/* The evidence pack (113): a clean white document, visible only in print. */
+#packPrint { display: none; }
+@media print {
+  body.packmode .app, body.packmode .tabbar, body.packmode #previewBar, body.packmode #busy { display: none !important; }
+  body.packmode #packPrint { display: block; background: #fff; color: #000; font-size: 12.5px; line-height: 1.5; padding: 8px 4px; }
+  #packPrint .porg { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #555; }
+  #packPrint h1 { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 26px; margin: 2px 0 10px; color: #000; }
+  #packPrint .pwho { font-size: 34px; margin: 0 0 2px; }
+  #packPrint .pmeta { color: #333; }
+  #packPrint .pgen { color: #666; font-size: 11px; margin-top: 4px; }
+  #packPrint h2 { font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 19px; margin: 16px 0 6px; border-bottom: 2px solid #000; padding-bottom: 2px; }
+  #packPrint table { width: 100%; border-collapse: collapse; }
+  #packPrint th, #packPrint td { text-align: left; padding: 3px 8px 3px 0; border-bottom: 1px solid #ccc; font-size: 12px; }
+  #packPrint th.n, #packPrint td.n { text-align: right; }
+  #packPrint .pnone { color: #666; }
+  #packPrint .pnote { margin: 0 0 8px; break-inside: avoid; }
+  #packPrint .pn-who { font-weight: 700; font-size: 11.5px; color: #333; }
+}
 @media print {
   .print-only { display: inline; }
   table.fit { min-width: 0; }
