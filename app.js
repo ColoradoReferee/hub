@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.11-b';
+  var VERSION = '2026.11.11-c';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -409,7 +409,9 @@
         .eq('date', today).not('status', 'in', '(C,X,canceled_no_pay)').or(mineOr()).order('kickoff'); }),
       sb.from('events').select('id,name,game_prefix,venues,blurb,tools,rules_url'),
       sb.from('checkins').select('game_id,created_at,ref_name').eq('date', today),
-      sb.from('observations').select('id,date,observer,rater_role,final_note,cleaned_note,public_notes,cleanup_status,area,game_id,field').order('date', { ascending: false }).limit(50),
+      sb.from('observations').select('id,date,ref_name,observer,rater_role,final_note,cleaned_note,public_notes,cleanup_status,area,game_id,field')
+        .or((S.me.nameKeys || []).map(function (k) { return 'ref_name.ilike.' + k.replace(/[,()]/g, ' ').trim(); }).join(',') || 'ref_name.ilike.' + ((S.me.first_name || '') + ' ' + (S.me.last_name || '')).trim())
+        .order('date', { ascending: false }).limit(50),
       sb.from('announcements').select('title,body,severity,created_at,venue,event_id,start_date,end_date').lte('start_date', today).gte('end_date', today).order('created_at', { ascending: false }).limit(5),
       sb.from('scores').select('game_id,home_score,away_score,status,entered_by,created_at').eq('date', today),
       loadEvalRequests(),
@@ -432,7 +434,12 @@
       if (keys.indexOf(key(c.ref_name)) >= 0) S.checkins[String(c.game_id)] = c.created_at;
       (S.checkinsAll[String(c.game_id)] = S.checkinsAll[String(c.game_id)] || {})[key(c.ref_name)] = c.created_at;
     });
-    S.notes = r[3].data || [];
+    // Mine means MINE: coaches and reviewers can read every released note
+    // in the org, so for them this select returns org-wide rows and the
+    // newest one may be someone else's. The games list already filters by
+    // name keys; notes now do too, so the Day box and My notes only ever
+    // show the person being viewed.
+    S.notes = (r[3].data || []).filter(function (n) { return keys.indexOf(key(n.ref_name)) >= 0; });
     S.bulletins = r[4].data || [];
     S.scores = {}; (r[5].data || []).forEach(function (x) { S.scores[String(x.game_id)] = x; });
     S.staffMsgs = r[7].data || [];
