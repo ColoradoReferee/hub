@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.11-a';
+  var VERSION = '2026.11.11-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -964,11 +964,13 @@
       try { var r = await sb.rpc('co_pulse', { p_date: todayStr() }); PULSE.data = r.data || null; } catch (e) { PULSE.data = null; }
     }
     var p = PULSE.data;
-    if (!p || !Number(p.games)) { el.innerHTML = ''; return; }
+    // The pulse is a community stat: inspiring on a league Saturday,
+    // noise on a quiet Tuesday. Below eight games statewide it stays off.
+    if (!p || Number(p.games) < 8) { el.innerHTML = ''; return; }
     var cell = function (n, l) { return '<div class="cell"><div class="n">' + esc(String(n)) + '</div><div class="l">' + esc(l) + '</div></div>'; };
     el.innerHTML = '<div class="pulse"><div class="slab"><span>' + esc(t('pulseTitle')) + '</span></div>' +
-      '<div class="nums">' + cell(p.refs, t('pulseRefs')) + cell(p.games, t('pulseGames')) + (Number(p.first_whistles) ? cell(p.first_whistles, t('pulseFirst')) : '') + '</div>' +
-      '<div class="line">' + esc(Number(p.first_whistles) ? t('pulseLineFirst').replace('{n}', p.first_whistles) : t('pulseLine')) + '</div></div>';
+      '<div class="nums">' + cell(p.refs, t(Number(p.refs) === 1 ? 'pulseRefs1' : 'pulseRefs')) + cell(p.games, t('pulseGames')) + (Number(p.first_whistles) ? cell(p.first_whistles, t(Number(p.first_whistles) === 1 ? 'pulseFirst1' : 'pulseFirst')) : '') + '</div>' +
+      '<div class="line">' + esc(Number(p.first_whistles) ? t(Number(p.first_whistles) === 1 ? 'pulseLineFirst1' : 'pulseLineFirst').replace('{n}', p.first_whistles) : t('pulseLine')) + '</div></div>';
   }
   function wrapYear() { var d = new Date(), m = d.getMonth() + 1, day = d.getDate(); if (m === 1) return d.getFullYear() - 1; if (m > WRAP_FROM[0] || (m === WRAP_FROM[0] && day >= WRAP_FROM[1])) return d.getFullYear(); return null; }
   async function renderWrap() {
