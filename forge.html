@@ -127,7 +127,7 @@ footer { margin-top: 40px; border-top: 1px solid var(--benchline); padding-top: 
         </div>
         <div class="pbody" id="pbody"></div>
         <div class="ptabs" id="ptabs"></div>
-        <div class="pfoot"><span class="ver">v2026.11.14-a</span></div>
+        <div class="pfoot"><span class="ver">v2026.11.14-b</span></div>
       </div>
       <div class="stageline" data-b="sample"></div>
     </div>
@@ -135,7 +135,7 @@ footer { margin-top: 40px; border-top: 1px solid var(--benchline); padding-top: 
 
   <footer>
     <span data-b="foot"></span>
-    <span class="ver">forge.html · v2026.11.14-a</span>
+    <span class="ver">forge.html · v2026.11.14-b</span>
   </footer>
 </div>
 
@@ -156,8 +156,16 @@ footer { margin-top: 40px; border-top: 1px solid var(--benchline); padding-top: 
       truth: '<b>This is not a mockup trick.</b> Colorado runs live today and a second state runs in a sandbox on the same schema. A new fork is a config file, six colors and a crest.',
       sample: 'Sample data. Tap the tabs.',
       foot: 'Built on the referee program platform. English and Spanish ship on day one.',
-      tabs: ['Today', 'Check in', 'State'],
+      tabs: ['Today', 'Check in', 'Coaching', 'State'],
       hubSub: 'Referee Hub', today: 'Saturday, 3 games', checkin: 'CHECK IN', signedin: 'Field 6 at 9:00 AM. Have a great match.',
+      coKick: 'Coaching note, released tonight',
+      coNote: 'Strong first half positioning. One thing for your next match: on corner kicks, start wider so the far post stays in view. Signals were timely and clear all game.',
+      coWho: 'Referee Mentor, after Saturday',
+      evKick: 'Formal evaluation',
+      evA: 'Observed evidence', evAtx: 'What the coach saw: the relevant moments, trends and examples from the match.',
+      evB: 'Agreed priorities', evBtx: 'The coaching message the referee and coach aligned on together.',
+      evC: 'Next match application', evCtx: 'Two practical actions, carried into the next assignment and the career record.',
+      evLine: 'Written to the national standard. Every entry builds the career record.',
       heroKick: 'State of the program', refs: 'Registered referees', renewed: 'Renewed', firstyear: 'First year',
       games: [['9:00 AM', 'U15B Premier, Field 6'], ['11:20 AM', 'U17G Premier, Field 2'], ['1:40 PM', 'U13B Select, Field 6']],
       ciKick: 'Game day', ciLead: 'One tap when you arrive. The venue team sees it at once.',
@@ -172,8 +180,16 @@ footer { margin-top: 40px; border-top: 1px solid var(--benchline); padding-top: 
       truth: '<b>No es un truco de maqueta.</b> Colorado corre en vivo hoy y un segundo estado corre en un sandbox sobre el mismo esquema. Un fork nuevo es un archivo de configuracion, seis colores y un escudo.',
       sample: 'Datos de muestra. Toca las pestanas.',
       foot: 'Construido sobre la plataforma del programa de arbitros. Ingles y espanol desde el primer dia.',
-      tabs: ['Hoy', 'Registrarse', 'Estado'],
+      tabs: ['Hoy', 'Registrarse', 'Coaching', 'Estado'],
       hubSub: 'Hub de Arbitros', today: 'Sabado, 3 partidos', checkin: 'REGISTRARME', signedin: 'Cancha 6 a las 9:00 AM. Buen partido.',
+      coKick: 'Nota de coaching, publicada esta noche',
+      coNote: 'Buen posicionamiento en el primer tiempo. Una cosa para tu proximo partido: en los tiros de esquina, empieza mas abierto para no perder el segundo palo. Senales claras y a tiempo todo el partido.',
+      coWho: 'Mentor de Arbitros, despues del sabado',
+      evKick: 'Evaluacion formal',
+      evA: 'Evidencia observada', evAtx: 'Lo que el coach vio: los momentos relevantes, tendencias y ejemplos del partido.',
+      evB: 'Prioridades acordadas', evBtx: 'El mensaje de coaching que el arbitro y el coach alinearon juntos.',
+      evC: 'Aplicacion al proximo partido', evCtx: 'Dos acciones practicas, llevadas a la proxima designacion y al expediente.',
+      evLine: 'Escrita al estandar nacional. Cada entrada construye el expediente del oficial.',
       heroKick: 'Estado del programa', refs: 'Arbitros registrados', renewed: 'Renovaron', firstyear: 'Primer ano',
       games: [['9:00 AM', 'U15B Premier, Cancha 6'], ['11:20 AM', 'U17G Premier, Cancha 2'], ['1:40 PM', 'U13B Select, Cancha 6']],
       ciKick: 'Dia de partido', ciLead: 'Un toque al llegar. El equipo de la sede lo ve al instante.',
@@ -247,6 +263,16 @@ footer { margin-top: 40px; border-top: 1px solid var(--benchline); padding-top: 
       b = '<div class="pcard hero"><div class="pkick">' + esc(t('ciKick')) + '</div><div style="margin-top:6px">' + esc(t('ciLead')) + '</div></div>' +
         '<button class="pbtn">' + esc(t('checkin')) + '</button>' +
         '<div class="pcard"><div class="pkick" style="color:var(--a)">' + esc(tb[0]) + '</div><div style="margin-top:4px">' + esc(t('signedin')) + '</div></div>';
+    } else if (tab === 2) {
+      b = '<div class="pcard hero"><div class="pkick">' + esc(t('coKick')) + '</div>' +
+        '<div style="margin-top:6px">' + esc(t('coNote')) + '</div>' +
+        '<div class="fld" style="margin-top:6px;font-weight:700">' + esc(t('coWho')) + '</div></div>' +
+        '<div class="pcard"><div class="pkick" style="color:var(--a)">' + esc(t('evKick')) + '</div>' +
+        ['A', 'B', 'C'].map(function (k) {
+          return '<div style="margin-top:8px"><div class="disp" style="font-size:17px;color:var(--p)">' + esc(t('ev' + k)) + '</div>' +
+            '<div class="fld">' + esc(t('ev' + k + 'tx')) + '</div></div>';
+        }).join('') +
+        '<div class="fld" style="margin-top:10px;border-top:1px solid var(--pline);padding-top:8px;font-weight:700">' + esc(t('evLine')) + '</div></div>';
     } else {
       b = '<div class="phero">' + ridge(cur.p) + '<div class="pkick">' + esc(t('heroKick')) + '</div>' +
         '<div class="disp pnum">' + cur.n[0].toLocaleString() + '</div><div class="pkick" style="color:#C8CFE2">' + esc(t('refs')) + '</div>' +
