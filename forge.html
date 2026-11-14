@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- forge.html · State Forge · 2026-11-10
+<!-- forge.html · State Forge · 2026-11-14
      The pitch instrument: pick a state, or type one in, and watch the Hub
      wear its colors. Standalone; touches nothing in the app. The point it
      makes is true: a state is a config file, six colors and a crest, and
@@ -127,7 +127,7 @@ footer { margin-top: 40px; border-top: 1px solid var(--benchline); padding-top: 
         </div>
         <div class="pbody" id="pbody"></div>
         <div class="ptabs" id="ptabs"></div>
-        <div class="pfoot"><span class="ver">v2026.11.10-a</span></div>
+        <div class="pfoot"><span class="ver">v2026.11.14-a</span></div>
       </div>
       <div class="stageline" data-b="sample"></div>
     </div>
@@ -135,7 +135,7 @@ footer { margin-top: 40px; border-top: 1px solid var(--benchline); padding-top: 
 
   <footer>
     <span data-b="foot"></span>
-    <span class="ver">forge.html · v2026.11.10-a</span>
+    <span class="ver">forge.html · v2026.11.14-a</span>
   </footer>
 </div>
 
@@ -189,6 +189,8 @@ footer { margin-top: 40px; border-top: 1px solid var(--benchline); padding-top: 
     { id: 'hi', name: 'Hawaii Referees', init: 'HI', p: '#12757E', a: '#E5457A', alt: '#F27BA3', tag: { en: 'sandbox', es: 'sandbox' }, n: [486, 301, 112] },
     { id: 'ga', name: 'Georgia Referees', init: 'GA', p: '#9D2235', a: '#1B1B1B', alt: '#4A4A4A', n: [3120, 2204, 648] },
     { id: 'wa', name: 'Washington Referees', init: 'WA', p: '#1D5B3C', a: '#0E2A47', alt: '#2E5E8F', n: [2410, 1702, 509] },
+    { id: 'ut', name: 'Utah Referees', init: 'UT', p: '#262458', a: '#262458', act: '#262458', n: [1650, 1120, 430] },
+    { id: 'rs', name: 'RISE Officials', init: 'R', p: '#021D45', a: '#C91D27', act: '#C91D27', n: [380, 260, 95] },
     { id: 'xx', name: 'Your State Referees', init: 'US', p: '#3A2E6E', a: '#B36A00', alt: '#E09A2F', n: [1482, 1015, 390], custom: true }
   ];
   var cur = Object.assign({}, PRESETS[0]), tab = 0;
@@ -213,6 +215,7 @@ footer { margin-top: 40px; border-top: 1px solid var(--benchline); padding-top: 
     ph.style.setProperty('--a', cur.a);
     ph.style.setProperty('--alt', cur.alt || lighten(cur.a));
     ph.style.setProperty('--heroa', mix(cur.a, '#FFFFFF', 0.55));
+    ph.style.setProperty('--act', cur.act || '#C8102E');
     ph.style.setProperty('--pbg', mix(cur.p, '#FFFFFF', 0.94));
     ph.style.setProperty('--pline', mix(cur.p, '#FFFFFF', 0.82));
     $('pname').textContent = cur.name;
@@ -252,7 +255,7 @@ footer { margin-top: 40px; border-top: 1px solid var(--benchline); padding-top: 
 
   function renderChips() {
     $('chips').innerHTML = PRESETS.map(function (p, i) {
-      return '<button class="chip' + (p.id === cur.id ? ' on' : '') + '" data-pick="' + i + '"><span class="dot" style="background:' + esc(p.p) + '"></span>' + esc(p.custom ? (L === 'es' ? 'Tu estado' : 'Your state') : p.name.replace(/ Referees| Arbitros/, '')) + (p.tag ? ' <span class="tag">' + esc(p.tag[L]) + '</span>' : '') + '</button>';
+      return '<button class="chip' + (p.id === cur.id ? ' on' : '') + '" data-pick="' + i + '"><span class="dot" style="background:' + esc(p.p) + '"></span>' + esc(p.custom ? (L === 'es' ? 'Tu estado' : 'Your state') : p.name.replace(/ Referees| Arbitros| Officials/, '')) + (p.tag ? ' <span class="tag">' + esc(p.tag[L]) + '</span>' : '') + '</button>';
     }).join('');
     $('chips').querySelectorAll('[data-pick]').forEach(function (x) {
       x.onclick = function () { pick(PRESETS[Number(x.getAttribute('data-pick'))]); };
