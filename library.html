@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- library.html v2026.11.09-c · 2026-11-09 · Colorado Referees Library -->
+<!-- library.html v2026.11.15-a · 2026-11-15 · Colorado Referees Library -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -491,7 +491,7 @@ a{color:inherit;text-decoration:none;}
       <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program">
     </div>
     <div class="footer-text">
-      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.09-c<br>
+      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.15-a<br>
       <a href="https://coloradosoccer.org" class="footer-link">ColoradoSoccer.org</a> &middot;
       <span data-l="questions">Questions:</span> <a href="mailto:refeducation@coloradoreferees.com" class="footer-link">refeducation@coloradoreferees.com</a> &middot; 303.888.6863
     </div>
@@ -1272,7 +1272,7 @@ var MODULES = [
     iconBg:"rgba(74,95,193,.12)",
     title:"What the U.S. Refereeing Way is",
     sub:"The shared standard behind every evaluation and every debrief",
-    eyebrow:"U.S. Refereeing Way · 1 of 5",
+    eyebrow:"U.S. Refereeing Way · 1 of 7",
     keywords:"usrw refereeing way values develop guide motivate confidence protect evaluation gp cmi cre match difficulty debrief",
     build: function() {
       return ds("One standard, every level",
@@ -1296,7 +1296,7 @@ var MODULES = [
     iconBg:"rgba(74,95,193,.12)",
     title:"Game management",
     sub:"Tone, flow, and the stepped approach to discipline",
-    eyebrow:"U.S. Refereeing Way · 2 of 5",
+    eyebrow:"U.S. Refereeing Way · 2 of 7",
     keywords:"usrw game management tone flow advantage stepped discipline escalation warning caution consistency temperature",
     build: function() {
       return ds("Three principles",
@@ -1317,7 +1317,7 @@ var MODULES = [
     iconBg:"rgba(74,95,193,.12)",
     title:"Handball: the three concepts",
     sub:"Deliberate touch, unnaturally bigger, and goals scored off the arm",
-    eyebrow:"U.S. Refereeing Way · 3 of 5",
+    eyebrow:"U.S. Refereeing Way · 3 of 7",
     keywords:"usrw handball hand arm deliberate unnatural bigger goal law 12 armpit justifiable",
     build: function() {
       return ds("Every handball decision comes down to three concepts",
@@ -1342,7 +1342,7 @@ var MODULES = [
     iconBg:"rgba(74,95,193,.12)",
     title:"Positioning around the penalty area",
     sub:"Optimal position for the optimal decision",
-    eyebrow:"U.S. Refereeing Way · 4 of 5",
+    eyebrow:"U.S. Refereeing Way · 4 of 7",
     keywords:"usrw positioning movement penalty area angle proximity counter attack anticipate scan feet moving",
     build: function() {
       return ds("Read the play before you move",
@@ -1363,7 +1363,7 @@ var MODULES = [
     iconBg:"rgba(74,95,193,.12)",
     title:"Teamwork and AR involvement",
     sub:"Assist, don't insist: when the flag comes up and when it stays down",
-    eyebrow:"U.S. Refereeing Way · 5 of 5",
+    eyebrow:"U.S. Refereeing Way · 5 of 7",
     keywords:"usrw teamwork ar assistant referee involvement flag silent signals skirt pocket credibility pregame",
     build: function() {
       return ds("The AR's core mandate",
@@ -1379,6 +1379,52 @@ var MODULES = [
         bul("<strong>Step away from the penalty area:</strong> the foul is outside.") +
         bul("<strong>Move toward the corner flag:</strong> penalty kick, used only when certain.")) +
       callout("74,95,193","&#128161;","Credibility shrinks with distance. Close to your line, your information beats the referee's view. In the far third, involvement is reserved for unseen violent conduct and a penalty you are certain of.");
+    }
+  },
+
+  {
+    id:"usrw-reads", cat:"usrw", icon:"&#128064;",
+    iconBg:"rgba(74,95,193,.12)",
+    title:"Read the action before the contact",
+    sub:"Five reads that tell you what happened",
+    eyebrow:"U.S. Refereeing Way · 6 of 7",
+    keywords:"usrw soccer iq read action contact challenge normal initiates opportunity ball first risk natural additional foul",
+    build: function() {
+      return ds("Football understanding comes first",
+        dt("Before you can judge how serious a challenge is, you have to read what actually happened. These five reads happen in the second before and during the contact. They tell you whether there is anything to punish at all.")) +
+      ds("The five reads",
+        stp(1, "<strong>Normal contact?</strong> Football is a contact sport. Contact that is normal for this game and this level is not a foul, and calling it costs credibility.") +
+        stp(2, "<strong>Who initiates?</strong> Watch who starts the contact, not who falls. The player who initiates usually owns the outcome.") +
+        stp(3, "<strong>Opportunity.</strong> Was the ball there to be played, and was this a genuine attempt to play it?") +
+        stp(4, "<strong>Ball first, or risk?</strong> Touching the ball first does not clear a challenge. Judge the risk the player accepted to get there.") +
+        stp(5, "<strong>Natural or additional?</strong> Was the movement part of the football action, or was something added: a raised arm, a late leg, extra force?")) +
+      callout("74,95,193","&#128161;","The reads tell you WHAT happened. The eight considerations, the next module, tell you HOW SERIOUS it was. Chain them in that order, every challenge.");
+    }
+  },
+  {
+    id:"usrw-eight", cat:"usrw", icon:"&#9878;",
+    iconBg:"rgba(74,95,193,.12)",
+    title:"The eight considerations",
+    sub:"Weighing how serious a challenge was",
+    eyebrow:"U.S. Refereeing Way · 7 of 7",
+    keywords:"usrw eight considerations challenge severity careless reckless excessive force point of contact mode manner opportunity responsibility impact expectation weighting",
+    build: function() {
+      return ds("Once you know what happened, weigh it",
+        dt("Eight questions separate a fair challenge from careless, reckless, and excessive force. No single one decides; you evaluate each, weigh them, then decide.")) +
+      ds("The eight",
+        stp(1, "<strong>Point of contact.</strong> Where on the body: the foot, the ankle, or above the ankle? The Achilles or the heel? Head and neck, or body? Full, glancing, or slight?") +
+        stp(2, "<strong>Force.</strong> Speed and intensity generate force. Straight leg or bent? Planted or in the air? Did the player try to reduce the force, and was it the level this challenge called for?") +
+        stp(3, "<strong>Mode.</strong> What makes the contact: studs or the top of the boot? Elbow or forearm? A natural action, or an additional movement?") +
+        stp(4, "<strong>Manner.</strong> Where does the player come from, and in what body position? In control, or lunging? Airborne? Two-footed? What are the arms doing: natural, assisting, or a separate action?") +
+        stp(5, "<strong>Opportunity.</strong> Is the ball there to be challenged, and is this an attempt to play it? Who plays the ball, and is there avoidable contact after it is played?") +
+        stp(6, "<strong>Responsibility.</strong> Which player is responsible for the contact? Aware of the opponent? Taking a risk? A second action? What danger did the action create?") +
+        stp(7, "<strong>Impact.</strong> Impact on the game and on the player can SUPPORT the other considerations when they are unclear. It can never decide severity on its own: an injury does not make a red card, and a player staying up does not erase one.") +
+        stp(8, "<strong>Expectation.</strong> Was this contact the expected consequence of the football action, or did something change the nature of the challenge?")) +
+      ds("Finding the balance",
+        stp(1, "<strong>Evaluate</strong> each component of the challenge on its own.") +
+        stp(2, "<strong>Weigh.</strong> The considerations are not all equal; in a given situation some take priority over others.") +
+        stp(3, "<strong>Decide.</strong> With everything evaluated and weighed, choose the most appropriate outcome for the player and for the game.")) +
+      callout("74,95,193","&#128161;","Context is key and details matter. The most common error is letting impact decide alone: judge the challenge, not the scream.");
     }
   },
 
@@ -1959,7 +2005,7 @@ var ES = {
   "usrw-what": {
     title:"Qué es el U.S. Refereeing Way",
     sub:"El estándar compartido detrás de cada evaluación y cada charla",
-    eyebrow:"U.S. Refereeing Way · 1 de 5",
+    eyebrow:"U.S. Refereeing Way · 1 de 7",
     keywords:"usrw valores desarrollar guiar motivar confianza proteger evaluacion gp cmi cre dificultad del partido",
     build: function() {
       return ds("Un estándar, todos los niveles",
@@ -1981,7 +2027,7 @@ var ES = {
   "usrw-gm": {
     title:"Manejo del partido",
     sub:"El tono, el ritmo y la disciplina escalonada",
-    eyebrow:"U.S. Refereeing Way · 2 de 5",
+    eyebrow:"U.S. Refereeing Way · 2 de 7",
     keywords:"usrw manejo del partido tono ritmo ventaja disciplina escalonada advertencia amonestacion consistencia temperatura",
     build: function() {
       return ds("Tres principios",
@@ -2000,7 +2046,7 @@ var ES = {
   "usrw-handball": {
     title:"Mano: los tres conceptos",
     sub:"Toque deliberado, cuerpo antinaturalmente más grande y goles con el brazo",
-    eyebrow:"U.S. Refereeing Way · 3 de 5",
+    eyebrow:"U.S. Refereeing Way · 3 de 7",
     keywords:"usrw mano brazo deliberado antinatural gol regla 12 axila justificable",
     build: function() {
       return ds("Toda decisión de mano se reduce a tres conceptos",
@@ -2023,7 +2069,7 @@ var ES = {
   "usrw-position": {
     title:"Posicionamiento cerca del área penal",
     sub:"La posición óptima para la decisión óptima",
-    eyebrow:"U.S. Refereeing Way · 4 de 5",
+    eyebrow:"U.S. Refereeing Way · 4 de 7",
     keywords:"usrw posicionamiento movimiento area penal angulo proximidad contraataque anticipar escanear pies en movimiento",
     build: function() {
       return ds("Lee la jugada antes de moverte",
@@ -2042,7 +2088,7 @@ var ES = {
   "usrw-team": {
     title:"Trabajo en equipo e intervención del AR",
     sub:"Asistir, no insistir: cuándo sube la bandera y cuándo se queda abajo",
-    eyebrow:"U.S. Refereeing Way · 5 de 5",
+    eyebrow:"U.S. Refereeing Way · 5 de 7",
     keywords:"usrw trabajo en equipo ar asistente intervencion bandera señales silenciosas bolsillo credibilidad previa",
     build: function() {
       return ds("El mandato del AR",
@@ -2058,6 +2104,47 @@ var ES = {
         bul("<strong>Alejarse del área penal:</strong> la falta es afuera.") +
         bul("<strong>Moverse hacia el banderín de esquina:</strong> penal, solo con certeza.")) +
       callout("74,95,193","&#128161;","La credibilidad se reduce con la distancia. Cerca de tu línea, tu información vale más que la vista del árbitro. En el tercio lejano, la intervención se reserva para conducta violenta no vista y un penal del que estás seguro.");
+    }
+  },
+  "usrw-reads": {
+    title:"Lee la acción antes del contacto",
+    sub:"Cinco lecturas que te dicen qué pasó",
+    eyebrow:"U.S. Refereeing Way · 6 de 7",
+    keywords:"usrw soccer iq leer accion contacto disputa normal inicia oportunidad balon primero riesgo natural adicional falta",
+    build: function() {
+      return ds("Primero, entender el fútbol",
+        dt("Antes de juzgar qué tan grave fue una disputa, tienes que leer qué pasó en realidad. Estas cinco lecturas ocurren en el segundo antes del contacto y durante el contacto. Te dicen si hay algo que sancionar.")) +
+      ds("Las cinco lecturas",
+        stp(1, "<strong>¿Contacto normal?</strong> El fútbol es un deporte de contacto. El contacto normal para este partido y este nivel no es falta, y pitarlo cuesta credibilidad.") +
+        stp(2, "<strong>¿Quién inicia?</strong> Mira quién inicia el contacto, no quién cae. El jugador que inicia suele ser dueño del resultado.") +
+        stp(3, "<strong>Oportunidad.</strong> ¿Estaba el balón ahí para jugarse, y fue este un intento genuino de jugarlo?") +
+        stp(4, "<strong>¿Balón primero, o riesgo?</strong> Tocar el balón primero no limpia la disputa. Juzga el riesgo que el jugador aceptó para llegar.") +
+        stp(5, "<strong>¿Natural o adicional?</strong> ¿Fue el movimiento parte de la acción de fútbol, o se agregó algo: un brazo levantado, una pierna tardía, fuerza extra?")) +
+      callout("74,95,193","&#128161;","Las lecturas te dicen QUÉ pasó. Las ocho consideraciones, el siguiente módulo, te dicen QUÉ TAN GRAVE fue. Encadénalas en ese orden, en cada disputa.");
+    }
+  },
+  "usrw-eight": {
+    title:"Las ocho consideraciones",
+    sub:"Cómo pesar la gravedad de una disputa",
+    eyebrow:"U.S. Refereeing Way · 7 de 7",
+    keywords:"usrw ocho consideraciones disputa gravedad imprudente temeraria fuerza excesiva punto de contacto modo manera oportunidad responsabilidad impacto expectativa",
+    build: function() {
+      return ds("Cuando ya sabes qué pasó, pésalo",
+        dt("Ocho preguntas separan una disputa limpia de la imprudente, la temeraria y la fuerza excesiva. Ninguna decide sola; evalúas cada una, las pesas y luego decides.")) +
+      ds("Las ocho",
+        stp(1, "<strong>Punto de contacto.</strong> ¿Dónde en el cuerpo: el pie, el tobillo o arriba del tobillo? ¿El tendón de Aquiles o el talón? ¿Cabeza y cuello, o el cuerpo? ¿Contacto pleno, de refilón o leve?") +
+        stp(2, "<strong>Fuerza.</strong> La velocidad y la intensidad generan fuerza. ¿Pierna recta o flexionada? ¿Apoyada o en el aire? ¿Intentó el jugador reducir la fuerza, y era el nivel que esta disputa pedía?") +
+        stp(3, "<strong>Modo.</strong> ¿Con qué se hace el contacto: los tacos o el empeine? ¿El codo o el antebrazo? ¿Una acción natural, o un movimiento adicional?") +
+        stp(4, "<strong>Manera.</strong> ¿De dónde viene el jugador y en qué posición corporal? ¿En control, o lanzándose? ¿En el aire? ¿Con las dos piernas? ¿Qué hacen los brazos: natural, de apoyo, o una acción aparte?") +
+        stp(5, "<strong>Oportunidad.</strong> ¿Está el balón ahí para disputarse, y es esto un intento de jugarlo? ¿Quién juega el balón, y hay contacto evitable después de jugarlo?") +
+        stp(6, "<strong>Responsabilidad.</strong> ¿Qué jugador es responsable del contacto? ¿Consciente del rival? ¿Asumiendo un riesgo? ¿Hay una segunda acción? ¿Qué peligro creó la acción?") +
+        stp(7, "<strong>Impacto.</strong> El impacto en el partido y en el jugador puede APOYAR a las otras consideraciones cuando no están claras. Nunca decide la gravedad por sí solo: una lesión no hace una roja, y que el jugador siga de pie no la borra.") +
+        stp(8, "<strong>Expectativa.</strong> ¿Fue este contacto la consecuencia esperada de la acción de fútbol, o algo cambió la naturaleza de la disputa?")) +
+      ds("Encontrar el equilibrio",
+        stp(1, "<strong>Evalúa</strong> cada componente de la disputa por separado.") +
+        stp(2, "<strong>Pesa.</strong> Las consideraciones no valen todas igual; en una situación dada, algunas tienen prioridad sobre otras.") +
+        stp(3, "<strong>Decide.</strong> Con todo evaluado y pesado, elige el resultado más apropiado para el jugador y para el partido.")) +
+      callout("74,95,193","&#128161;","El contexto es clave y los detalles importan. El error más común es dejar que el impacto decida solo: juzga la disputa, no el grito.");
     }
   },
   "hub-start": {
