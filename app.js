@@ -1,11 +1,11 @@
-// app.js · Colorado Referees Hub · 2026-11-11
+// app.js · Colorado Referees Hub · 2026-11-15
 // Reads from the database as the signed-in person. Writes (check-in, Help)
 // go through the current backend this week so the sheet and the database
 // both get them.
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.11-c';
+  var VERSION = '2026.11.15-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -4338,6 +4338,9 @@
     var row = function (cells, th) { return '<tr>' + cells.map(function (x, i) { return '<' + (th ? 'th' : 'td') + (i ? ' class="n"' : '') + '>' + x + '</' + (th ? 'th' : 'td') + '>'; }).join('') + '</tr>'; };
     var sec = function (title, body) { return '<h2>' + esc(title) + '</h2>' + (body || '<p class="pnone">' + esc(t('packNone')) + '</p>'); };
     var cs = d.career || [], evs = d.evaluations || [], fits = d.fitness || [], nts = d.notes || [];
+    var dc = d.difficulty_counts || null;
+    var diffLabel = function (v) { v = String(v || '').toLowerCase(); return v.indexOf('very') === 0 ? t('diffVery') : v === 'difficult' ? t('diffDifficult') : v === 'normal' ? t('diffNormal') : ''; };
+    var diffLine = dc && evs.length ? '<p class="pdiff">' + esc(t('packDiffLine')) + ': ' + dc.normal + ' ' + esc(t('diffNormal')) + ' · ' + dc.difficult + ' ' + esc(t('diffDifficult')) + ' · ' + dc.very_difficult + ' ' + esc(t('diffVery')) + '</p>' : '';
     div.innerHTML =
       '<div class="packhead"><div class="porg">' + esc(t('appName')) + '</div><h1>' + esc(t('packTitle')) + '</h1>' +
       '<div class="pwho disp">' + esc(d.name) + '</div>' +
@@ -4347,7 +4350,7 @@
         cs.length ? '<table>' + row([esc(t('packSeason')), esc(t('wrapGames')), esc(t('refCenter')), esc(t('wrapVenues'))], true) +
           cs.map(function (x) { return row([esc(String(x.year)), esc(String(x.games)), esc(String(x.as_center)), esc(String(x.venues))]); }).join('') + '</table>' : '') +
       sec(t('packEvals') + (evs.length ? ', ' + evs.length : ''),
-        evs.length ? '<table>' + evs.map(function (x) { return row([esc(dayLong(x.date)), esc(x.competition || ''), esc(x.venue || ''), esc(x.purpose || ''), esc(x.coach || '')]); }).join('') + '</table>' : '') +
+        evs.length ? diffLine + '<table>' + evs.map(function (x) { return row([esc(dayLong(x.date)), esc(x.competition || ''), esc(x.venue || ''), esc(x.purpose || ''), esc(diffLabel(x.difficulty)), esc(x.coach || '')]); }).join('') + '</table>' : '') +
       sec(t('packFitness'),
         fits.length ? '<table>' + fits.map(function (x) { return row([esc(dayLong(x.date)), esc(x.standard || ''), esc(x.status || '')]); }).join('') + '</table>' : '') +
       sec(t('packNotes') + (nts.length ? ', ' + nts.length : ''),
