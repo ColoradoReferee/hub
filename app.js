@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.16-d';
+  var VERSION = '2026.11.16-e';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -966,18 +966,31 @@
       '<div class="stats" style="margin-top:10px">' + stat(m.games, t('wrapGames')) + stat(m.as_center, t('refCenter')) + stat(m.venues, t('wrapVenues')) + '</div>' +
       medalRack(SEAS.wall);
   }
-  // ── The badge wall: career milestones as medals (116). Earned medals
-  // carry the date they were earned; locked game medals show progress.
+  // ── The badge wall (116, grouped by 117): career, this season,
+  // honors and coaching. Earned medals carry the date they were
+  // earned; locked game medals show progress. Renders the flat 116
+  // shape too, so paste and migration order never matters.
+  function awLabel(a) { return a.code === 'custom' ? (a.label || t('aw.custom')) : t('aw.' + a.code); }
   function medalRack(w) {
-    if (!w || !w.badges || !w.badges.length) return '';
-    var icons = { first_game: '&#9917;', ten: '10', fifty: '50', century: '100', first_note: '&#128221;', first_eval: '&#128203;', fit: '&#127939;' };
+    if (!w) return '';
+    var icons = { first_game: '&#9917;', ten: '10', fifty: '50', century: '100', first_note: '&#128221;', first_eval: '&#128203;', fit: '&#127939;', s10: '10', s25: '25', s50: '50', first_note_w: '&#128221;', notes50: '50', notes250: '250', first_eval_w: '&#128203;', evals10: '10' };
     var one = function (b) {
       var lbl = t('bg.' + b.code);
-      var sub = b.earned ? (b.on ? dayShort(b.on) : '') : (b.need ? b.n + ' / ' + b.need : t('bgLocked'));
+      var sub = b.earned ? (b.on ? dayShort(b.on) : '') : (b.need ? (b.n || 0) + ' / ' + b.need : t('bgLocked'));
       return '<div class="medal' + (b.earned ? ' earned' : '') + '"' + (b.earned && b.on ? ' title="' + esc(dayLong(b.on)) + '"' : '') + '><div class="disc">' + (icons[b.code] || '&#127942;') + '</div><div class="ml">' + esc(lbl) + '</div><div class="ms">' + esc(sub) + '</div></div>';
     };
-    return '<div class="pad" style="padding-top:16px"><div class="slab"><span>' + esc(t('bgTitle')) + '</span></div></div>' +
-      '<div class="medals">' + w.badges.map(one).join('') + '</div>';
+    var grp = function (title, items) {
+      if (!items || !items.length) return '';
+      return '<div class="pad" style="padding-top:16px"><div class="slab"><span>' + esc(title) + '</span></div></div><div class="medals">' + items.map(one).join('') + '</div>';
+    };
+    if (w.badges) return grp(t('bgTitle'), w.badges);
+    var honors = (w.honors || []).map(function (a) {
+      return '<div class="medal earned honor" title="' + esc(String(a.season)) + '"><div class="disc">&#127942;</div><div class="ml">' + esc(awLabel(a)) + '</div><div class="ms">' + esc(String(a.season)) + '</div></div>';
+    }).join('');
+    return (honors ? '<div class="pad" style="padding-top:16px"><div class="slab"><span>' + esc(t('bgHonors')) + '</span></div></div><div class="medals">' + honors + '</div>' : '') +
+      grp(t('bgTitle') + ' · ' + t('bgCareer'), w.career) +
+      grp(t('bgTitle') + ' · ' + t('bgSeason') + (w.season && w.season.year ? ' ' + w.season.year : ''), w.season && w.season.badges) +
+      grp(t('bgTitle') + ' · ' + t('bgCoaching'), w.coaching);
   }
   // Colorado, today: the statewide pulse. One program, one Sunday,
   // every field at once. Needs co_pulse (097); silent until it runs.
@@ -2311,7 +2324,7 @@
       else if (DAYNEXT.at === todayStr() && DAYNEXT.g) { $('nextCard').innerHTML = heroHtml(DAYNEXT.g); }
       else {
         $('nextCard').innerHTML = '<div class="card hero"><div class="kicker">' + esc(t('nextUp')) + '</div><div class="skel" style="width:70%;height:26px"></div><div class="skel" style="width:50%;height:12px"></div></div>';
-        upcomingFor(S.me.first_name + ' ' + S.me.last_name, 90).then(function (list) {
+        upcomingFor(S.me.first_name + ' ' + S.me.last_name, 90, S.me.nameKeys).then(function (list) {
           DAYNEXT.at = todayStr();
           DAYNEXT.g = (list || []).filter(function (x) { return x.date !== todayStr(); })[0] || null;
           $('nextCard').innerHTML = DAYNEXT.g ? heroHtml(DAYNEXT.g) : plainNo;
@@ -2330,7 +2343,7 @@
     renderSeason();
     renderPulse();
     var up = $('dayUpcoming');
-    if (S.me.previewing) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div><div class="hint">' + esc(t('loadingReview')) + '</div>'; upcomingFor(S.me.first_name + ' ' + S.me.last_name, 90).then(function (list) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div>' + upcomingHtml(list.filter(function (g) { return g.date !== todayStr(); }), S.me.first_name + ' ' + S.me.last_name); }).catch(function () { up.innerHTML = ''; }); }
+    if (S.me.previewing) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div><div class="hint">' + esc(t('loadingReview')) + '</div>'; upcomingFor(S.me.first_name + ' ' + S.me.last_name, 90, S.me.nameKeys).then(function (list) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div>' + upcomingHtml(list.filter(function (g) { return g.date !== todayStr(); }), S.me.first_name + ' ' + S.me.last_name, S.me.nameKeys); }).catch(function () { up.innerHTML = ''; }); }
     else up.innerHTML = '';
     var note = S.notes[0];
     if (note) markRead([note]);
@@ -3596,6 +3609,7 @@
     PP.person = p;
     var r = await sb.from('person_titles').select('title_code,source').eq('person_id', p.id);
     PP.held = r.data || [];
+    try { var aw = await sb.from('awards').select('id,code,label,season').eq('person_id', p.id).order('season', { ascending: false }); PP.awards = aw.data || []; } catch (e) { PP.awards = []; }
     await loadCatalog();
     // The card belongs under the tapped name, not at the bottom of a
     // long result list.
@@ -3640,10 +3654,26 @@
       '<div><div class="hint" style="font-weight:700">' + esc(t('lcTitles')) + '</div><div>' + (lc.length ? lc.map(function (h) { return '<span class="pill" style="margin:4px 4px 0 0">' + esc(byCode[h.title_code] ? byCode[h.title_code].label : h.title_code) + '</span>'; }).join('') : '<span class="hint">' + esc(t('noneYet')) + '</span>') + '</div></div>' +
       '<div><div class="hint" style="font-weight:700">' + esc(t('coTitles')) + '</div><div>' + (co.length ? co.map(function (h) { return '<span class="pill ok" style="margin:4px 4px 0 0">' + esc(byCode[h.title_code] ? byCode[h.title_code].label : h.title_code) + ' <button class="linkbtn" style="display:inline;min-height:0;padding:0 0 0 6px;color:inherit" data-take="' + esc(h.title_code) + '">' + esc(t('remove')) + '</button></span>'; }).join('') : '<span class="hint">' + esc(t('noneYet')) + '</span>') + '</div></div>' +
       '<div><div class="hint" style="font-weight:700">' + esc(t('addTitle')) + '</div><div class="chips" style="margin-top:6px">' + givable.map(function (c) { return '<button class="chip-btn" data-give="' + esc(c.code) + '">' + esc(c.label) + '</button>'; }).join('') + '</div></div>' +
+      '<div><div class="hint" style="font-weight:700">' + esc(t('awTitle')) + '</div><div>' +
+        ((PP.awards || []).length ? PP.awards.map(function (a) { return '<span class="pill ok" style="margin:4px 4px 0 0">' + esc(awLabel(a)) + ' ' + esc(String(a.season)) + ' <button class="linkbtn" style="display:inline;min-height:0;padding:0 0 0 6px;color:inherit" data-awtake="' + a.id + '">' + esc(t('remove')) + '</button></span>'; }).join('') : '<span class="hint">' + esc(t('noneYet')) + '</span>') + '</div>' +
+        '<div class="go" style="margin-top:6px"><select id="awCode" style="font:inherit;flex:1;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' +
+          ['roy_youth', 'roy_adult', 'larry_smith', 'custom'].map(function (c) { return '<option value="' + c + '">' + esc(t('aw.' + c)) + '</option>'; }).join('') + '</select>' +
+        '<input id="awYear" type="number" value="' + new Date().getFullYear() + '" style="font:inherit;width:84px;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink);text-align:center">' +
+        '<button class="btn outline" id="awGive">' + esc(t('awGiveBtn')) + '</button></div>' +
+        '<input id="awLabel" placeholder="' + esc(t('awLabelPh')) + '" hidden style="font:inherit;width:100%;margin-top:6px;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div>' +
       '<div><div class="hint" style="font-weight:700">' + esc(t('signinHelp')) + '</div><div class="go" style="margin-top:6px"><input id="ppEmail" type="email" value="' + esc(p.email || '') + '" placeholder="' + esc(t('emailLabel')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn outline" id="ppEmailSave">' + esc(t('save')) + '</button></div>' +
         (iCan('setup') ? '<button class="btn outline small" id="ppCode" style="margin-top:8px">' + esc(t('signinCodeBtn')) + '</button><div id="ppCodeBox"></div>' : '') + '</div>' +
       '<div class="msg" id="ppMsg" hidden></div></div>';
     $('personCard').querySelectorAll('[data-give]').forEach(function (b) { b.onclick = async function () { b.disabled = true; var r = await sb.rpc('give_title', { p_person: p.id, p_code: b.getAttribute('data-give') }); if (r.error) { say('ppMsg', r.error.message, 'bad'); b.disabled = false; return; } await openPerson(p.id); say('ppMsg', t('titleGiven') + ': ' + b.textContent, 'good'); }; });
+    var awSel = $('awCode'), awGv = $('awGive');
+    if (awSel) awSel.onchange = function () { $('awLabel').hidden = awSel.value !== 'custom'; };
+    if (awGv) awGv.onclick = async function () {
+      awGv.disabled = true;
+      var r = await sb.rpc('give_award', { p_person: p.id, p_code: awSel.value, p_season: parseInt($('awYear').value, 10) || new Date().getFullYear(), p_label: $('awLabel').value.trim() || null });
+      if (r.error) { say('ppMsg', r.error.message, 'bad'); awGv.disabled = false; return; }
+      await openPerson(p.id); say('ppMsg', t('awGiven'), 'good');
+    };
+    $('personCard').querySelectorAll('[data-awtake]').forEach(function (b) { b.onclick = async function () { b.disabled = true; var r = await sb.rpc('take_award', { p_id: parseInt(b.getAttribute('data-awtake'), 10) }); if (r.error) { say('ppMsg', r.error.message, 'bad'); b.disabled = false; return; } await openPerson(p.id); }; });
     var es = $('ppEmailSave');
     if (es) es.onclick = async function () { es.disabled = true; var r = await sb.rpc('set_person_email', { p_person: p.id, p_email: $('ppEmail').value.trim() }); es.disabled = false; if (r.error) { say('ppMsg', r.error.message, 'bad'); return; } p.email = $('ppEmail').value.trim().toLowerCase(); say('ppMsg', t('emailSaved'), 'good'); };
     var pc = $('ppCode');
@@ -4247,23 +4277,29 @@
     return '<a class="refname" href="#ref/' + encodeURIComponent(name) + '">' + esc(name) + '</a>';
   }
   // Every future game a name is on, across every assigning group.
-  async function upcomingFor(name, days) {
+  async function upcomingFor(name, days, keys) {
+    // Match every linked spelling when the caller has them (the
+    // person's own list), not just the canonical one. A game crewed
+    // under a variant spelling is still this person's game.
     var today = todayStr(), until = iso(new Date(Date.now() + (days || 60) * 86400000));
-    var q = name.replace(/[,()]/g, ' ').trim();
-    var r = await fetchAll(function () { return sb.from('games').select('game_id,date,kickoff,field,age_group,venue,competition,cr,ar1,ar2,fourth,status,site_id').gte('date', today).lte('date', until).not('status', 'in', '(C,X,canceled_no_pay)').or('cr.ilike.' + q + ',ar1.ilike.' + q + ',ar2.ilike.' + q + ',fourth.ilike.' + q).order('date').order('kickoff'); });
+    var qs = (keys && keys.length ? keys : [name]).map(function (k) { return String(k).replace(/[,()]/g, ' ').trim(); }).filter(Boolean);
+    var parts = [];
+    qs.forEach(function (q) { ['cr', 'ar1', 'ar2', 'fourth'].forEach(function (c) { parts.push(c + '.ilike.' + q); }); });
+    var r = await fetchAll(function () { return sb.from('games').select('game_id,date,kickoff,field,age_group,venue,competition,cr,ar1,ar2,fourth,status,site_id').gte('date', today).lte('date', until).not('status', 'in', '(C,X,canceled_no_pay)').or(parts.join(',')).order('date').order('kickoff'); });
     return r.data || [];
   }
   var COACH_NAMES = null;
   function coachNameOf(pid) { if (!pid) return ''; var c = (COACH_NAMES || []).filter(function (x) { return String(x.person_id) === String(pid); })[0]; return c ? c.first_name + ' ' + c.last_name : t('evalCoachWord'); }
   async function loadCoachNames() { if (COACH_NAMES) return; try { var c = await sb.from('coaches').select('person_id,first_name,last_name'); COACH_NAMES = c.data || []; } catch (e) { COACH_NAMES = []; } }
-  function upcomingHtml(list, name) {
-    var k = key(name);
+  function upcomingHtml(list, name, keys) {
+    var ks = (keys && keys.length ? keys : [name]).map(key);
+    var isMe = function (n) { return ks.indexOf(key(n)) >= 0; };
     if (!list.length) return '<div class="card"><div class="hint">' + esc(t('upNone')) + '</div></div>';
     var days = {}, order = [];
     list.forEach(function (g) { if (!days[g.date]) { days[g.date] = []; order.push(g.date); } days[g.date].push(g); });
     return order.map(function (d) {
       return '<div class="pad" style="padding-top:12px"><div class="hint" style="font-weight:700">' + esc(dayLong(d)) + '</div></div><div class="list" style="padding-top:8px">' + days[d].map(function (g) {
-        var role = key(g.cr) === k ? 'CR' : key(g.ar1) === k ? 'AR1' : key(g.ar2) === k ? 'AR2' : '4th';
+        var role = isMe(g.cr) ? 'CR' : isMe(g.ar1) ? 'AR1' : isMe(g.ar2) ? 'AR2' : '4th';
         var ck = { CR: 'cr', AR1: 'ar1', AR2: 'ar2', '4th': 'fourth' }[role];
         var noteBtn = iCan('coaching') && g.date <= todayStr() ? '<a class="btn outline small" style="margin:6px 0 0" href="#coach/game/' + esc(g.game_id) + '/' + ck + '">' + esc(t('leaveNote')) + '</a>' : '';
         var rq = (ER.mine || []).filter(function (q) { return String(q.game_id) === String(g.game_id) && (q.status === 'requested' || q.status === 'assigned'); })[0];
