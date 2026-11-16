@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.16-f';
+  var VERSION = '2026.11.16-g';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -2941,11 +2941,11 @@
   }
   async function loadEvals_() {
     if (!CC.coaches.length) { var c = await sb.from('coaches').select('person_id,first_name,last_name,coaching_title').order('last_name'); CC.coaches = c.data || []; }
-    var r = await sb.from('eval_requests').select('id,game_id,game_date,venue,purpose,status,coach_person_id,ref_name,ref_person_id,note').in('status', ['requested', 'assigned']).order('game_date');
+    var r = await sb.from('eval_requests').select('id,game_id,game_date,venue,purpose,status,coach_person_id,ref_name,ref_person_id,note').in('status', ['requested', 'pending_payment', 'assigned']).order('game_date');
     CC.evalReqs = r.data || [];
     try { var cand = await sb.rpc('eval_candidates'); CC.cands = cand.data || []; } catch (e) { CC.cands = []; }
     // Who said they are free on the days with open requests, so the picker can put them first.
-    var days = CC.evalReqs.filter(function (q) { return q.status === 'requested' && q.game_date; }).map(function (q) { return q.game_date; });
+    var days = CC.evalReqs.filter(function (q) { return (q.status === 'requested' || q.status === 'pending_payment') && q.game_date; }).map(function (q) { return q.game_date; });
     CC.evalAvail = {};
     if (days.length) { var av2 = await sb.from('coach_availability').select('person_id,date,block').in('date', days); (av2.data || []).forEach(function (x) { (CC.evalAvail[x.date] = CC.evalAvail[x.date] || {})[String(x.person_id)] = ((CC.evalAvail[x.date] || {})[String(x.person_id)] || '') + x.block; }); }
     try { var tr = await sb.from('evaluations').select('id,ref_name,coach_name,game_date,report_at').eq('report_status', 'submitted').order('report_at'); CC.toReview = tr.data || []; } catch (e) { CC.toReview = []; }
@@ -2990,7 +2990,7 @@
   }
   function renderCenter() {
     var tabs = ['coverage', 'evals', 'schedule', 'coaches', 'co90', 'ceu', 'ai', 'queue'];
-    var openN = (CC.evalReqs || []).filter(function (q) { return q.status === 'requested'; }).length || (S.evalWaiting || []).length;
+    var openN = (CC.evalReqs || []).filter(function (q) { return q.status === 'requested' || q.status === 'pending_payment'; }).length || (S.evalWaiting || []).length;
     var head = '<div class="tabs">' + tabs.map(function (k) { return '<button class="chip-btn' + (CC.tab === k ? ' on' : '') + (k === 'evals' && openN && CC.tab !== k ? ' warn' : '') + '" data-tab="' + k + '">' + esc(t('tab' + k.charAt(0).toUpperCase() + k.slice(1))) + (k === 'evals' && openN ? ' (' + openN + ')' : '') + '</button>'; }).join('') + '</div>';
     var body = '';
     if (CC.tab === 'coverage') {
@@ -3008,15 +3008,16 @@
     } else if (CC.tab === 'evals') {
       var reqs = CC.evalReqs || [];
       var byId = {}; CC.coaches.forEach(function (c) { byId[String(c.person_id)] = c; });
-      var open = reqs.filter(function (r) { return r.status === 'requested'; }), assigned = reqs.filter(function (r) { return r.status === 'assigned'; });
+      var isOpen = function (r) { return r.status === 'requested' || r.status === 'pending_payment'; };
+      var open = reqs.filter(isOpen), assigned = reqs.filter(function (r) { return r.status === 'assigned'; });
       var card = function (r) {
         var c = byId[String(r.coach_person_id)];
         var picking = CC.evalPick === r.id;
         var eligible = CC.coaches.filter(function (x) { return r.purpose !== 'upgrade_national' || /national|fifa/i.test(x.coaching_title || ''); });
         var q = (CC.evalQ || '').toLowerCase();
-        return '<div class="card" style="gap:8px;border-color:' + (r.status === 'requested' ? 'var(--gold)' : 'var(--line)') + '"><div><b>' + refLink(r.ref_name) + '</b> <span class="hint">' + esc(t('evalPurpose.' + r.purpose)) + '</span><br><span class="hint">' + esc(dayLong(r.game_date)) + ', ' + esc(r.venue || '') + (r.note ? '. ' + esc(r.note) : '') + '</span></div>' +
+        return '<div class="card" style="gap:8px;border-color:' + (isOpen(r) ? 'var(--gold)' : 'var(--line)') + '"><div><b>' + refLink(r.ref_name) + '</b> <span class="hint">' + esc(t('evalPurpose.' + r.purpose)) + '</span>' + (r.status === 'pending_payment' ? ' <span class="pill" style="border-color:var(--red);color:var(--red)">' + esc(t('evalPendingPay')) + '</span>' : '') + '<br><span class="hint">' + esc(dayLong(r.game_date)) + ', ' + esc(r.venue || '') + (r.note ? '. ' + esc(r.note) : '') + '</span></div>' +
           (c ? '<div>' + esc(t('evalCoach')) + ' <b>' + esc(c.first_name + ' ' + c.last_name) + '</b> <span class="hint">' + esc(c.coaching_title || '') + '</span></div>' : '') +
-          (r.status === 'requested' ? (picking ? '<input id="evalQ" placeholder="' + esc(t('coachSearch')) + '" value="' + esc(CC.evalQ || '') + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><div class="chips">' + eligible.filter(function (x) { return !q || (x.first_name + ' ' + x.last_name).toLowerCase().indexOf(q) >= 0; }).sort(function (a, b) { var fa = (CC.evalAvail[r.game_date] || {})[String(a.person_id)] ? 0 : 1, fb = (CC.evalAvail[r.game_date] || {})[String(b.person_id)] ? 0 : 1; return fa - fb || (a.last_name || '').localeCompare(b.last_name || ''); }).slice(0, 12).map(function (x) { var fr = (CC.evalAvail[r.game_date] || {})[String(x.person_id)]; return '<button class="chip-btn' + (fr ? ' avail' : '') + '" data-evalassign="' + x.person_id + '" data-req="' + r.id + '">' + (fr ? '\u2713 ' : '') + esc(x.first_name + ' ' + x.last_name) + ' <small>' + esc(x.coaching_title || '') + '</small></button>'; }).join('') + '</div>' + (r.purpose === 'upgrade_national' ? '<div class="hint">' + esc(t('evalNationalOnly')) + '</div>' : '') : '<div class="actions" style="padding:0"><button class="btn go small" data-evalpick="' + r.id + '">' + esc(t('evalAssign')) + '</button><button class="btn outline small" data-evaldecline="' + r.id + '">' + esc(t('evalDecline')) + '</button></div>') : '') +
+          (isOpen(r) ? (picking ? '<input id="evalQ" placeholder="' + esc(t('coachSearch')) + '" value="' + esc(CC.evalQ || '') + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><div class="chips">' + eligible.filter(function (x) { return !q || (x.first_name + ' ' + x.last_name).toLowerCase().indexOf(q) >= 0; }).sort(function (a, b) { var fa = (CC.evalAvail[r.game_date] || {})[String(a.person_id)] ? 0 : 1, fb = (CC.evalAvail[r.game_date] || {})[String(b.person_id)] ? 0 : 1; return fa - fb || (a.last_name || '').localeCompare(b.last_name || ''); }).slice(0, 12).map(function (x) { var fr = (CC.evalAvail[r.game_date] || {})[String(x.person_id)]; return '<button class="chip-btn' + (fr ? ' avail' : '') + '" data-evalassign="' + x.person_id + '" data-req="' + r.id + '">' + (fr ? '\u2713 ' : '') + esc(x.first_name + ' ' + x.last_name) + ' <small>' + esc(x.coaching_title || '') + '</small></button>'; }).join('') + '</div>' + (r.purpose === 'upgrade_national' ? '<div class="hint">' + esc(t('evalNationalOnly')) + '</div>' : '') : '<div class="actions" style="padding:0"><button class="btn go small" data-evalpick="' + r.id + '">' + esc(t('evalAssign')) + '</button><button class="btn outline small" data-evaldecline="' + r.id + '">' + esc(t('evalDecline')) + '</button></div>') : '') +
           (r.status === 'assigned' ? '<button class="btn outline small" data-evaldone="' + r.id + '">' + esc(t('evalMarkDone')) + '</button>' : '') + '</div>';
       };
       body = '<div class="pad lead" style="padding-top:12px">' + esc(t('evalsLead')) + '</div><div class="disp h2">' + esc(t('evalsOpen')) + ' ' + open.length + '</div>' + (open.length ? open.map(card).join('') : '<div class="card"><div class="hint">' + esc(t('evalsNoneOpen')) + '</div></div>') +
@@ -4724,9 +4725,18 @@
     var c = $('evalReqCancel'); if (c) c.onclick = function () { ER.open = false; renderGame(g.game_id); };
     $('gameBody').querySelectorAll('[data-purpose]').forEach(function (b) { b.onclick = async function () {
       b.disabled = true; var pp = b.getAttribute('data-purpose'); b.textContent = t('sending');
-      if (FEES.eval[pp]) { var paid = await payStart({ kind: 'evaluation', purpose: pp, game_id: g.game_id, ref_name: myNameOn(g) }, 'evalReqMsg'); if (!paid) { b.disabled = false; b.textContent = t('evalPurpose.' + pp); } return; }
-      var r = await sb.from('eval_requests').insert({ org_id: S.me.org_id, ref_person_id: S.me.person_id, ref_name: myNameOn(g), purpose: pp, game_id: g.game_id, game_date: g.date, venue: g.venue });
+      // The request goes through FIRST, payment or not. With a fee it
+      // lands as pending_payment, so the Director can assign a coach
+      // while the money is chased; a completed checkout flips it to
+      // requested (the Stripe go-live carries that contract).
+      var st = FEES.eval[pp] ? 'pending_payment' : 'requested';
+      var r = await sb.from('eval_requests').insert({ org_id: S.me.org_id, ref_person_id: S.me.person_id, ref_name: myNameOn(g), purpose: pp, game_id: g.game_id, game_date: g.date, venue: g.venue, status: st }).select('id').single();
       if (r.error) { b.disabled = false; b.textContent = t('evalPurpose.' + pp); say('evalReqMsg', r.error.message, 'bad'); return; }
+      if (FEES.eval[pp]) {
+        var paid = await payStart({ kind: 'evaluation', purpose: pp, game_id: g.game_id, ref_name: myNameOn(g), request_id: r.data && r.data.id }, 'evalReqMsg');
+        if (paid) return; // redirecting to checkout; the request already exists
+        say('evalReqMsg', t('evalReqPendingSent'), 'good');
+      }
       ER.open = false; await loadEvalRequests(); renderGame(g.game_id);
     }; });
   }
