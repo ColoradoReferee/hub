@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.16-c';
+  var VERSION = '2026.11.16-d';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -920,6 +920,10 @@
       SEAS.mTried = true;
       try { var r2 = await sb.rpc('my_months', { p_year: y }); SEAS.months = (r2.data && r2.data.length === 12) ? r2.data : null; } catch (e2) { SEAS.months = null; }
     }
+    if (!SEAS.wall && !SEAS.wTried) {
+      SEAS.wTried = true;
+      try { var r3 = await sb.rpc('badge_wall'); SEAS.wall = r3.data || null; } catch (e3) { SEAS.wall = null; }
+    }
     var m = SEAS.data;
     if (!m || !m.games) { el.innerHTML = ''; return; }
     var stat = function (n, l) { return '<div class="stat"><b>' + esc(n == null ? '0' : String(n)) + '</b><i>' + esc(l) + '</i></div>'; };
@@ -959,7 +963,21 @@
       '<div class="ringtext">' + rankLine + (mileLine ? '<span>' + mileLine + '</span>' : '') +
       '<div class="rankbar"><i style="width:' + Math.round(frac * 100) + '%"></i></div></div></div>' + spark +
       (badges ? '<div class="badges">' + badges + '</div>' : '') + '</div>' +
-      '<div class="stats" style="margin-top:10px">' + stat(m.games, t('wrapGames')) + stat(m.as_center, t('refCenter')) + stat(m.venues, t('wrapVenues')) + '</div>';
+      '<div class="stats" style="margin-top:10px">' + stat(m.games, t('wrapGames')) + stat(m.as_center, t('refCenter')) + stat(m.venues, t('wrapVenues')) + '</div>' +
+      medalRack(SEAS.wall);
+  }
+  // ── The badge wall: career milestones as medals (116). Earned medals
+  // carry the date they were earned; locked game medals show progress.
+  function medalRack(w) {
+    if (!w || !w.badges || !w.badges.length) return '';
+    var icons = { first_game: '&#9917;', ten: '10', fifty: '50', century: '100', first_note: '&#128221;', first_eval: '&#128203;', fit: '&#127939;' };
+    var one = function (b) {
+      var lbl = t('bg.' + b.code);
+      var sub = b.earned ? (b.on ? dayShort(b.on) : '') : (b.need ? b.n + ' / ' + b.need : t('bgLocked'));
+      return '<div class="medal' + (b.earned ? ' earned' : '') + '"' + (b.earned && b.on ? ' title="' + esc(dayLong(b.on)) + '"' : '') + '><div class="disc">' + (icons[b.code] || '&#127942;') + '</div><div class="ml">' + esc(lbl) + '</div><div class="ms">' + esc(sub) + '</div></div>';
+    };
+    return '<div class="pad" style="padding-top:16px"><div class="slab"><span>' + esc(t('bgTitle')) + '</span></div></div>' +
+      '<div class="medals">' + w.badges.map(one).join('') + '</div>';
   }
   // Colorado, today: the statewide pulse. One program, one Sunday,
   // every field at once. Needs co_pulse (097); silent until it runs.
@@ -4304,9 +4322,10 @@
       sb.rpc('ref_card', { p_name: name }),
       sb.rpc('ref_notes', { p_name: name }),
       staff ? sb.rpc('ref_contact', { p_name: name }) : Promise.resolve({ data: null }),
-      sb.rpc('evidence_pack', { p_name: name })
+      sb.rpc('evidence_pack', { p_name: name }),
+      sb.rpc('badge_wall', { p_name: name })
     ]);
-    var card = rr[0], notes = rr[1], ct = rr[2].data, pack = rr[3].data || null;
+    var card = rr[0], notes = rr[1], ct = rr[2].data, pack = rr[3].data || null, wall = rr[4].data || null;
     // One round trip for everything that needs the person id, not three.
     var prog = null, co90 = null, ceuRows = [];
     try {
@@ -4374,6 +4393,7 @@
     })();
     $('refBody').innerHTML =
       '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(t('refCardTitle')) + (c.city ? ', ' + esc(c.city) : '') + (c.green_badge ? ', ' + esc(t('greenBadge')) : '') + '</div><div class="disp" style="font-size:40px">' + esc(name) + '</div><div>' + fitBadgeHtml(c.fitness) + (titles || '<span class="hint">' + esc(t('noneYet')) + '</span>') + '</div></div>' +
+      medalRack(wall) +
       contact + co90RefHtml(co90, c.person_id) + progressHtml(prog, c.person_id) +
       '<div class="disp h2">' + esc(t('refSeason')) + '</div>' +
       '<div class="stats">' + stat(c.games, t('refGames')) + stat(c.as_center, t('refCenter')) + stat(c.evaluations, t('refEvals')) + '</div>' +

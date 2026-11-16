@@ -347,6 +347,13 @@ table.fit tr.failed td:last-child { color: var(--red); }
 .statbtn { cursor: pointer; width: 100%; font: inherit; }
 .statbtn.on { outline: 2px solid var(--gold); outline-offset: -2px; }
 .chartcard svg { width: 100%; height: auto; }
+.medals { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 20px 0; }
+.medal { width: 82px; text-align: center; opacity: .45; filter: grayscale(1); }
+.medal.earned { opacity: 1; filter: none; }
+.medal .disc { width: 54px; height: 54px; margin: 0 auto; border-radius: 50%; background: var(--surface); border: 3px solid var(--line); display: flex; align-items: center; justify-content: center; font-family: var(--disp); font-style: italic; font-weight: 800; font-size: 19px; color: var(--gold); box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+.medal.earned .disc { border-color: var(--gold); }
+.medal .ml { font-size: 12px; font-weight: 700; margin-top: 6px; line-height: 1.2; }
+.medal .ms { font-size: 11px; color: var(--muted); }
 .note .text.clip { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
 /* State hero: the pool and the registration race lead; everything else
    on the screen reads smaller. */
