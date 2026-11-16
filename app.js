@@ -1,11 +1,11 @@
-// app.js · Colorado Referees Hub · 2026-11-15
+// app.js · Colorado Referees Hub · 2026-11-16
 // Reads from the database as the signed-in person. Writes (check-in, Help)
 // go through the current backend this week so the sheet and the database
 // both get them.
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.15-a';
+  var VERSION = '2026.11.16-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -2493,8 +2493,14 @@
       // Days ahead with games, for saying when I am free. One row per day is enough.
       sb.rpc('game_halves', { p_from: today, p_to: until4 }),
       sb.from('coach_availability').select('date,block').gte('date', today),
-      sb.from('observations').select('id,date,ref_name,observer,rater_role,public_notes,cleaned_note,final_note,cleanup_status,area,field,game_id,created_at').order('created_at', { ascending: false }).limit(100)
+      sb.from('observations').select('id,date,ref_name,observer,rater_role,public_notes,cleaned_note,final_note,cleanup_status,area,field,game_id,created_at').order('created_at', { ascending: false }).limit(100),
+      // Season totals for the workbench strip: counted on the server so a
+      // heavy season is not clipped by the 100-note window above.
+      sb.from('observations').select('id', { count: 'exact', head: true }).or(obsMineOr()).in('cleanup_status', ['approved', 'edited']).gte('date', todayStr().slice(0, 4) + '-01-01'),
+      sb.from('evaluations').select('id', { count: 'exact', head: true }).eq('coach_person_id', S.me.person_id).in('report_status', ['submitted', 'approved'])
     ]);
+    S.coach.sentNotesN = r[7].count || 0;
+    S.coach.sentEvalsN = r[8].count || 0;
     S.coach.games = r[0].data || [];
     S.coach.mine = r[1].data || [];
     S.coach.evals = r[2].data || [];
@@ -2517,6 +2523,63 @@
     ]);
     S.coach.reads = {}; (r2[0].data || []).forEach(function (x) { S.coach.reads[String(x.observation_id)] = x.read_at; });
     S.coach.seen = {}; (r2[1].data || []).forEach(function (o) { var k = key(o.ref_name); (S.coach.seen[k] = S.coach.seen[k] || []).push(o); });
+  }
+  function obsMineOr() {
+    var ks = (S.me.nameKeys || []).map(function (k) { return k.replace(/[,()]/g, ' ').trim(); }).filter(Boolean);
+    if (!ks.length) ks = [((S.me.first_name || '') + ' ' + (S.me.last_name || '')).trim()];
+    return ks.map(function (k) { return 'observer.ilike.' + k; }).join(',');
+  }
+  // ── The coach workbench: the season's work by status, the national
+  // working-view shape. In progress, ready to submit, needs attention
+  // (returned, rejected, or sitting over a week), sent this season.
+  function wbBuckets() {
+    var weekAgo = Date.now() - 7 * 86400000;
+    var old = function (iso) { var ms = iso ? new Date(iso).getTime() : 0; return ms > 0 && ms < weekAgo; };
+    var b = { inprog: [], ready: [], attn: [], sent: [] };
+    (S.coach.notes || []).forEach(function (n) {
+      var st = n.cleanup_status || 'pending';
+      var it = { kind: 'note', when: n.date || (n.created_at || '').slice(0, 10), n: n };
+      if (st === 'approved' || st === 'edited') b.sent.push(it);
+      else if (st === 'rejected' || old(n.created_at)) b.attn.push(it);
+      else b.inprog.push(it);
+    });
+    (S.coach.myEvals || []).forEach(function (e) {
+      var it = { kind: 'eval', when: e.game_date || '', e: e };
+      if (e.status !== 'complete') { (old(e.updated_at) ? b.attn : b.inprog).push(it); }
+      else if (e.report_status === 'returned') b.attn.push(it);
+      else if (e.report_status === 'submitted' || e.report_status === 'approved') b.sent.push(it);
+      else if (old(e.updated_at)) b.attn.push(it);
+      else b.ready.push(it);
+    });
+    Object.keys(b).forEach(function (k) { b[k].sort(function (x, y) { return x.when < y.when ? 1 : -1; }); });
+    return b;
+  }
+  function wbItemHtml(it) {
+    if (it.kind === 'eval') {
+      var e = it.e;
+      var rs = e.status === 'complete' ? (e.report ? t('evalRs.' + (e.report_status || 'draft')) : t('evalComplete')) : t('evalInProgress');
+      return '<a class="item" href="#eval/' + e.id + '"><div><b>' + esc(e.ref_name || '') + '</b> <span class="pill">' + esc(t('wbEval')) + '</span> <span class="hint">' + esc(rs) + '</span><br><span class="hint">' + esc(e.game_date ? dayLong(e.game_date) : '') + (e.venue ? ', ' + esc(e.venue) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>';
+    }
+    var n = it.n, st = n.cleanup_status || 'pending';
+    var label = t('status.' + st); if (label === 'status.' + st) label = t('status.pending');
+    return '<div class="item" style="cursor:default"><div><b>' + esc(n.ref_name || '') + '</b> <span class="pill">' + esc(t('wbNote')) + '</span> <span class="hint">' + esc(label) + '</span><br><span class="hint">' + esc(n.date ? dayLong(n.date) : '') + (n.area ? ', ' + esc(t('areas.' + n.area)) : '') + '</span></div></div>';
+  }
+  function wbHtml() {
+    var b = wbBuckets();
+    var sentN = (S.coach.sentNotesN || 0) + (S.coach.sentEvalsN || 0);
+    var wb = S.coach.wb || {};
+    var tile = function (k, n, l) { return '<button class="stat statbtn' + (wb.tile === k ? ' on' : '') + '" data-wb="' + k + '"><b>' + n + '</b><i>' + esc(l) + '</i></button>'; };
+    var h = '<div class="pad" style="padding-top:14px"><div class="hint" style="font-weight:700">' + esc(t('wbTitle')) + '</div></div>' +
+      '<div class="stats two" style="margin-top:8px">' + tile('inprog', b.inprog.length, t('wbInProg')) + tile('ready', b.ready.length, t('wbReady')) + '</div>' +
+      '<div class="stats two" style="margin-top:2px">' + tile('attn', b.attn.length, t('wbAttn')) + tile('sent', sentN, t('wbSent')) + '</div>';
+    if (wb.tile) {
+      var items = b[wb.tile] || [];
+      if (wb.type && wb.type !== 'all') items = items.filter(function (x) { return x.kind === wb.type; });
+      h += '<div class="chips pad" style="padding-top:10px">' + [['all', 'wbAll'], ['note', 'wbNotes'], ['eval', 'wbEvals']].map(function (p) { return '<button class="chip-btn' + ((wb.type || 'all') === p[0] ? ' on' : '') + '" data-wbtype="' + p[0] + '">' + esc(t(p[1])) + '</button>'; }).join('') + '</div>' +
+        '<div class="list">' + (items.length ? items.slice(0, 25).map(wbItemHtml).join('') : '<div class="card"><div class="hint">' + esc(t('wbEmpty')) + '</div></div>') + '</div>' +
+        (wb.tile === 'sent' && items.length ? '<div class="pad hint">' + esc(t('wbNewest')) + '</div>' : '');
+    }
+    return h;
   }
   function inBlock(g, block) {
     if (!block || block === 'all') return true;
@@ -2545,7 +2608,7 @@
     var upcoming = (S.coach.assignr || []).filter(function (g) { return g.date > coachDay(); });
     var upcomingCard = upcoming.length ? '<div class="card" style="gap:4px"><b>' + esc(t('comingUp')) + '</b>' + upcoming.map(function (g) { return '<div>' + esc(dayLong(g.date)) + ', ' + esc(clock(g.kickoff)) + ', ' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + ' <span class="hint">' + esc(t('fromAssignr')) + '</span></div>'; }).join('') + '</div>' : '';
     var myEvalsFold = (S.coach.myEvals || []).length ? fold('myevals', t('myEvalsTitle'), S.coach.myEvals.length, '<div class="list">' + S.coach.myEvals.map(function (e) { return '<a class="item" href="#eval/' + e.id + '"><div><b>' + esc(e.ref_name || '') + '</b> <span class="pill' + (e.status === 'complete' && (!e.report || e.report_status === 'approved') ? ' ok' : e.report_status === 'returned' ? ' bad' : '') + '">' + esc(e.status === 'complete' ? (e.report ? t('evalRs.' + (e.report_status || 'draft')) : t('evalComplete')) : t('evalInProgress')) + '</span><br><span class="hint">' + esc(e.game_date ? dayLong(e.game_date) : '') + (e.venue ? ', ' + esc(e.venue) : '') + (e.competition ? ', ' + esc(e.competition) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>', false) : '';
-    expected = evalsCard + expected + upcomingCard + myEvalsFold;
+    expected = wbHtml() + evalsCard + expected + upcomingCard + myEvalsFold;
     var availability = availCalHtml();
     expected = expected + availability;
     var vCount = {}; S.coach.games.forEach(function (g) { if (g.venue) vCount[g.venue] = (vCount[g.venue] || 0) + 1; });
@@ -2557,6 +2620,8 @@
     var dayPicker = dayList.length > 1 ? '<div class="pad" style="padding-top:14px"><div class="hint" style="font-weight:700;padding-bottom:8px">' + esc(t('coachDay')) + '</div><div class="chips">' + dayList.map(function (d) { return '<button class="chip-btn' + (d === coachDay() ? ' on' : '') + '" data-cday="' + d + '">' + esc(d === todayStr() ? t('todayWord') : dayShort(d)) + '</button>'; }).join('') + '</div></div>' : '';
     $('venuePick').innerHTML = expected + dayPicker + (venues.length ? '<div class="pad" style="padding-top:14px"><div class="hint" style="font-weight:700;padding-bottom:8px">' + esc(t('venue')) + '</div>' + venuePicker + '</div>' : '<div class="card"><div class="hint">' + esc(t('noVenuesToday')) + '</div></div>');
     var vsel = $('venueSel'); if (vsel) vsel.onchange = function () { S.coach.venue = vsel.value; renderCoach(); };
+    $('venuePick').querySelectorAll('[data-wb]').forEach(function (b) { b.onclick = function () { var k = b.getAttribute('data-wb'); S.coach.wb = S.coach.wb || {}; S.coach.wb.tile = S.coach.wb.tile === k ? null : k; renderCoach(); }; });
+    $('venuePick').querySelectorAll('[data-wbtype]').forEach(function (b) { b.onclick = function () { S.coach.wb = S.coach.wb || {}; S.coach.wb.type = b.getAttribute('data-wbtype'); renderCoach(); }; });
     $('venuePick').querySelectorAll('[data-cday]').forEach(function (b) { b.onclick = function () { S.coach.date = b.getAttribute('data-cday'); S.coach.venue = null; loadCoach().then(renderCoach); }; });
     $('venuePick').querySelectorAll('[data-venue]').forEach(function (b) { b.onclick = function () { S.coach.venue = b.getAttribute('data-venue'); renderCoach(); }; });
     $('venuePick').querySelectorAll('[data-av]').forEach(function (b) {
@@ -4222,9 +4287,10 @@
     var rr = await Promise.all([
       sb.rpc('ref_card', { p_name: name }),
       sb.rpc('ref_notes', { p_name: name }),
-      staff ? sb.rpc('ref_contact', { p_name: name }) : Promise.resolve({ data: null })
+      staff ? sb.rpc('ref_contact', { p_name: name }) : Promise.resolve({ data: null }),
+      sb.rpc('evidence_pack', { p_name: name })
     ]);
-    var card = rr[0], notes = rr[1], ct = rr[2].data;
+    var card = rr[0], notes = rr[1], ct = rr[2].data, pack = rr[3].data || null;
     // One round trip for everything that needs the person id, not three.
     var prog = null, co90 = null, ceuRows = [];
     try {
@@ -4269,34 +4335,56 @@
       (c.next_game ? '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('refNext')) + '</b><div>' + esc(dayLong(c.next_game)) + ', ' + esc(clock(c.next_kickoff)) + ', ' + esc(c.next_venue || '') + (c.next_field ? ', ' + esc(c.next_field) : '') + '</div><div class="hint">' + esc(t('refNextHint')) + '</div></div>' : '') +
       '<div class="disp h2">' + esc(t('upTitle')) + '</div><div id="refUpcoming"><div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div></div>' +
       (function () {
-        // Development picture: where the coaching has pointed, from the
-        // area tag every cleaned note carries (v3 pipeline). Same data as
-        // the notes below, read at a glance instead of eight at a time.
+        // The record, two tabs like the national referee profile:
+        // Evaluations (scored, formal, with the difficulty counts) and
+        // Development history (unscored notes plus the area picture).
+        var evs = (pack && pack.evaluations) || [], dc = pack && pack.difficulty_counts;
+        var dLab = function (v) { v = String(v || '').toLowerCase(); return v.indexOf('very') === 0 ? t('diffVery') : v === 'difficult' ? t('diffDifficult') : v === 'normal' ? t('diffNormal') : ''; };
+        var evalsHtml = !evs.length ? '<div class="card"><div class="hint">' + esc(t('refEvalsNone')) + '</div></div>' :
+          '<div class="card" style="gap:8px">' +
+          (dc ? '<div class="hint">' + esc(t('packDiffLine')) + ': ' + (dc.normal || 0) + ' ' + esc(t('diffNormal')) + ' · ' + (dc.difficult || 0) + ' ' + esc(t('diffDifficult')) + ' · ' + (dc.very_difficult || 0) + ' ' + esc(t('diffVery')) + '</div>' : '') +
+          '<table class="dt" style="width:100%"><thead><tr><th>' + esc(t('thDate')) + '</th><th>' + esc(t('thComp')) + '</th><th>' + esc(t('thPurpose')) + '</th><th>' + esc(t('thDiff')) + '</th><th>' + esc(t('thCoach')) + '</th></tr></thead><tbody>' +
+          evs.map(function (x) { return '<tr><td>' + esc(dayShort(x.date)) + '</td><td>' + esc(x.competition || '') + '</td><td>' + esc(x.purpose || '') + '</td><td>' + esc(dLab(x.difficulty)) + '</td><td>' + esc(x.coach || '') + '</td></tr>'; }).join('') +
+          '</tbody></table></div>';
         var list = notes.data || [];
-        var ar = { laws: 0, reading: 0, fitness: 0, presence: 0 }, tot = 0;
-        list.forEach(function (n) { if (n.area && ar[n.area] != null) { ar[n.area]++; tot++; } });
-        if (!tot) return '';
-        var mx = Math.max(ar.laws, ar.reading, ar.fitness, ar.presence);
-        var top = ['laws', 'reading', 'fitness', 'presence'].sort(function (a, b) { return ar[b] - ar[a]; })[0];
-        var row = function (k) { return '<div class="devbar"><div class="lbl">' + esc(t('areas.' + k)) + '</div><div class="tr"><i style="width:' + (mx ? Math.round(100 * ar[k] / mx) : 0) + '%"></i></div><div class="n">' + ar[k] + '</div></div>'; };
-        return '<div class="disp h2">' + esc(t('devTitle')) + '</div><div class="card" style="gap:8px">' +
-          row('laws') + row('reading') + row('fitness') + row('presence') +
-          '<div class="hint">' + esc(t('devTop').replace('{a}', t('areas.' + top)).replace('{n}', tot)) + '</div></div>';
-      })() +
-      '<div class="disp h2">' + esc(t('refNotes')) + ((notes.data || []).length ? ' · ' + (notes.data || []).length : '') + '</div>' + (function () {
-        // Every note on the PERSON, every name spelling, newest first (085).
-        // Unreleased notes reach reviewers and their own coach with a status pill.
-        var list = notes.data || [];
-        if (!list.length) return '<div class="card"><div class="hint">' + esc(t('refNoNotes')) + '</div></div>';
-        var one = function (n) {
-          var st = n.status || 'pending';
-          var stLabel = t('status.' + st); if (stLabel === 'status.' + st) stLabel = t('status.pending');
-          return '<div class="note"><div class="who">' + esc(n.observer || '') + (n.rater_role ? ', ' + esc(n.rater_role) : '') + ', ' + esc(dayLong(n.date)) + (n.field ? ', ' + esc(n.field) : '') + (n.area ? ', ' + esc(t('areas.' + n.area)) : '') + (n.released === false ? ' <span class="pill">' + esc(stLabel) + '</span>' : '') + '</div><div class="text">' + esc(n.text || '') + '</div></div>';
-        };
-        return list.slice(0, 8).map(one).join('') + (list.length > 8 ? fold('refnotes-older', t('olderNotes'), list.length - 8, list.slice(8).map(one).join(''), false) : '');
+        var devPic = (function () {
+          var ar = { laws: 0, reading: 0, fitness: 0, presence: 0 }, tot = 0;
+          list.forEach(function (n) { if (n.area && ar[n.area] != null) { ar[n.area]++; tot++; } });
+          if (!tot) return '';
+          var mx = Math.max(ar.laws, ar.reading, ar.fitness, ar.presence);
+          var top = ['laws', 'reading', 'fitness', 'presence'].sort(function (a, b) { return ar[b] - ar[a]; })[0];
+          var row = function (k) { return '<div class="devbar"><div class="lbl">' + esc(t('areas.' + k)) + '</div><div class="tr"><i style="width:' + (mx ? Math.round(100 * ar[k] / mx) : 0) + '%"></i></div><div class="n">' + ar[k] + '</div></div>'; };
+          return '<div class="card" style="gap:8px">' + row('laws') + row('reading') + row('fitness') + row('presence') +
+            '<div class="hint">' + esc(t('devTop').replace('{a}', t('areas.' + top)).replace('{n}', tot)) + '</div></div>';
+        })();
+        var notesHtml = (function () {
+          // Every note on the PERSON, every name spelling, newest first (085).
+          // Unreleased notes reach reviewers and their own coach with a status pill.
+          if (!list.length) return '<div class="card"><div class="hint">' + esc(t('refNoNotes')) + '</div></div>';
+          var one = function (n) {
+            var st = n.status || 'pending';
+            var stLabel = t('status.' + st); if (stLabel === 'status.' + st) stLabel = t('status.pending');
+            return '<div class="note"><div class="who">' + esc(n.observer || '') + (n.rater_role ? ', ' + esc(n.rater_role) : '') + ', ' + esc(dayLong(n.date)) + (n.field ? ', ' + esc(n.field) : '') + (n.area ? ', ' + esc(t('areas.' + n.area)) : '') + (n.released === false ? ' <span class="pill">' + esc(stLabel) + '</span>' : '') + '</div><div class="text">' + esc(n.text || '') + '</div></div>';
+          };
+          return list.slice(0, 8).map(one).join('') + (list.length > 8 ? fold('refnotes-older', t('olderNotes'), list.length - 8, list.slice(8).map(one).join(''), false) : '');
+        })();
+        var tab = REF.tab || (evs.length ? 'ev' : 'dv');
+        return '<div class="disp h2">' + esc(t('refRecord')) + '</div>' +
+          '<div class="chips pad" style="padding-top:4px">' +
+          '<button class="chip-btn' + (tab === 'ev' ? ' on' : '') + '" data-reftab="ev">' + esc(t('refTabEvals')) + (evs.length ? ' · ' + evs.length : '') + '</button>' +
+          '<button class="chip-btn' + (tab === 'dv' ? ' on' : '') + '" data-reftab="dv">' + esc(t('refTabDev')) + (list.length ? ' · ' + list.length : '') + '</button></div>' +
+          '<div' + (tab === 'ev' ? '' : ' hidden') + ' data-refpane="ev">' + evalsHtml + '</div>' +
+          '<div' + (tab === 'dv' ? '' : ' hidden') + ' data-refpane="dv">' + devPic + notesHtml + '</div>';
       })() +
       (c.person_id ? ceuBlock(ceuRows, REF.ceuAdd) : '');
     if (c.person_id) wireCeu($('refBody'), c.person_id, REF, function () { renderRef(name); });
+    $('refBody').querySelectorAll('[data-reftab]').forEach(function (b) {
+      b.onclick = function () {
+        REF.tab = b.getAttribute('data-reftab');
+        $('refBody').querySelectorAll('[data-reftab]').forEach(function (x) { x.classList.toggle('on', x === b); });
+        $('refBody').querySelectorAll('[data-refpane]').forEach(function (p) { p.hidden = p.getAttribute('data-refpane') !== REF.tab; });
+      };
+    });
     var osb = $('opsSend'); if (osb) osb.onclick = async function () {
       var ta = $('opsTxt'), v = (ta.value || '').trim();
       if (v.length < 2) { say('opsMsg', t('opsTextEmpty'), 'bad'); return; }
@@ -4318,6 +4406,7 @@
     };
     wireSeasonCard(name, c.person_id);
     var pk = $('refPack'); if (pk) pk.onclick = async function () {
+      if (pack) { packShow(pack); return; }
       pk.disabled = true; busy(true);
       var pr = await sb.rpc('evidence_pack', { p_name: name });
       busy(false); pk.disabled = false;

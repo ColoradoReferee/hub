@@ -344,6 +344,8 @@ table.fit tr.failed td:last-child { color: var(--red); }
 
 /* State view charts */
 .stats.two { grid-template-columns: repeat(2, 1fr); }
+.statbtn { cursor: pointer; width: 100%; font: inherit; }
+.statbtn.on { outline: 2px solid var(--gold); outline-offset: -2px; }
 /* State hero: the pool and the registration race lead; everything else
    on the screen reads smaller. */
 .stathero { display: grid; grid-template-columns: 3fr 2fr; gap: 2px; margin: 14px 20px 0; background: var(--line); padding: 2px; border-radius: 3px; }
