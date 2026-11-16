@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.16-e';
+  var VERSION = '2026.11.16-f';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -2343,8 +2343,10 @@
     renderSeason();
     renderPulse();
     var up = $('dayUpcoming');
-    if (S.me.previewing) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div><div class="hint">' + esc(t('loadingReview')) + '</div>'; upcomingFor(S.me.first_name + ' ' + S.me.last_name, 90, S.me.nameKeys).then(function (list) { up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div>' + upcomingHtml(list.filter(function (g) { return g.date !== todayStr(); }), S.me.first_name + ' ' + S.me.last_name, S.me.nameKeys); }).catch(function () { up.innerHTML = ''; }); }
-    else up.innerHTML = '';
+    // Every referee sees their whole upcoming slate, not just the next
+    // game. This list was preview-only until 2026.11.16-f, which meant
+    // a referee could never open a later game to request an evaluation.
+    up.innerHTML = '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div><div class="hint">' + esc(t('loadingReview')) + '</div>'; upcomingFor(S.me.first_name + ' ' + S.me.last_name, 90, S.me.nameKeys).then(function (list) { var l2 = list.filter(function (g) { return g.date !== todayStr(); }); up.innerHTML = l2.length ? '<div class="hint" style="padding:12px 0 6px;font-weight:700">' + esc(t('upTitleAdmin')) + '</div>' + upcomingHtml(l2, S.me.first_name + ' ' + S.me.last_name, S.me.nameKeys) : ''; }).catch(function () { up.innerHTML = ''; });
     var note = S.notes[0];
     if (note) markRead([note]);
     $('noteBox').innerHTML = note ? '<div class="note"><div class="who">' + esc(note.observer || '') + (note.rater_role ? ', ' + esc(note.rater_role) : '') + (note.date ? ', ' + esc(t('noteFrom')) + ' ' + esc(dayLong(note.date)) : '') + '</div><div class="text">' + esc(note.final_note || note.cleaned_note || '') + '</div><a href="#notes">' + esc(t('allNotes')) + '</a></div>'
