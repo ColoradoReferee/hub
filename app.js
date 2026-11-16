@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.16-g';
+  var VERSION = '2026.11.16-h';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -4716,11 +4716,29 @@
     var keys = S.me.nameKeys || [];
     if (!['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(g[k])) >= 0; })) return '';
     var req = (ER.mine || []).filter(function (r) { return String(r.game_id) === String(g.game_id); })[0];
-    if (req) return '<div class="pad" style="padding-top:10px"><span class="pill ok">' + esc(t('evalReqShort')) + ': ' + esc(t('evalPurpose.' + req.purpose)) + ', ' + esc(t('evalStatus.' + req.status)) + '</span></div>';
+    if (req) {
+      var pend = req.status === 'pending_payment' && FEES.eval[req.purpose];
+      var pill = '<span class="pill' + (pend ? '' : ' ok') + '"' + (pend ? ' style="border-color:var(--red);color:var(--red)"' : '') + '>' + esc(t('evalReqShort')) + ': ' + esc(t('evalPurpose.' + req.purpose)) + ', ' + esc(t('evalStatus.' + req.status)) + '</span>';
+      if (!pend) return '<div class="pad" style="padding-top:10px">' + pill + '</div>';
+      // Payment still owed: the request stands, and this button settles
+      // it. Today checkout cannot start (Stripe is not live), so the tap
+      // reports that; once the Edge Function lands it opens checkout and
+      // the webhook flips the request to requested.
+      return '<div class="pad" style="padding-top:10px">' + pill +
+        '<button class="btn go small" id="evalPayNow" style="margin-top:10px;width:100%">' + esc(t('evalPayBtn')) + ' · ' + money(FEES.eval[req.purpose]) + '</button>' +
+        '<div class="msg" id="evalReqMsg" hidden></div></div>';
+    }
     if (!ER.open) return '<div class="pad" style="padding-top:10px"><button class="chip-btn small" id="evalReqOpen">' + esc(t('evalReqShort')) + '</button></div>';
     return '<div class="pad" style="padding-top:10px"><div class="hint" style="padding-bottom:6px">' + esc(t('evalReqWhy')) + '</div><div class="chips">' + ['maintenance', 'upgrade_regional', 'upgrade_national'].map(function (p) { return '<button class="chip-btn small" data-purpose="' + p + '">' + esc(t('evalPurpose.' + p) + (FEES.eval[p] ? ' · ' + money(FEES.eval[p]) : '')) + '</button>'; }).join('') + '<button class="chip-btn small" id="evalReqCancel">' + esc(t('neverMind')) + '</button></div><div class="msg" id="evalReqMsg" hidden></div></div>';
   }
   function wireEvalRequest(g) {
+    var pn = $('evalPayNow'); if (pn) pn.onclick = async function () {
+      pn.disabled = true;
+      var req = (ER.mine || []).filter(function (r) { return String(r.game_id) === String(g.game_id); })[0];
+      if (!req) { pn.disabled = false; return; }
+      var paid = await payStart({ kind: 'evaluation', purpose: req.purpose, game_id: g.game_id, ref_name: myNameOn(g), request_id: req.id }, 'evalReqMsg');
+      if (!paid) pn.disabled = false;
+    };
     var o = $('evalReqOpen'); if (o) o.onclick = function () { ER.open = true; renderGame(g.game_id); };
     var c = $('evalReqCancel'); if (c) c.onclick = function () { ER.open = false; renderGame(g.game_id); };
     $('gameBody').querySelectorAll('[data-purpose]').forEach(function (b) { b.onclick = async function () {
