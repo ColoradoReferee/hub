@@ -1275,6 +1275,8 @@ window.LANG = {
     avPick: 'Tap a day to set the hours you can work. Playing first, or family games? Add exact windows.',
     signOut: 'Sign out',
     builtWith: 'Built with JAReferee',
+    osiTitle: 'Referee gear: Official Sports',
+    osiLine: 'Colorado discount pricing on uniforms and gear.',
     theme: 'Switch between light and dark',
     langSwitch: 'Español'
   },
@@ -2552,6 +2554,8 @@ window.LANG = {
     avPick: 'Toca un día para fijar las horas que puedes trabajar. ¿Juegas antes o hay partidos de la familia? Agrega ventanas exactas.',
     signOut: 'Cerrar sesión',
     builtWith: 'Hecho con JAReferee',
+    osiTitle: 'Equipo arbitral: Official Sports',
+    osiLine: 'Precios con descuento de Colorado en uniformes y equipo.',
     theme: 'Cambiar entre claro y oscuro',
     langSwitch: 'English'
   }
