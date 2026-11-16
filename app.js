@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.16-b';
+  var VERSION = '2026.11.16-c';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -1001,7 +1001,7 @@
       (WRAP.board.length ? '<table class="dt" style="margin:8px 20px 0;width:calc(100% - 40px)"><thead><tr><th class="n">#</th><th>' + esc(t('fitName')) + '</th><th class="n">' + esc(t('wrapGames')) + '</th><th class="n">' + esc(t('refCenter')) + '</th></tr></thead><tbody>' + WRAP.board.map(function (r, i) { return '<tr' + (r.is_me ? ' class="mine"' : '') + '><td class="n">' + (i + 1) + '</td><td>' + esc(r.name) + '</td><td class="n">' + esc(String(r.games)) + '</td><td class="n">' + esc(String(r.as_center)) + '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="pad hint">' + esc(t('wrapNobody')) + '</div>') +
       '<div class="pad hint" style="padding-top:8px">' + esc(t('wrapBoardHint')) + '</div>';
     var chips = '<div class="pad" style="padding-top:6px;display:flex;gap:8px;flex-wrap:wrap">' + years.map(function (yy2) { return '<button class="btn small ' + (yy2 === y ? 'primary' : 'outline') + '" data-wy="' + yy2 + '" style="flex-grow:0;min-height:36px;font-size:' + (yy2 === y ? '18px' : '14px') + '">' + yy2 + '</button>'; }).join('') + '</div>';
-    el.innerHTML = fold('wrap', t('wrapTitle').replace('{y}', y), m.games || '', chips + mine + '<div class="disp h2 print-keep" style="padding-top:10px">' + esc(t('wrapBoard').replace('{y}', y)) + '</div>' + board, true);
+    el.innerHTML = fold('wrap', t('wrapTitle').replace('{y}', y), m.games || '', chips + mine + fold('wrapboard', t('wrapBoard').replace('{y}', y), WRAP.board.length || '', board, false), true);
     var go = async function () { WRAP.club = $('wrapClub').value.trim(); WRAP.open = true; busy(true); var r = await sb.rpc('leaderboard', { p_year: y, p_club: WRAP.club || null, p_limit: 25 }); busy(false); WRAP.board = r.data || []; renderWrap(); };
     $('wrapGo').onclick = go; $('wrapClub').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } };
     el.querySelectorAll('[data-wy]').forEach(function (b) { b.onclick = function () { WRAP.pick = parseInt(b.getAttribute('data-wy'), 10); WRAP.me = null; WRAP.open = true; renderWrap(); }; });
@@ -2335,8 +2335,8 @@
     $('bulletins').innerHTML = (coachedHere ? '<div class="bulletin"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="9" stroke="currentColor" stroke-width="2"></circle><path d="M7 11.5l3 3 5-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg><div class="text">' + esc(t('coachHereToday')) + ' <a href="#" id="badgeLink">' + esc(t('lanyard')) + '</a><div id="badgeBox" hidden style="margin-top:8px"><img src="assets/badge.png" alt="" style="width:130px;border-radius:8px"><div class="hint">' + esc(t('badgeCaption')) + '</div></div></div></div>' : '') + S.bulletins.slice(0, 2).map(function (b) {
       return '<div class="bulletin"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="9" stroke="currentColor" stroke-width="2"></circle><path d="M11 6v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><circle cx="11" cy="15.5" r="1.2" fill="currentColor"></circle></svg><div class="text">' + (b.title ? '<b>' + esc(b.title) + '</b> ' : '') + esc(b.body || '') + ' <span>' + esc(t('fromState')) + '.</span></div></div>';
     }).join('');
-    $('coachEntry').innerHTML = (iCan('coaching') ? '<a class="rowbtn" href="#coach" style="margin-top:14px"><span><span class="t">' + esc(t('coachingEntry')) + '</span><br><span class="s">' + esc(t('coachingEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '') +
-      (canSeeRef() ? '<div class="card" style="gap:8px;margin-top:10px"><div class="hint" style="font-weight:700">' + esc(t('findRefTitle')) + '</div><div class="hint">' + esc(t('findRefHint')) + '</div><div class="go"><input id="findRefQ" placeholder="' + esc(t('coachSearch')) + '" autocomplete="off" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn outline" id="findRefGo">' + esc(t('go')) + '</button></div><div class="chips" id="findRefPicks"></div><div class="msg" id="findRefMsg" hidden></div></div>' : '');
+    $('coachEntry').innerHTML = iCan('coaching') ? '<a class="rowbtn" href="#coach" style="margin-top:14px"><span><span class="t">' + esc(t('coachingEntry')) + '</span><br><span class="s">' + esc(t('coachingEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
+    $('findRefEntry').innerHTML = canSeeRef() ? '<div class="card" style="gap:8px"><b>' + esc(t('findRefTitle')) + '</b><div class="hint">' + esc(t('findRefHint')) + '</div><div class="go"><input id="findRefQ" type="search" placeholder="' + esc(t('coachSearch')) + '" autocomplete="off" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn outline" id="findRefGo">' + esc(t('go')) + '</button></div><div class="chips" id="findRefPicks" style="padding:0"></div><div class="msg" id="findRefMsg" hidden></div></div>' : '';
     var fq = $('findRefQ');
     if (fq) {
       var ft = null;
@@ -4121,7 +4121,7 @@
       '<div class="pad hint" style="padding-top:8px">' + esc(stNote(latest)) + (open ? ' ' + esc(stNote(open)) : '') + '</div>';
     // Official US Soccer State Referee Report, RY 25-26 Colorado page, received
     // 28 Oct 2026. Static by design; replace when the next annual report lands.
-    html += '<div class="card" style="border-color:var(--gold);gap:6px"><b>' + esc(t('ussfTitle').replace('{y}', '25-26')) + '</b>' +
+    html += '<div class="card half" style="border-color:var(--gold);gap:6px"><b>' + esc(t('ussfTitle').replace('{y}', '25-26')) + '</b>' +
       '<div class="stats" style="margin:0">' +
       '<div class="stat"><b>54%</b><i>' + esc(t('ussfRet')) + '</i><div class="sub"><span class="delta down">' + esc(t('ussfNat').replace('{n}', '60')) + '</span></div></div>' +
       '<div class="stat"><b>3,066</b><i>' + esc(t('ussfLic')) + '</i><div class="sub"><span class="delta up">+0.2%</span></div></div>' +
@@ -4137,7 +4137,7 @@
       var acTot = 0, acAct = 0;
       acYears.forEach(function (a) { acTot += a.students; acAct += a.active; });
       if (ST.acad.students != null) { acTot = ST.acad.students; acAct = ST.acad.active; }
-      html += '<div class="card" style="gap:6px"><b>' + esc(t('acadTitle')) + '</b><div class="stats" style="margin:0">' +
+      html += '<div class="card half" style="gap:6px"><b>' + esc(t('acadTitle')) + '</b><div class="stats" style="margin:0">' +
         acYears.map(function (a) { return '<div class="stat"><b>' + fmtN(a.students) + '</b><i>' + esc(t('acadClass').replace('{y}', a.class_year)) + '</i></div>'; }).join('') +
         '</div><div>' + esc(t('acadActive').replace('{n}', fmtN(acAct)).replace('{t}', fmtN(acTot))) + '</div>' +
         '<div class="hint">' + esc(t('acadHint')) + '</div></div>';
@@ -4164,7 +4164,7 @@
     }
     // Who comes back: of the referees who left after a year, the share that ever registered again.
     var lvYears = full.filter(function (y) { return stVal(y, 'leavers') != null && Number(y) <= Number(latest) - 2; });
-    if (lvYears.length) html += '<div class="card" style="gap:6px"><b>' + esc(t('stLeavers')) + '</b>' + hbars(lvYears.map(function (y) { return { l: String(y) + ', ' + fmtN(stVal(y, 'leavers')) + ' ' + t('stLeft') + ', ' + fmtN(stVal(y, 'leavers_back')) + ' ' + t('stCameBack'), v: pct(stVal(y, 'leavers_back'), stVal(y, 'leavers')) }; }), 0, '%') + '<div class="hint">' + esc(t('stLeaversHint')) + '</div></div>';
+    if (lvYears.length) html += '<div class="card half" style="gap:6px"><b>' + esc(t('stLeavers')) + '</b>' + hbars(lvYears.map(function (y) { return { l: String(y) + ', ' + fmtN(stVal(y, 'leavers')) + ' ' + t('stLeft') + ', ' + fmtN(stVal(y, 'leavers_back')) + ' ' + t('stCameBack'), v: pct(stVal(y, 'leavers_back'), stVal(y, 'leavers')) }; }), 0, '%') + '<div class="hint">' + esc(t('stLeaversHint')) + '</div></div>';
     // 3. Retention
     var rYears = full.filter(function (y) { return stVal(y, 'prev_total') != null; });
     if (rYears.length) html += '<div class="disp h2">' + esc(t('stRetentionTitle')) + '</div><div class="card chartcard">' + svgLines(rYears, [
@@ -4174,15 +4174,15 @@
     ], { label: t('stRetentionTitle') }) + '<div class="hint">' + esc(t('stRetentionHint')) + '</div></div>';
     // Notes on the data: any year that carries one, in order
     var noted = allYears.filter(function (y) { return stNote(y); });
-    if (noted.length) html += '<div class="card" style="gap:4px"><b>' + esc(t('stDataNotes')) + '</b>' + noted.map(function (y) { return '<div class="hint"><b>' + y + '</b> ' + esc(stNote(y)) + '</div>'; }).join('') + '</div>';
+    if (noted.length) html += '<div class="card half" style="gap:4px"><b>' + esc(t('stDataNotes')) + '</b>' + noted.map(function (y) { return '<div class="hint"><b>' + y + '</b> ' + esc(stNote(y)) + '</div>'; }).join('') + '</div>';
     // 4. One year in detail
     var yt = stVal(Y, 'referees');
     var d = function (m, s) { var a = stVal(Y, m, s), b = P ? stVal(P, m, s) : null; return a != null && b != null ? a - b : null; };
     html += '<div class="disp h2">' + esc(t('stDetail')) + '</div><div class="pad"><div class="chips">' + fileYears.map(function (y) { return '<button class="chip-btn' + (Y === y ? ' on' : '') + '" data-styear="' + y + '">' + y + '</button>'; }).join('') + '</div><div class="hint" style="padding-top:6px">' + esc(fmtN(yt)) + ' ' + esc(t('stRefereesIn')) + ' ' + Y + (P ? '. ' + esc(t('stDeltaHint')).replace('{y}', P) : '') + '</div></div>' +
-      '<div class="card" style="gap:6px"><b>' + esc(t('stAge')) + '</b>' + hbars([['u18', t('ageU18')], ['18_24', '18 to 24'], ['25_39', '25 to 39'], ['40_54', '40 to 54'], ['55plus', '55+']].map(function (b) { return { l: b[1], v: stVal(Y, 'age', b[0]), d: d('age', b[0]) }; }), yt) + '</div>' +
-      '<div class="card" style="gap:6px"><b>' + esc(t('stGender')) + '</b>' + hbars([['m', t('genderM')], ['f', t('genderF')], ['other', t('genderOther')]].map(function (b) { return { l: b[1], v: stVal(Y, 'gender', b[0]), d: d('gender', b[0]) }; }), yt) + '</div>' +
-      '<div class="card" style="gap:6px"><b>' + esc(t('stLevel')) + '</b>' + hbars([['grassroots', t('lvlGrassroots')], ['regional', t('lvlRegional')], ['national', t('lvlNational')]].map(function (b) { return { l: b[1], v: stVal(Y, 'level', b[0]), d: d('level', b[0]) }; }), yt) + '</div>' +
-      '<div class="card" style="gap:6px"><b>' + esc(t('stStaff')) + '</b>' + hbars([['assignor', t('stAssignors')], ['mentor', t('stMentors')], ['coach', t('stCoaches')], ['instructor', t('stInstructors')]].map(function (b) { return { l: b[1], v: stVal(Y, 'staff', b[0]) || 0, d: d('staff', b[0]) }; }), 0) + '<div class="hint">' + esc(t('stStaffHint')) + '</div></div>';
+      '<div class="card half" style="gap:6px"><b>' + esc(t('stAge')) + '</b>' + hbars([['u18', t('ageU18')], ['18_24', '18 to 24'], ['25_39', '25 to 39'], ['40_54', '40 to 54'], ['55plus', '55+']].map(function (b) { return { l: b[1], v: stVal(Y, 'age', b[0]), d: d('age', b[0]) }; }), yt) + '</div>' +
+      '<div class="card half" style="gap:6px"><b>' + esc(t('stGender')) + '</b>' + hbars([['m', t('genderM')], ['f', t('genderF')], ['other', t('genderOther')]].map(function (b) { return { l: b[1], v: stVal(Y, 'gender', b[0]), d: d('gender', b[0]) }; }), yt) + '</div>' +
+      '<div class="card half" style="gap:6px"><b>' + esc(t('stLevel')) + '</b>' + hbars([['grassroots', t('lvlGrassroots')], ['regional', t('lvlRegional')], ['national', t('lvlNational')]].map(function (b) { return { l: b[1], v: stVal(Y, 'level', b[0]), d: d('level', b[0]) }; }), yt) + '</div>' +
+      '<div class="card half" style="gap:6px"><b>' + esc(t('stStaff')) + '</b>' + hbars([['assignor', t('stAssignors')], ['mentor', t('stMentors')], ['coach', t('stCoaches')], ['instructor', t('stInstructors')]].map(function (b) { return { l: b[1], v: stVal(Y, 'staff', b[0]) || 0, d: d('staff', b[0]) }; }), 0) + '<div class="hint">' + esc(t('stStaffHint')) + '</div></div>';
     // This season, live: licensed vs working, and the feedback reach
     if (ST.cov && ST.cov.length) {
       var worked = ST.cov.length, seen = ST.cov.filter(function (r) { return r.notes > 0; }).length, rel = 0, rd = 0;
@@ -4191,21 +4191,21 @@
     }
     // Fitness tests, by standard, for the year in view
     var fitRows = (ST.fit || []).filter(function (r) { return Number(r.year) === Number(Y); });
-    if (fitRows.length) html += '<div class="card" style="gap:6px"><b>' + esc(t('stFitness')) + '</b>' + hbars(fitRows.map(function (r) { return { l: t('fitStd.' + stdKey(r)) + ', ' + t('sesPassed').toLowerCase() + (Number(r.tested) ? ' (' + pct(Number(r.passed), Number(r.tested)) + '% ' + t('stOfTested').replace('{n}', r.tested) + ')' : ''), v: Number(r.passed) }; }), Number(Y)) + '</div>';
+    if (fitRows.length) html += '<div class="card half" style="gap:6px"><b>' + esc(t('stFitness')) + '</b>' + hbars(fitRows.map(function (r) { return { l: t('fitStd.' + stdKey(r)) + ', ' + t('sesPassed').toLowerCase() + (Number(r.tested) ? ' (' + pct(Number(r.passed), Number(r.tested)) + '% ' + t('stOfTested').replace('{n}', r.tested) + ')' : ''), v: Number(r.passed) }; }), Number(Y)) + '</div>';
     // Where they are, experience, ethnicity, compliance, registration month
     var regions = [['denver', t('regDenver')], ['north', t('regNorth')], ['springs', t('regSprings')], ['foothills', t('regFoothills')], ['west', t('regWest')], ['mountains', t('regMountains')], ['boulder', t('regBoulder')], ['pueblo', t('regPueblo')], ['south', t('regSouth')], ['southwest', t('regSouthwest')], ['plains', t('regPlains')], ['outside', t('regOutside')]];
     var regItems = regions.map(function (b) { return { l: b[1], v: stVal(Y, 'region', b[0]) || 0, d: d('region', b[0]) }; }).filter(function (i) { return i.v; }).sort(function (a, b) { return b.v - a.v; });
-    if (regItems.length) html += '<div class="card" style="gap:6px"><b>' + esc(t('stWhere')) + '</b>' + hbars(regItems, yt) + '<div class="hint">' + esc(t('stWhereHint')) + '</div></div>';
+    if (regItems.length) html += '<div class="card half" style="gap:6px"><b>' + esc(t('stWhere')) + '</b>' + hbars(regItems, yt) + '<div class="hint">' + esc(t('stWhereHint')) + '</div></div>';
     html += stMap(Y);
-    if (stVal(Y, 'experience', 'first') != null) html += '<div class="card" style="gap:6px"><b>' + esc(t('stExperience')) + '</b>' + hbars([['first', t('expFirst')], ['1_3', t('exp13')], ['4_9', t('exp49')], ['10plus', t('exp10')]].map(function (b) { return { l: b[1], v: stVal(Y, 'experience', b[0]) || 0, d: d('experience', b[0]) }; }), yt) + '</div>';
+    if (stVal(Y, 'experience', 'first') != null) html += '<div class="card half" style="gap:6px"><b>' + esc(t('stExperience')) + '</b>' + hbars([['first', t('expFirst')], ['1_3', t('exp13')], ['4_9', t('exp49')], ['10plus', t('exp10')]].map(function (b) { return { l: b[1], v: stVal(Y, 'experience', b[0]) || 0, d: d('experience', b[0]) }; }), yt) + '</div>';
     if (stVal(Y, 'ethnicity', 'white') != null) {
       var ethItems = [['white', t('ethWhite')], ['hispanic', t('ethHispanic')], ['two_or_more', t('ethTwo')], ['black', t('ethBlack')], ['asian', t('ethAsian')], ['native', t('ethNative')], ['hawaiian', t('ethHawaiian')], ['no_answer', t('ethNoAnswer')]].map(function (b) { return { l: b[1], v: stVal(Y, 'ethnicity', b[0]) || 0, d: d('ethnicity', b[0]) }; }).filter(function (i) { return i.v; });
-      html += '<div class="card" style="gap:6px"><b>' + esc(t('stEthnicity')) + '</b>' + hbars(ethItems, yt) + '<div class="hint">' + esc(t('stEthnicityHint')) + '</div></div>';
+      html += '<div class="card half" style="gap:6px"><b>' + esc(t('stEthnicity')) + '</b>' + hbars(ethItems, yt) + '<div class="hint">' + esc(t('stEthnicityHint')) + '</div></div>';
     }
     var adults = stVal(Y, 'adults');
     if (adults) {
       var bg = stVal(Y, 'adults_bgc_clear'), ssv = stVal(Y, 'adults_safesport_valid'), ipsv = stVal(Y, 'ips_valid');
-      html += '<div class="card" style="gap:6px"><b>' + esc(t('stCompliance')) + '</b><div class="hint">' + esc(t('stAdultsCount').replace('{n}', fmtN(adults)).replace('{m}', fmtN(stVal(Y, 'minor', 'yes') || 0))) + '</div>' +
+      html += '<div class="card half" style="gap:6px"><b>' + esc(t('stCompliance')) + '</b><div class="hint">' + esc(t('stAdultsCount').replace('{n}', fmtN(adults)).replace('{m}', fmtN(stVal(Y, 'minor', 'yes') || 0))) + '</div>' +
         hbars([{ l: t('cmpBgc'), v: bg }, { l: t('cmpSafeSport'), v: ssv }], adults) +
         '<div class="hint" style="margin-top:6px">' + esc(t('stEveryone')) + '</div>' + hbars([{ l: t('cmpIps'), v: ipsv }, { l: t('cmpSafeCleared'), v: stVal(Y, 'safe_soccer', 'cleared') || 0 }, { l: t('cmpSafePhase'), v: (stVal(Y, 'safe_soccer', 'phase_1') || 0) + (stVal(Y, 'safe_soccer', 'phase_2') || 0) }], yt) + '</div>';
     }
@@ -4329,69 +4329,74 @@
     if (!c) { $('refBody').innerHTML = '<div class="pad" style="padding-top:16px"><div class="disp" style="font-size:40px">' + esc(name) + '</div></div><div class="card"><div class="hint">' + esc(t('refNoRecord')) + '</div></div>'; return; }
     var titles = (c.titles || []).map(function (x) { return '<span class="pill' + (x.source === 'manual' ? ' ok' : '') + '" style="margin:4px 4px 0 0">' + esc(x.label) + '</span>'; }).join('');
     var stat = function (n, l, cls) { return '<div class="stat' + (cls ? ' ' + cls : '') + '"><b>' + (n == null ? '0' : esc(n)) + '</b><i>' + esc(l) + '</i></div>'; };
+    var recordHtml = (function () {
+      // The record, two tabs like the national referee profile:
+      // Evaluations (scored, formal, with the difficulty counts) and
+      // Development history (unscored notes plus the area picture).
+      // Long notes clip to four lines; a tap opens them.
+      var evs = (pack && pack.evaluations) || [], dc = pack && pack.difficulty_counts;
+      var dLab = function (v) { v = String(v || '').toLowerCase(); return v.indexOf('very') === 0 ? t('diffVery') : v === 'difficult' ? t('diffDifficult') : v === 'normal' ? t('diffNormal') : ''; };
+      var evalsHtml = !evs.length ? '<div class="card"><div class="hint">' + esc(t('refEvalsNone')) + '</div></div>' :
+        '<div class="card" style="gap:8px">' +
+        (dc ? '<div class="hint">' + esc(t('packDiffLine')) + ': ' + (dc.normal || 0) + ' ' + esc(t('diffNormal')) + ' · ' + (dc.difficult || 0) + ' ' + esc(t('diffDifficult')) + ' · ' + (dc.very_difficult || 0) + ' ' + esc(t('diffVery')) + '</div>' : '') +
+        '<table class="dt" style="width:100%"><thead><tr><th>' + esc(t('thDate')) + '</th><th>' + esc(t('thComp')) + '</th><th>' + esc(t('thPurpose')) + '</th><th>' + esc(t('thDiff')) + '</th><th>' + esc(t('thCoach')) + '</th></tr></thead><tbody>' +
+        evs.map(function (x) { return '<tr><td>' + esc(dayShort(x.date)) + '</td><td>' + esc(x.competition || '') + '</td><td>' + esc(x.purpose || '') + '</td><td>' + esc(dLab(x.difficulty)) + '</td><td>' + esc(x.coach || '') + '</td></tr>'; }).join('') +
+        '</tbody></table></div>';
+      var list = notes.data || [];
+      var devPic = (function () {
+        var ar = { laws: 0, reading: 0, fitness: 0, presence: 0 }, tot = 0;
+        list.forEach(function (n) { if (n.area && ar[n.area] != null) { ar[n.area]++; tot++; } });
+        if (!tot) return '';
+        var mx = Math.max(ar.laws, ar.reading, ar.fitness, ar.presence);
+        var top = ['laws', 'reading', 'fitness', 'presence'].sort(function (a, b) { return ar[b] - ar[a]; })[0];
+        var row = function (k) { return '<div class="devbar"><div class="lbl">' + esc(t('areas.' + k)) + '</div><div class="tr"><i style="width:' + (mx ? Math.round(100 * ar[k] / mx) : 0) + '%"></i></div><div class="n">' + ar[k] + '</div></div>'; };
+        return '<div class="card" style="gap:8px">' + row('laws') + row('reading') + row('fitness') + row('presence') +
+          '<div class="hint">' + esc(t('devTop').replace('{a}', t('areas.' + top)).replace('{n}', tot)) + '</div></div>';
+      })();
+      var notesHtml = (function () {
+        // Every note on the PERSON, every name spelling, newest first (085).
+        // Unreleased notes reach reviewers and their own coach with a status pill.
+        if (!list.length) return '<div class="card"><div class="hint">' + esc(t('refNoNotes')) + '</div></div>';
+        var one = function (n) {
+          var st = n.status || 'pending';
+          var stLabel = t('status.' + st); if (stLabel === 'status.' + st) stLabel = t('status.pending');
+          return '<div class="note"><div class="who">' + esc(n.observer || '') + (n.rater_role ? ', ' + esc(n.rater_role) : '') + ', ' + esc(dayLong(n.date)) + (n.field ? ', ' + esc(n.field) : '') + (n.area ? ', ' + esc(t('areas.' + n.area)) : '') + (n.released === false ? ' <span class="pill">' + esc(stLabel) + '</span>' : '') + '</div><div class="text clip" data-nclip>' + esc(n.text || '') + '</div></div>';
+        };
+        return list.slice(0, 4).map(one).join('') + (list.length > 4 ? fold('refnotes-older', t('olderNotes'), list.length - 4, list.slice(4).map(one).join(''), false) : '');
+      })();
+      var tab = REF.tab || (evs.length ? 'ev' : 'dv');
+      return '<div class="disp h2">' + esc(t('refRecord')) + '</div>' +
+        '<div class="chips pad" style="padding-top:4px">' +
+        '<button class="chip-btn' + (tab === 'ev' ? ' on' : '') + '" data-reftab="ev">' + esc(t('refTabEvals')) + (evs.length ? ' · ' + evs.length : '') + '</button>' +
+        '<button class="chip-btn' + (tab === 'dv' ? ' on' : '') + '" data-reftab="dv">' + esc(t('refTabDev')) + (list.length ? ' · ' + list.length : '') + '</button></div>' +
+        '<div' + (tab === 'ev' ? '' : ' hidden') + ' data-refpane="ev">' + evalsHtml + '</div>' +
+        '<div' + (tab === 'dv' ? '' : ' hidden') + ' data-refpane="dv">' + devPic + notesHtml + '</div>';
+    })();
     $('refBody').innerHTML =
       '<div class="pad" style="padding-top:16px"><div class="lead">' + esc(t('refCardTitle')) + (c.city ? ', ' + esc(c.city) : '') + (c.green_badge ? ', ' + esc(t('greenBadge')) : '') + '</div><div class="disp" style="font-size:40px">' + esc(name) + '</div><div>' + fitBadgeHtml(c.fitness) + (titles || '<span class="hint">' + esc(t('noneYet')) + '</span>') + '</div></div>' +
       contact + co90RefHtml(co90, c.person_id) + progressHtml(prog, c.person_id) +
       '<div class="disp h2">' + esc(t('refSeason')) + '</div>' +
       '<div class="stats">' + stat(c.games, t('refGames')) + stat(c.as_center, t('refCenter')) + stat(c.evaluations, t('refEvals')) + '</div>' +
       '<div class="stats">' + stat(c.notes, t('refSeen'), c.notes ? 'green' : 'red') + stat(c.released, t('refReleased')) + stat(c.coaches, t('refCoaches')) + '</div>' +
+      recordHtml +
       (function () {
-        // Career: every season on record since the history backfill (113).
+        // Career: every season on record since the history backfill (113),
+        // folded to keep the card short on a phone.
         var cs = c.career || [];
         if (cs.length < 2) return '';
         var y0 = cs[cs.length - 1].year;
-        return '<div class="disp h2">' + esc(t('refCareer')) + '</div><div class="card" style="gap:6px">' +
+        return fold('refcareer', t('refCareer'), c.career_games || '',
+          '<div class="card" style="gap:6px;margin-top:4px">' +
           '<table class="dt" style="width:100%"><thead><tr><th>' + esc(t('packSeason')) + '</th><th class="n">' + esc(t('wrapGames')) + '</th><th class="n">' + esc(t('refCenter')) + '</th></tr></thead><tbody>' +
           cs.map(function (x) { return '<tr><td>' + esc(String(x.year)) + '</td><td class="n">' + esc(String(x.games)) + '</td><td class="n">' + esc(String(x.as_center)) + '</td></tr>'; }).join('') +
           '</tbody></table>' +
           '<div class="hint">' + esc(t('refCareerLine').replace('{n}', c.career_games).replace('{y}', y0)) + '</div>' +
-          '<button class="btn outline" id="refPack" style="width:100%">' + esc(t('packBtn')) + '</button></div>';
+          '<button class="btn outline" id="refPack" style="width:100%">' + esc(t('packBtn')) + '</button></div>', false);
       })() +
       '<div class="pad hint" style="padding-top:8px">' + (c.first_game ? esc(t('refFirst')) + ' ' + esc(dayLong(c.first_game)) + ', ' : '') + (c.last_game ? esc(t('refLast')) + ' ' + esc(dayLong(c.last_game)) : '') + (c.last_seen ? '. ' + esc(t('refLastSeen')) + ' ' + esc(dayLong(c.last_seen)) : '') + '</div>' +
-      (c.next_game ? '<div class="card" style="border-color:var(--gold);gap:4px"><b>' + esc(t('refNext')) + '</b><div>' + esc(dayLong(c.next_game)) + ', ' + esc(clock(c.next_kickoff)) + ', ' + esc(c.next_venue || '') + (c.next_field ? ', ' + esc(c.next_field) : '') + '</div><div class="hint">' + esc(t('refNextHint')) + '</div></div>' : '') +
-      '<div class="disp h2">' + esc(t('upTitle')) + '</div><div id="refUpcoming"><div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div></div>' +
-      (function () {
-        // The record, two tabs like the national referee profile:
-        // Evaluations (scored, formal, with the difficulty counts) and
-        // Development history (unscored notes plus the area picture).
-        var evs = (pack && pack.evaluations) || [], dc = pack && pack.difficulty_counts;
-        var dLab = function (v) { v = String(v || '').toLowerCase(); return v.indexOf('very') === 0 ? t('diffVery') : v === 'difficult' ? t('diffDifficult') : v === 'normal' ? t('diffNormal') : ''; };
-        var evalsHtml = !evs.length ? '<div class="card"><div class="hint">' + esc(t('refEvalsNone')) + '</div></div>' :
-          '<div class="card" style="gap:8px">' +
-          (dc ? '<div class="hint">' + esc(t('packDiffLine')) + ': ' + (dc.normal || 0) + ' ' + esc(t('diffNormal')) + ' · ' + (dc.difficult || 0) + ' ' + esc(t('diffDifficult')) + ' · ' + (dc.very_difficult || 0) + ' ' + esc(t('diffVery')) + '</div>' : '') +
-          '<table class="dt" style="width:100%"><thead><tr><th>' + esc(t('thDate')) + '</th><th>' + esc(t('thComp')) + '</th><th>' + esc(t('thPurpose')) + '</th><th>' + esc(t('thDiff')) + '</th><th>' + esc(t('thCoach')) + '</th></tr></thead><tbody>' +
-          evs.map(function (x) { return '<tr><td>' + esc(dayShort(x.date)) + '</td><td>' + esc(x.competition || '') + '</td><td>' + esc(x.purpose || '') + '</td><td>' + esc(dLab(x.difficulty)) + '</td><td>' + esc(x.coach || '') + '</td></tr>'; }).join('') +
-          '</tbody></table></div>';
-        var list = notes.data || [];
-        var devPic = (function () {
-          var ar = { laws: 0, reading: 0, fitness: 0, presence: 0 }, tot = 0;
-          list.forEach(function (n) { if (n.area && ar[n.area] != null) { ar[n.area]++; tot++; } });
-          if (!tot) return '';
-          var mx = Math.max(ar.laws, ar.reading, ar.fitness, ar.presence);
-          var top = ['laws', 'reading', 'fitness', 'presence'].sort(function (a, b) { return ar[b] - ar[a]; })[0];
-          var row = function (k) { return '<div class="devbar"><div class="lbl">' + esc(t('areas.' + k)) + '</div><div class="tr"><i style="width:' + (mx ? Math.round(100 * ar[k] / mx) : 0) + '%"></i></div><div class="n">' + ar[k] + '</div></div>'; };
-          return '<div class="card" style="gap:8px">' + row('laws') + row('reading') + row('fitness') + row('presence') +
-            '<div class="hint">' + esc(t('devTop').replace('{a}', t('areas.' + top)).replace('{n}', tot)) + '</div></div>';
-        })();
-        var notesHtml = (function () {
-          // Every note on the PERSON, every name spelling, newest first (085).
-          // Unreleased notes reach reviewers and their own coach with a status pill.
-          if (!list.length) return '<div class="card"><div class="hint">' + esc(t('refNoNotes')) + '</div></div>';
-          var one = function (n) {
-            var st = n.status || 'pending';
-            var stLabel = t('status.' + st); if (stLabel === 'status.' + st) stLabel = t('status.pending');
-            return '<div class="note"><div class="who">' + esc(n.observer || '') + (n.rater_role ? ', ' + esc(n.rater_role) : '') + ', ' + esc(dayLong(n.date)) + (n.field ? ', ' + esc(n.field) : '') + (n.area ? ', ' + esc(t('areas.' + n.area)) : '') + (n.released === false ? ' <span class="pill">' + esc(stLabel) + '</span>' : '') + '</div><div class="text">' + esc(n.text || '') + '</div></div>';
-          };
-          return list.slice(0, 8).map(one).join('') + (list.length > 8 ? fold('refnotes-older', t('olderNotes'), list.length - 8, list.slice(8).map(one).join(''), false) : '');
-        })();
-        var tab = REF.tab || (evs.length ? 'ev' : 'dv');
-        return '<div class="disp h2">' + esc(t('refRecord')) + '</div>' +
-          '<div class="chips pad" style="padding-top:4px">' +
-          '<button class="chip-btn' + (tab === 'ev' ? ' on' : '') + '" data-reftab="ev">' + esc(t('refTabEvals')) + (evs.length ? ' · ' + evs.length : '') + '</button>' +
-          '<button class="chip-btn' + (tab === 'dv' ? ' on' : '') + '" data-reftab="dv">' + esc(t('refTabDev')) + (list.length ? ' · ' + list.length : '') + '</button></div>' +
-          '<div' + (tab === 'ev' ? '' : ' hidden') + ' data-refpane="ev">' + evalsHtml + '</div>' +
-          '<div' + (tab === 'dv' ? '' : ' hidden') + ' data-refpane="dv">' + devPic + notesHtml + '</div>';
-      })() +
+      fold('refup', t('upTitle'), '',
+        (c.next_game ? '<div class="card" style="border-color:var(--gold);gap:4px;margin-top:4px"><b>' + esc(t('refNext')) + '</b><div>' + esc(dayLong(c.next_game)) + ', ' + esc(clock(c.next_kickoff)) + ', ' + esc(c.next_venue || '') + (c.next_field ? ', ' + esc(c.next_field) : '') + '</div><div class="hint">' + esc(t('refNextHint')) + '</div></div>' : '') +
+        '<div id="refUpcoming"><div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div></div>', false) +
       (c.person_id ? ceuBlock(ceuRows, REF.ceuAdd) : '');
     if (c.person_id) wireCeu($('refBody'), c.person_id, REF, function () { renderRef(name); });
     $('refBody').querySelectorAll('[data-reftab]').forEach(function (b) {
@@ -4401,6 +4406,7 @@
         $('refBody').querySelectorAll('[data-refpane]').forEach(function (p) { p.hidden = p.getAttribute('data-refpane') !== REF.tab; });
       };
     });
+    $('refBody').querySelectorAll('[data-nclip]').forEach(function (x) { x.onclick = function () { x.classList.toggle('clip'); }; });
     var osb = $('opsSend'); if (osb) osb.onclick = async function () {
       var ta = $('opsTxt'), v = (ta.value || '').trim();
       if (v.length < 2) { say('opsMsg', t('opsTextEmpty'), 'bad'); return; }

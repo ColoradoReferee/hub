@@ -346,6 +346,8 @@ table.fit tr.failed td:last-child { color: var(--red); }
 .stats.two { grid-template-columns: repeat(2, 1fr); }
 .statbtn { cursor: pointer; width: 100%; font: inherit; }
 .statbtn.on { outline: 2px solid var(--gold); outline-offset: -2px; }
+.chartcard svg { width: 100%; height: auto; }
+.note .text.clip { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
 /* State hero: the pool and the registration race lead; everything else
    on the screen reads smaller. */
 .stathero { display: grid; grid-template-columns: 3fr 2fr; gap: 2px; margin: 14px 20px 0; background: var(--line); padding: 2px; border-radius: 3px; }
@@ -422,19 +424,20 @@ details.fold > .fold-body > .list { padding-top: 8px; }
 /* State view on a desktop: wide, two columns of cards, charts side by side */
 @media (min-width: 900px) {
   body.wide .app { max-width: 1100px; }
-  #stateBody { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; align-items: start; }
-  #stateBody > .stats, #stateBody > .disp.h2, #stateBody > .pad, #stateBody > table, #stateBody > .card.chartcard.wide { grid-column: 1 / -1; }
+  /* Uniform wide layout (2026.11.16-c): everything spans the page in
+     order; only the small detail cards (.half) pack two to a row, so
+     the columns stay level instead of drifting out of sync. */
+  #stateBody { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; align-items: start; grid-auto-flow: row dense; }
+  #stateBody > * { grid-column: 1 / -1; }
+  #stateBody > .card.half { grid-column: auto; }
   #stateBody > .stats.two { grid-template-columns: repeat(4, 1fr); }
-  /* The hero spans the page and grows into the width; the mini row
-     spreads under it. Detection is automatic: same page, wider glass. */
-  #stateBody > .stathero, #stateBody > .statsmini { grid-column: 1 / -1; }
   .stathero { grid-template-columns: 2fr 1.1fr; }
   .stathero .sh { padding: 28px 16px 22px; }
   .stathero .sh b { font-size: 78px; }
   .stathero .sh.side b { font-size: 46px; }
   .stathero .sh i { font-size: 13px; }
   .stathero .sh .sub { font-size: 13px; }
-  .statsmini { gap: 40px; }
+  .statsmini { gap: 24px; }
   .statsmini .mstat { flex: 0 0 auto; }
   .statsmini .mstat b { font-size: 20px; }
   .statsmini .mstat i { font-size: 12px; }
