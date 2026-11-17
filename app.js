@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.16-j';
+  var VERSION = '2026.11.16-k';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -3014,11 +3014,19 @@
       var card = function (r) {
         var c = byId[String(r.coach_person_id)];
         var picking = CC.evalPick === r.id;
-        var eligible = CC.coaches.filter(function (x) { return r.purpose !== 'upgrade_national' || /national|fifa/i.test(x.coaching_title || ''); });
+        // Formal evaluations are coach work: mentors and mentors plus are
+        // never listed (may_evaluate refuses them server side too).
+        // National upgrades narrow further to National Referee Coaches,
+        // FIFA Evaluators and the Admin seat.
+        var eligible = CC.coaches.filter(function (x) {
+          var tt = x.coaching_title || '';
+          if (!/coach|evaluator|admin/i.test(tt) || /mentor/i.test(tt)) return false;
+          return r.purpose !== 'upgrade_national' || /national|fifa|admin/i.test(tt);
+        });
         var q = (CC.evalQ || '').toLowerCase();
         return '<div class="card" style="gap:8px;border-color:' + (isOpen(r) ? 'var(--gold)' : 'var(--line)') + '"><div><b>' + refLink(r.ref_name) + '</b> <span class="hint">' + esc(t('evalPurpose.' + r.purpose)) + '</span>' + (owes(r) ? ' <span class="pill" style="border-color:var(--red);color:var(--red)">' + esc(t('evalPendingPay')) + ' · ' + money(r.fee_cents) + '</span>' : '') + '<br><span class="hint">' + esc(dayLong(r.game_date)) + ', ' + esc(r.venue || '') + (r.note ? '. ' + esc(r.note) : '') + '</span></div>' +
           (c ? '<div>' + esc(t('evalCoach')) + ' <b>' + esc(c.first_name + ' ' + c.last_name) + '</b> <span class="hint">' + esc(c.coaching_title || '') + '</span></div>' : '') +
-          (isOpen(r) ? (picking ? '<input id="evalQ" placeholder="' + esc(t('coachSearch')) + '" value="' + esc(CC.evalQ || '') + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><div class="chips">' + eligible.filter(function (x) { return !q || (x.first_name + ' ' + x.last_name).toLowerCase().indexOf(q) >= 0; }).sort(function (a, b) { var fa = (CC.evalAvail[r.game_date] || {})[String(a.person_id)] ? 0 : 1, fb = (CC.evalAvail[r.game_date] || {})[String(b.person_id)] ? 0 : 1; return fa - fb || (a.last_name || '').localeCompare(b.last_name || ''); }).slice(0, 12).map(function (x) { var fr = (CC.evalAvail[r.game_date] || {})[String(x.person_id)]; return '<button class="chip-btn' + (fr ? ' avail' : '') + '" data-evalassign="' + x.person_id + '" data-req="' + r.id + '">' + (fr ? '\u2713 ' : '') + esc(x.first_name + ' ' + x.last_name) + ' <small>' + esc(x.coaching_title || '') + '</small></button>'; }).join('') + '</div>' + (r.purpose === 'upgrade_national' ? '<div class="hint">' + esc(t('evalNationalOnly')) + '</div>' : '') : '<div class="actions" style="padding:0"><button class="btn go small" data-evalpick="' + r.id + '">' + esc(t('evalAssign')) + '</button><button class="btn outline small" data-evaldecline="' + r.id + '">' + esc(t('evalDecline')) + '</button></div>') : '') +
+          (isOpen(r) ? (picking ? '<input id="evalQ" placeholder="' + esc(t('coachSearch')) + '" value="' + esc(CC.evalQ || '') + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><div class="chips">' + eligible.filter(function (x) { return !q || (x.first_name + ' ' + x.last_name).toLowerCase().indexOf(q) >= 0; }).sort(function (a, b) { var fa = (CC.evalAvail[r.game_date] || {})[String(a.person_id)] ? 0 : 1, fb = (CC.evalAvail[r.game_date] || {})[String(b.person_id)] ? 0 : 1; return fa - fb || (a.last_name || '').localeCompare(b.last_name || ''); }).slice(0, 12).map(function (x) { var fr = (CC.evalAvail[r.game_date] || {})[String(x.person_id)]; return '<button class="chip-btn' + (fr ? ' avail' : '') + '" data-evalassign="' + x.person_id + '" data-req="' + r.id + '">' + (fr ? '\u2713 ' : '') + esc(x.first_name + ' ' + x.last_name) + ' <small>' + esc(x.coaching_title || '') + '</small></button>'; }).join('') + '</div><div class="hint">' + esc(t(r.purpose === 'upgrade_national' ? 'evalNationalOnly' : 'evalCoachOnly')) + '</div>' : '<div class="actions" style="padding:0"><button class="btn go small" data-evalpick="' + r.id + '">' + esc(t('evalAssign')) + '</button><button class="btn outline small" data-evaldecline="' + r.id + '">' + esc(t('evalDecline')) + '</button></div>') : '') +
           (owes(r) ? '<button class="btn outline small" data-evalpaid="' + r.id + '">' + esc(t('evalMarkPaid')) + '</button>' : '') +
           (r.status === 'assigned' ? '<button class="btn outline small" data-evaldone="' + r.id + '">' + esc(t('evalMarkDone')) + '</button>' : '') + '</div>';
       };
