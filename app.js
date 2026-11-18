@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.16-k';
+  var VERSION = '2026.11.18-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -973,7 +973,7 @@
   function awLabel(a) { return a.code === 'custom' ? (a.label || t('aw.custom')) : t('aw.' + a.code); }
   function medalRack(w) {
     if (!w) return '';
-    var icons = { first_game: '&#9917;', ten: '10', fifty: '50', century: '100', first_note: '&#128221;', first_eval: '&#128203;', fit: '&#127939;', s10: '10', s25: '25', s50: '50', first_note_w: '&#128221;', notes50: '50', notes250: '250', first_eval_w: '&#128203;', evals10: '10' };
+    var icons = { first_game: '&#9917;', ten: '10', fifty: '50', century: '100', c250: '250', first_note: '&#128221;', first_eval: '&#128203;', fit: '&#127939;', sopen: '&#9654;', s10: '10', s25: '25', s50: '50', center_stage: 'CR', marathon_day: '4+', road_tripper: '&#129517;', streak: '&#128293;', comeback: '&#8634;', homegrown: '&#127793;', first_note_w: '&#128221;', notes50: '50', notes250: '250', first_eval_w: '&#128203;', evals10: '10' };
     var one = function (b) {
       var lbl = t('bg.' + b.code);
       var sub = b.earned ? (b.on ? dayShort(b.on) : '') : (b.need ? (b.n || 0) + ' / ' + b.need : t('bgLocked'));
