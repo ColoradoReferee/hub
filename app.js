@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.18-a';
+  var VERSION = '2026.11.18-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -561,7 +561,14 @@
     var dr = $('evDraft'); if (dr) dr.onclick = async function () {
       if (e.report && !window.confirm(t('evalRedraftConfirm'))) return;
       dr.disabled = true; dr.textContent = t('evalDrafting'); busy(true);
-      try { var j = await post({ action: 'evalWrite', evalId: e.id }); e.report = j.report; e.report_at = j.reportAt; busy(false); renderEval(id); }
+      // The Writer lives in the eval-write Edge Function now (dual-write
+      // retirement, first slice); the GCC no longer drafts reports.
+      try {
+        var r = await sb.functions.invoke('eval-write', { body: { evalId: e.id } });
+        var j = r.data;
+        if (r.error || !j || j.status !== 'ok') throw new Error((j && j.message) || (r.error && r.error.message) || 'error');
+        e.report = j.report; e.report_at = j.reportAt; busy(false); renderEval(id);
+      }
       catch (err) { busy(false); dr.disabled = false; dr.textContent = t('evalDraft'); say('evMsg', err.message || String(err), 'bad'); }
     };
     async function evUpdate(patch, okMsg) { var u = await sb.from('evaluations').update(patch).eq('id', e.id); if (u.error) { say('evMsg', u.error.message, 'bad'); return false; } Object.keys(patch).forEach(function (k) { e[k] = patch[k]; }); if (okMsg) say('evMsg', okMsg, 'good'); return true; }
