@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.19-a';
+  var VERSION = '2026.11.19-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -2743,12 +2743,23 @@
       var text = ($('noteText').value || '').trim();
       if (!text) { $('noteText').focus(); return; }
       save.disabled = true; save.textContent = t('savingNote');
-      var ev = eventFor(g);
       try {
-        var res = await fetch(C.backend, { method: 'POST', body: JSON.stringify({ action: 'observation', event: ev ? ev.id : '', refName: g[S.coach.ref], raterName: S.me.first_name + ' ' + S.me.last_name, raterRole: signed, gameId: g.game_id, date: g.date, field: g.field || '', ageGroup: g.age_group || '', kickoffTime: clock(g.kickoff), officialRole: S.coach.ref, notesPublic: text, area: S.coach.area || '' }) });
-        var j = await res.json();
-        if (!j || j.status !== 'ok') throw new Error(j && j.message || 'error');
+        // Database-first (dual-write retirement, slice two): the note
+        // lands in observations directly; nothing touches the sheet.
         var refName = g[S.coach.ref];
+        var nowIso = new Date().toISOString();
+        var kd = g.kickoff ? new Date(g.kickoff) : null;
+        var kt = kd ? ('0' + kd.getHours()).slice(-2) + ':' + ('0' + kd.getMinutes()).slice(-2) + ':00' : null;
+        var ins = await sb.from('observations').insert({
+          org_id: S.me.org_id, src_key: nowIso + '|' + refName + '|' + g.game_id,
+          created_at: nowIso, ref_name: refName,
+          observer: S.me.first_name + ' ' + S.me.last_name, observer_roles: signed, rater_role: signed,
+          game_id: g.game_id, date: g.date, field: g.field || '', age_group: g.age_group || '',
+          kickoff_time: kt, official_role: String(S.coach.ref || '').toUpperCase(),
+          position: String(S.coach.ref || '').toUpperCase(),
+          public_notes: text, area: S.coach.area || null, cleanup_status: 'pending'
+        });
+        if (ins.error) throw new Error(ins.error.message);
         S.coach.notes.unshift({ date: g.date, ref_name: refName, observer: S.me.first_name + ' ' + S.me.last_name, rater_role: signed, public_notes: text, cleanup_status: 'pending', area: S.coach.area, field: g.field, created_at: new Date().toISOString() });
         $('noteCard').innerHTML = '<div class="btn done"><span class="disp">' + esc(t('noteSaved')) + '</span><small>' + esc(refName) + ', ' + esc(clock(new Date().toISOString())) + '</small></div><div class="hint">' + esc(t('noteSavedHint')) + '</div><button class="btn outline" id="anotherRef">' + esc(t('another')) + '</button>';
         $('anotherRef').onclick = function () { S.coach.ref = null; S.coach.area = null; renderCoachGame(id); };
@@ -2790,9 +2801,19 @@
     return j;
   }
   async function loadReview_() {
-    var from = new Date(Date.now() - 45 * 86400000);
-    var j = await post({ action: 'pendingNotes', dateFrom: from.toISOString().slice(0, 10) });
-    REV.notes = (j.data || []).filter(function (n) { return n.notesPublic || n.cleanedNote; });
+    // Database-first (dual-write retirement, slice two). The rows keep
+    // the GCC-era field names so the renderer below stays untouched;
+    // rowNum now carries the observation id.
+    var from = new Date(Date.now() - 45 * 86400000).toISOString().slice(0, 10);
+    var rr = await fetchAll(function () { return sb.from('observations').select('id,ref_name,observer,rater_role,official_role,date,field,public_notes,cleaned_note,final_note,cleanup_status,reviewed_by,flag_override_by,created_at').gte('date', from).order('created_at', { ascending: false }); });
+    if (rr.error) throw new Error(rr.error.message || String(rr.error));
+    REV.notes = (rr.data || []).map(function (o) {
+      return { rowNum: o.id, refName: o.ref_name || '', observer: o.observer || '', raterRole: o.rater_role || '',
+        officialRole: o.official_role || '', date: o.date || '', field: o.field || '',
+        notesPublic: o.public_notes || '', cleanedNote: o.cleaned_note || '', finalNote: o.final_note || '',
+        cleanupStatus: o.cleanup_status || 'pending', reviewedBy: o.reviewed_by || '',
+        flagged: /^\s*FLAG:/i.test(o.cleaned_note || '') && !o.flag_override_by };
+    }).filter(function (n) { return n.notesPublic || n.cleanedNote; });
   }
   function revStatus(n) {
     var s = String(n.cleanupStatus || 'pending').toLowerCase();
@@ -2876,23 +2897,49 @@
     if (what === 'reject' && !window.confirm(t('rejectConfirm'))) { REV.busy = false; renderReview(); return; }
     var m = $('revMsg'); if (m) m.hidden = true;
     try {
+      // Database-first (dual-write retirement, slice two): review writes
+      // go straight to observations; the AI cleanup is the note-clean
+      // Edge Function. rowNum carries the observation id.
       var by = S.me.first_name + ' ' + S.me.last_name;
-      if (what === 'approve') {
-        var ab = await post({ action: 'approveBatch', reviewedBy: by, items: notes.map(function (n) { return { rowNum: n.rowNum, use: 'ai' }; }) });
-        if (ab && ab.skipped && ab.skipped.length && notes.length === 1) throw new Error(t('flaggedSkip'));
-      } else if (what === 'approve_raw') {
-        await post({ action: 'approveBatch', reviewedBy: by, items: notes.map(function (n) { return { rowNum: n.rowNum, use: 'original' }; }) });
+      var nowTs = new Date().toISOString();
+      var upd = async function (n, patch) {
+        patch.reviewed_by = by; patch.reviewed_at = nowTs;
+        var u = await sb.from('observations').update(patch).eq('id', n.rowNum);
+        if (u.error) throw new Error(u.error.message);
+      };
+      if (what === 'approve' || what === 'approve_raw') {
+        // A flagged clean never ships as the AI version; the coach's own
+        // words still can, because the flag was about the rewrite. The
+        // same gate the backend used to hold.
+        var skipped = 0;
+        for (var a2 = 0; a2 < notes.length; a2++) {
+          var n2 = notes[a2];
+          if (what === 'approve' && n2.flagged) { skipped++; continue; }
+          var text2 = what === 'approve' ? (n2.cleanedNote || n2.notesPublic) : n2.notesPublic;
+          if (!text2) { skipped++; continue; }
+          await upd(n2, { cleanup_status: 'approved', final_note: text2 });
+        }
+        if (skipped && notes.length === 1) throw new Error(t('flaggedSkip'));
       } else if (what === 'edit') {
-        // A reviewer who rewrote a flagged note has cleared the flag by hand;
-        // the backend records who and why on the row.
-        for (var e2 = 0; e2 < notes.length; e2++) await post({ action: 'updateNoteStatus', rowNum: notes[e2].rowNum, status: 'edited', finalNote: notes[e2]._text, reviewedBy: by, overrideReason: notes[e2].flagged ? 'Rewritten by ' + by + ' before release; the released text is theirs, not the flagged cleanup.' : '' });
+        // A reviewer who rewrote a flagged note has cleared the flag by
+        // hand; who and why land on the row.
+        for (var e2 = 0; e2 < notes.length; e2++) {
+          var ne = notes[e2];
+          var patch2 = { cleanup_status: 'edited', final_note: ne._text };
+          if (ne.flagged) { patch2.flag_override_by = by; patch2.flag_override_at = nowTs; patch2.flag_override_reason = 'Rewritten by ' + by + ' before release; the released text is theirs, not the flagged cleanup.'; }
+          await upd(ne, patch2);
+        }
         REV.editing = null; REV.draft = '';
       } else if (what === 'reject') {
-        for (var r2 = 0; r2 < notes.length; r2++) await post({ action: 'updateNoteStatus', rowNum: notes[r2].rowNum, status: 'rejected', reviewedBy: by });
+        for (var r2 = 0; r2 < notes.length; r2++) await upd(notes[r2], { cleanup_status: 'rejected' });
       } else if (what === 'restore') {
-        for (var r3 = 0; r3 < notes.length; r3++) await post({ action: 'updateNoteStatus', rowNum: notes[r3].rowNum, status: 'pending', reviewedBy: by });
+        for (var r3 = 0; r3 < notes.length; r3++) await upd(notes[r3], { cleanup_status: 'pending' });
       } else {
-        for (var i = 0; i < notes.length; i++) await post({ action: 'cleanNote', rowNum: notes[i].rowNum });
+        for (var i = 0; i < notes.length; i++) {
+          var rc2 = await sb.functions.invoke('note-clean', { body: { id: notes[i].rowNum } });
+          var jc = rc2.data;
+          if (rc2.error || !jc || jc.status !== 'ok') throw new Error((jc && jc.message) || (rc2.error && rc2.error.message) || 'error');
+        }
       }
       await loadReview();
       if ((what === 'approve' || what === 'approve_raw' || what === 'edit') && REV.filter !== 'approved') REV.filter = 'approved';
