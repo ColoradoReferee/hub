@@ -1,5 +1,6 @@
 <!doctype html>
-<!-- Evaluator v2026.11.16-c · 2026-11-16 · the coach's live log, post-match ratings, crew debrief and PDF, in the Hub's own light and dark themes. The formal evaluation is written by the coach in the Hub. -->
+<!-- Evaluator v2026.11.20-a · 2026-11-20 · the coach's live log, post-match ratings, crew debrief and PDF, in the Hub's own light and dark themes. The formal evaluation is written by the coach in the Hub.
+     2026.11.20-a: the foul modal reads Law 12 itself. Reckless attaches a caution, Excessive Force attaches a send-off, with the matching offense preselected; tapping any offense sets its card. Dropping the severity back down removes what was auto-attached. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1646,7 +1647,7 @@ function setLang(l) { LANG = l; try { localStorage.setItem('hub-lang', l); } cat
 // ═══════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════
-var EVAL_VERSION = '2026.11.16-c';
+var EVAL_VERSION = '2026.11.20-a';
 document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v' + EVAL_VERSION; });
 var MD = {};
 var OT = { active:false, half:0, len:10, otStarted:false };
@@ -1664,6 +1665,7 @@ var clockStartedAt = null;
 var foulDirOpen = false, lastFoulIdx = -1;
 var miscCode = '', miscReason = '', miscTSV = '', goalTSV = '', pkTSV = '', osAR = 'AR1';
 var fmlOpen = false, fmlType = '';
+var fmlAuto = false, fmlAutoOff = null;
 var editingIdx = -1, editTeamVal = '';
 // Incident state (CMI/CRE per official)
 var incidents = { ref:{cmi:[],cre:[]}, ar1:{cmi:[],cre:[]}, ar2:{cmi:[],cre:[]}, fourth:{cmi:[],cre:[]} };
@@ -2702,7 +2704,7 @@ function logFoulDir(side) {
   document.getElementById('foul-notes').value = '';
   document.querySelectorAll('#foul-type-chips .chip').forEach(function(c) { c.classList.remove('sel'); });
   Array.from(document.querySelectorAll('#foul-type-chips .chip')).forEach(function(c) { if (c.textContent === 'Careless') c.classList.add('sel'); });
-  fmlOpen = false; fmlType = '';
+  fmlOpen = false; fmlType = ''; fmlAuto = false; fmlAutoOff = null;
   document.getElementById('fml-body').classList.remove('open');
   document.getElementById('fml-arrow').innerHTML = '&#9660;';
   document.querySelectorAll('#fml-yc,#fml-rc').forEach(function(c) { c.classList.remove('sel','sely','selr'); });
@@ -2713,9 +2715,56 @@ function logFoulDir(side) {
 }
 
 function toggleFML() {
-  fmlOpen = !fmlOpen;
-  document.getElementById('fml-body').classList.toggle('open', fmlOpen);
-  document.getElementById('fml-arrow').innerHTML = fmlOpen ? '&#9650;' : '&#9660;';
+  setFML_(!fmlOpen);
+  if (fmlOpen) fmlAuto = false;
+}
+
+function setFML_(open) {
+  fmlOpen = open;
+  document.getElementById('fml-body').classList.toggle('open', open);
+  document.getElementById('fml-arrow').innerHTML = open ? '&#9650;' : '&#9660;';
+}
+
+// ── Law 12 does the clicking ───────────────────────────────────────────
+// A reckless challenge IS a caution and excessive force IS a send-off, so
+// picking the severity attaches the card by itself with the matching
+// offense preselected. The coach only corrects the offense when the
+// default is wrong, and dropping the severity back down removes whatever
+// was auto-attached. Misconduct the coach opened by hand is never touched.
+function ftSeverity_(el) {
+  var k = el.getAttribute('data-t') || '';
+  if (k === 'reckless' || k === 'excessive_force') {
+    var rc = k === 'excessive_force';
+    setFML_(true);
+    selFMLtype(rc ? 'RC' : 'C', document.getElementById(rc ? 'fml-rc' : 'fml-yc'));
+    var cur = document.querySelector('[onclick*="fml-off"].sel');
+    if (!cur || cur === fmlAutoOff) {
+      var want = document.querySelector('#fml-offense .chip[data-t="' + (rc ? 'serious_foul_play' : 'ub_reckless') + '"]');
+      if (want) { selC(want, 'fml-off'); fmlAutoOff = want; }
+    }
+    fmlAuto = true;
+  } else if (fmlAuto) {
+    setFML_(false);
+    fmlType = '';
+    document.getElementById('fml-yc').classList.remove('sel', 'sely');
+    document.getElementById('fml-rc').classList.remove('sel', 'selr');
+    document.querySelectorAll('[onclick*="fml-off"]').forEach(function (c) { c.classList.remove('sel'); });
+    fmlAuto = false; fmlAutoOff = null;
+  }
+}
+
+// The offense names its own card: tapping Serious Foul Play selects red,
+// tapping SPA selects yellow. Same rule the standalone Misconduct modal
+// has always applied.
+var OFF_CARD_ = { ub_reckless: 'C', spa: 'C', dogso_f_downgraded: 'C',
+                  serious_foul_play: 'RC', violent_conduct: 'RC',
+                  dogso_f: 'RC', '2nd_caution': 'RC' };
+function offImplies_(el) {
+  var card = OFF_CARD_[el.getAttribute('data-t') || ''];
+  if (card && fmlType !== card) {
+    selFMLtype(card, document.getElementById(card === 'C' ? 'fml-yc' : 'fml-rc'));
+  }
+  fmlAutoOff = null;
 }
 
 function selFMLtype(code, el) {
@@ -2958,6 +3007,8 @@ function autoSuggestCMI(ev) {
 function selC(el, grp) {
   document.querySelectorAll('[onclick*="selC"][onclick*="\''+grp+'\'"]').forEach(function(c) { c.classList.remove('sel'); });
   el.classList.add('sel');
+  if (grp === 'ft') ftSeverity_(el);
+  else if (grp === 'fml-off') offImplies_(el);
 }
 
 // ═══════════════════════════════════════
