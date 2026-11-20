@@ -1,11 +1,11 @@
-// app.js · Colorado Referees Hub · 2026-11-20
+// app.js · Colorado Referees Hub · 2026-11-20 (b: Board staff check-in writes the database directly via staff_checkin; needs 124)
 // Reads from the database as the signed-in person. Coaching notes write
 // to the database directly; the 10 day submission countdown sits on
 // every evaluation not yet submitted.
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.20-a';
+  var VERSION = '2026.11.20-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -3621,9 +3621,16 @@
         var name = b.getAttribute('data-checkin'), g = OPS.games.filter(function (x) { return String(x.game_id) === b.getAttribute('data-gid'); })[0];
         if (!g) return;
         b.disabled = true; b.textContent = t('checkingIn');
-        var ev = eventFor(g);
-        try { await post({ action: 'checkinVenue', event: ev ? ev.id : '', refName: name, venue: g.venue, date: OPS.date, by: S.me.first_name + ' ' + S.me.last_name }); await loadOps(); renderOps(); }
-        catch (e) { b.disabled = false; b.textContent = t('staffCheckin'); }
+        // Straight to the database, like the referee's own tap. The old
+        // sheet route surfaced the check-in only when the mirror ran.
+        try {
+          var hr = await sb.rpc('staff_checkin', { p_game: g.game_id, p_name: name });
+          if (hr.error || !hr.data) throw new Error(hr.error ? hr.error.message : 'refused');
+          await loadOps(); renderOps();
+        } catch (e) {
+          b.disabled = false; b.textContent = t('staffCheckinFailed');
+          setTimeout(function () { b.textContent = t('staffCheckin'); }, 2500);
+        }
       };
     });
     $('opsBody').querySelectorAll('[data-ack]').forEach(function (b) {
