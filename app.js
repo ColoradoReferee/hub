@@ -1,11 +1,11 @@
-// app.js · Colorado Referees Hub · 2026-11-16
-// Reads from the database as the signed-in person. Writes (check-in, Help)
-// go through the current backend this week so the sheet and the database
-// both get them.
+// app.js · Colorado Referees Hub · 2026-11-20
+// Reads from the database as the signed-in person. Coaching notes write
+// to the database directly; the 10 day submission countdown sits on
+// every evaluation not yet submitted.
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.19-b';
+  var VERSION = '2026.11.20-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -547,7 +547,7 @@
       (deb ? fold('evdebrief', t('evalDebrief'), nDisc || nInc, '<div class="pad hint" style="padding-top:0">' + esc(t('evalDebriefHint')) + '</div><div class="pad">' + deb + '</div>', false) : '') +
       (rated ? fold('evratings', t('evalRatingsTitle'), Object.keys(ratings).length, '<div class="pad">' + rated + '</div>', false) : '') +
       (e.game_id ? '<div class="pad" style="padding-top:8px"><a class="btn outline small" href="evaluator.html?game=' + esc(e.game_id) + '">' + esc(t('evalOpenEvaluator')) + '</a></div>' : '') +
-      '<div class="disp h2">' + esc(t('evalReport')) + rsPill + '</div><div class="pad hint" style="padding-top:0">' + esc(rs === 'approved' ? t('evalApprovedHint') : rs === 'submitted' && !isRev ? t('evalLocked') : t('evalReportHint')) + '</div>' +
+      '<div class="disp h2">' + esc(t('evalReport')) + rsPill + evalDuePill(e) + '</div><div class="pad hint" style="padding-top:0">' + esc(rs === 'approved' ? t('evalApprovedHint') : rs === 'submitted' && !isRev ? t('evalLocked') : t('evalReportHint')) + '</div>' +
       (rs === 'returned' && e.review_note ? '<div class="pad"><div class="card" style="border-color:var(--bad,#c0392b)"><b>' + esc(t('evalReviewNote')) + '</b><div style="white-space:pre-wrap">' + esc(e.review_note) + '</div></div></div>' : '') +
       '<div class="pad no-print" style="padding-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' + (e.status !== 'complete' ? '<span class="hint">' + esc(t('evalFinishFirst')) + '</span>' : '') + (canDraft ? '<button class="btn outline small" id="evDraft">' + esc(e.report ? t('evalRedraft') : t('evalDraft')) + '</button><span class="hint">' + esc(t('evalReviewerDraft')) + '</span>' : '') + (e.report ? '<button class="btn outline small" id="evCopy">' + esc(t('evalCopy')) + '</button><button class="btn outline small" id="evPrint">' + esc(t('print')) + '</button>' : '') + '</div>' +
       '<div class="pad" style="padding-top:8px"><textarea id="evText" style="min-height:360px;font:inherit;width:100%;padding:12px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)" placeholder="' + esc(t('evalEmpty')) + '"' + (canEdit ? '' : ' readonly') + '>' + esc(e.report || '') + '</textarea></div>' +
@@ -2650,6 +2650,16 @@
     if (!arr.length) return '<span style="color:var(--red);font-weight:700">' + esc(t('notSeen')) + '</span>';
     return esc(t('seenTimes').replace('{n}', arr.length)) + ', ' + esc(dayLong(arr[0].date));
   }
+  // The national deadline: a completed evaluation is submitted within 10
+  // calendar days of the match. A pill counts down on every evaluation
+  // not yet submitted, red from 3 days out.
+  function evalDuePill(e) {
+    if (!e.game_date || e.report_status === 'submitted' || e.report_status === 'approved') return '';
+    var days = Math.floor((new Date(todayStr() + 'T12:00:00') - new Date(e.game_date + 'T12:00:00')) / 86400000);
+    if (days < 0) return '';
+    var left = 10 - days;
+    return ' <span class="pill' + (left <= 3 ? ' bad' : '') + '">' + esc(left >= 0 ? t('evalDueDays').replace('{n}', left) : t('evalOverdue')) + '</span>';
+  }
   function renderCoach() {
     var venues = [];
     S.coach.games.forEach(function (g) { if (g.venue && venues.indexOf(g.venue) < 0) venues.push(g.venue); });
@@ -2663,7 +2673,7 @@
     var evalsCard = (S.coach.evals || []).length ? '<div class="card" style="border-color:var(--red);gap:6px"><b>' + esc(t('evalAssignedTitle')) + '</b>' + S.coach.evals.map(function (r) { return '<div>' + refLink(r.ref_name) + ', ' + esc(dayLong(r.game_date)) + ', ' + esc(r.venue || '') + '. ' + esc(t('evalPurpose.' + r.purpose)) + ' <a class="refname" href="#coach/game/' + esc(r.game_id) + '">' + esc(t('details')) + '</a></div>'; }).join('') + '<div class="hint">' + esc(t('evalAssignedHint')) + '</div></div>' : '';
     var upcoming = (S.coach.assignr || []).filter(function (g) { return g.date > coachDay(); });
     var upcomingCard = upcoming.length ? '<div class="card" style="gap:4px"><b>' + esc(t('comingUp')) + '</b>' + upcoming.map(function (g) { return '<div>' + esc(dayLong(g.date)) + ', ' + esc(clock(g.kickoff)) + ', ' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + ' <span class="hint">' + esc(t('fromAssignr')) + '</span></div>'; }).join('') + '</div>' : '';
-    var myEvalsFold = (S.coach.myEvals || []).length ? fold('myevals', t('myEvalsTitle'), S.coach.myEvals.length, '<div class="list">' + S.coach.myEvals.map(function (e) { return '<a class="item" href="#eval/' + e.id + '"><div><b>' + esc(e.ref_name || '') + '</b> <span class="pill' + (e.status === 'complete' && (!e.report || e.report_status === 'approved') ? ' ok' : e.report_status === 'returned' ? ' bad' : '') + '">' + esc(e.status === 'complete' ? (e.report ? t('evalRs.' + (e.report_status || 'draft')) : t('evalComplete')) : t('evalInProgress')) + '</span><br><span class="hint">' + esc(e.game_date ? dayLong(e.game_date) : '') + (e.venue ? ', ' + esc(e.venue) : '') + (e.competition ? ', ' + esc(e.competition) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>', false) : '';
+    var myEvalsFold = (S.coach.myEvals || []).length ? fold('myevals', t('myEvalsTitle'), S.coach.myEvals.length, '<div class="list">' + S.coach.myEvals.map(function (e) { return '<a class="item" href="#eval/' + e.id + '"><div><b>' + esc(e.ref_name || '') + '</b> <span class="pill' + (e.status === 'complete' && (!e.report || e.report_status === 'approved') ? ' ok' : e.report_status === 'returned' ? ' bad' : '') + '">' + esc(e.status === 'complete' ? (e.report ? t('evalRs.' + (e.report_status || 'draft')) : t('evalComplete')) : t('evalInProgress')) + '</span>' + evalDuePill(e) + '<br><span class="hint">' + esc(e.game_date ? dayLong(e.game_date) : '') + (e.venue ? ', ' + esc(e.venue) : '') + (e.competition ? ', ' + esc(e.competition) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>', false) : '';
     expected = wbHtml() + evalsCard + expected + upcomingCard + myEvalsFold;
     var availability = availCalHtml();
     expected = expected + availability;
