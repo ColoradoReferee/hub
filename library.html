@@ -491,7 +491,7 @@ a{color:inherit;text-decoration:none;}
       <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program">
     </div>
     <div class="footer-text">
-      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.15-a<br>
+      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.20-a<br>
       <a href="https://coloradosoccer.org" class="footer-link">ColoradoSoccer.org</a> &middot;
       <span data-l="questions">Questions:</span> <a href="mailto:refeducation@coloradoreferees.com" class="footer-link">refeducation@coloradoreferees.com</a> &middot; 303.888.6863
     </div>
@@ -1779,6 +1779,46 @@ var MODULES = [
         bul("You are paid 3 or more business days after the club funds the games") +
         bul("Tournaments typically pay fastest: usually shortly after tournament ends") +
         callout("100,180,255","&#128273;","<strong>Tax reminder:</strong> As an IC, taxes are NOT withheld. Keep records of all earnings. Uniform and equipment are deductible business expenses."));
+    }
+  },
+
+  {
+    id:"career-staff-pay", cat:"career", icon:"&#129309;",
+    iconBg:"rgba(230,126,34,.12)",
+    title:"Mentor & Coach Pay Rates",
+    sub:"What mentors, coaches and instructors are paid, plus travel",
+    eyebrow:"Career Resources",
+    keywords:"mentor coach instructor pay rates assessment evaluation course travel incentive mileage regional national referee coach fifa instructor proctor",
+    build: function() {
+      function ptbl(hds, rows) {
+        var h = "<div style=\"overflow-x:auto\"><table style=\"width:100%;border-collapse:collapse;font-size:12px\">" +
+          "<thead><tr style=\"background:rgba(230,126,34,.12)\">" +
+          hds.map(function(x){ return "<th style=\"padding:7px 10px;text-align:left;color:var(--c-career);font-weight:700;white-space:nowrap\">" + x + "</th>"; }).join("") +
+          "</tr></thead><tbody>";
+        rows.forEach(function(row,i) {
+          h += "<tr style=\"background:" + (i%2===0?"var(--ov)":"transparent") + "\">";
+          row.forEach(function(cell,j){ h += "<td style=\"padding:7px 10px;color:var(--ink);border-bottom:1px solid var(--line);" + (j===0?"":"white-space:nowrap") + "\">" + cell + "</td>"; });
+          h += "</tr>";
+        });
+        return h + "</tbody></table></div>";
+      }
+      return ds("Pay Rates (Nov 16, 2026)",
+        ptbl(["Task","Mentor","Mentor+","Coach","National Coach","FIFA Instructor"], [
+          ["National referee assessment","&ndash;","&ndash;","&ndash;","$200","&ndash;"],
+          ["Regional referee assessment","&ndash;","&ndash;","$125","$125","&ndash;"],
+          ["Developmental (D&amp;G) / premium pay assessment","&ndash;","$75","$75","$75","&ndash;"],
+          ["New referee in-person course, lead instructor","&ndash;","$180","$225","$240","&ndash;"],
+          ["New referee in-person course, instructor","$150","$150","$180","$240","&ndash;"],
+          ["Continuing ed, field sessions, game-day mentoring, fitness test proctor","$25/hr","$25/hr","$30/hr","$35/hr","$40/hr"]
+        ]) +
+        dt("Paid monthly through Assignr after expenses are filed as required. Course fees include prep and follow-up (lead: 1 hr pre + 2 hr post; instructor: 0.5 hr pre + 1 hr post) around a 3.5 hr class.") +
+        callout("100,180,255","&#128161;","<strong>Referees are charged exactly what the mentor or coach is paid for an assessment.</strong> Nothing is added on top.")) +
+      ds("Travel Incentives (rev. Jan 2025)",
+        ptbl(["Round trip","0-50 miles","51-100 miles","101-150 miles","151+ miles"], [
+          ["Rate","$0.00","$25.00","$50.00","$75.00"]
+        ]) +
+        dt("Over 200 miles round trip: incentive, meals and lodging are set in advance. Travel is paid by the program, never charged to referees. Other expenses need advance approval.") +
+        callout("126,87,194","&#9993;","Questions: CSA Referee Operations &middot; dduncanallen@coloradoreferees.com &middot; 303.888.6863"));
     }
   },
 
@@ -3109,6 +3149,43 @@ var ES = {
   },
 
 
+  "career-staff-pay": {
+    title: "Tarifas de pago: mentores y coaches",
+    sub: "Lo que se paga a mentores, coaches e instructores, y los viajes",
+    eyebrow: "Recursos de carrera",
+    keywords: "tarifas pago mentor coach instructor evaluaci\u00f3n curso viaje incentivo millas regional nacional fifa supervisor prueba f\u00edsica",
+    build: function() {
+      function ptbl(hds, rows) {
+        var h = "<div style=\"overflow-x:auto\"><table style=\"width:100%;border-collapse:collapse;font-size:12px\">" +
+          "<thead><tr style=\"background:rgba(230,126,34,.12)\">" +
+          hds.map(function(x){ return "<th style=\"padding:7px 10px;text-align:left;color:var(--c-career);font-weight:700;white-space:nowrap\">" + x + "</th>"; }).join("") +
+          "</tr></thead><tbody>";
+        rows.forEach(function(row,i) {
+          h += "<tr style=\"background:" + (i%2===0?"var(--ov)":"transparent") + "\">";
+          row.forEach(function(cell,j){ h += "<td style=\"padding:7px 10px;color:var(--ink);border-bottom:1px solid var(--line);" + (j===0?"":"white-space:nowrap") + "\">" + cell + "</td>"; });
+          h += "</tr>";
+        });
+        return h + "</tbody></table></div>";
+      }
+      return ds("Tarifas de pago (16 nov 2026)",
+        ptbl(["Tarea","Mentor","Mentor+","Coach","Coach Nacional","Instructor FIFA"], [
+          ["Evaluaci\u00f3n de \u00e1rbitro Nacional","&ndash;","&ndash;","&ndash;","$200","&ndash;"],
+          ["Evaluaci\u00f3n de \u00e1rbitro Regional","&ndash;","&ndash;","$125","$125","&ndash;"],
+          ["Evaluaci\u00f3n de desarrollo (D&amp;G) / pago premium","&ndash;","$75","$75","$75","&ndash;"],
+          ["Curso presencial de \u00e1rbitro nuevo, instructor l\u00edder","&ndash;","$180","$225","$240","&ndash;"],
+          ["Curso presencial de \u00e1rbitro nuevo, instructor","$150","$150","$180","$240","&ndash;"],
+          ["Educaci\u00f3n continua, sesiones de campo, mentor\u00eda el d\u00eda de juego, supervisor de prueba f\u00edsica","$25/h","$25/h","$30/h","$35/h","$40/h"]
+        ]) +
+        dt("Se paga mensualmente por Assignr despu\u00e9s de presentar los gastos requeridos. Las tarifas de curso incluyen preparaci\u00f3n y seguimiento (l\u00edder: 1 h antes + 2 h despu\u00e9s; instructor: 0.5 h antes + 1 h despu\u00e9s) alrededor de una clase de 3.5 h.") +
+        callout("100,180,255","&#128161;","<strong>Al \u00e1rbitro se le cobra exactamente lo que se paga al mentor o coach por una evaluaci\u00f3n.</strong> No se agrega nada encima.")) +
+      ds("Incentivos de viaje (rev. enero 2025)",
+        ptbl(["Viaje redondo","0-50 millas","51-100 millas","101-150 millas","151+ millas"], [
+          ["Tarifa","$0.00","$25.00","$50.00","$75.00"]
+        ]) +
+        dt("M\u00e1s de 200 millas de viaje redondo: el incentivo, las comidas y el alojamiento se fijan por adelantado. El programa paga los viajes, nunca se cobran a los \u00e1rbitros. Otros gastos requieren aprobaci\u00f3n previa.") +
+        callout("126,87,194","&#9993;","Preguntas: Operaciones de Arbitraje de CSA &middot; dduncanallen@coloradoreferees.com &middot; 303.888.6863"));
+    }
+  },
   "career-18tips": {
     title: "18 consejos para oficiales que empiezan",
     sub: "Los hábitos que sostienen a un árbitro toda una carrera, en términos de fútbol",
