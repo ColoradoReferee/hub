@@ -1,11 +1,11 @@
-// app.js · Colorado Referees Hub · 2026-11-22 (a: pending-work badges on the Your Day entries via pill_counts; needs 125)
+// app.js · Colorado Referees Hub · 2026-11-22 (b: the Names to link count sits on the People chip; uncapped list via 126)
 // Reads from the database as the signed-in person. Coaching notes write
 // to the database directly; the 10 day submission countdown sits on
 // every evaluation not yet submitted.
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.22-a';
+  var VERSION = '2026.11.22-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -5238,6 +5238,14 @@
     $('staffBtn').onclick = function () { renderStaff(); };
     $('linkBtn').onclick = function () { LINK.rows = null; LINK.pick = null; renderLinks(); };
     $('regBtn').onclick = function () { REG.rows = null; REG.lapsed = false; renderUnregistered(); };
+    // The home badge said 99+ and could not say where. The chip says it:
+    // the Names to link count sits on the button itself, fresh each open.
+    var lbn = $('linkBtnN');
+    if (lbn) {
+      lbn.innerHTML = pillBadge('names');
+      PILLS.at = 0;
+      loadPills().then(function () { if (lbn) lbn.innerHTML = pillBadge('names'); });
+    }
     $('peopleGo').onclick = function () { clearTimeout(PP.timer); searchPeople($('peopleQ').value.trim()); };
     document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('[data-tab="staff"]'); if (a && a.getAttribute('href') === '#ops') OPS.openStaff = true; });
     $('signOut').onclick = async function (e) { e.preventDefault(); liveStop(); await sb.auth.signOut(); try { localStorage.removeItem('hub-snap'); } catch (e2) {} S.me = null; location.hash = ''; show('s-signin'); };
