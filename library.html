@@ -7,6 +7,8 @@
 <meta name="description" content="Colorado Referees Library: the Laws, the CSA guide, game day procedures, career and policy.">
 <meta name="theme-color" content="#F6F3EC" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0E1E3F" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>Library · Colorado Referees</title>
 <script>try { var th = localStorage.getItem('hub-theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}</script>
 <link rel="stylesheet" href="fonts/fonts.css">
@@ -3513,6 +3515,7 @@ buildCards();
 // A link like library.html#hub-start opens that module.
 (function () { var id = location.hash.replace("#", ""); if (!id) return; var m = MODULES.filter(function (x) { return x.id === id; })[0]; if (m) openModule(m); })();
 </script>
+<script>if ("serviceWorker" in navigator) { addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); }); }</script>
 </body>
 </html>
 

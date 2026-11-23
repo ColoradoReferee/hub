@@ -1,11 +1,11 @@
-// app.js · Colorado Referees Hub · 2026-11-23 (a: dual-write retired for switches, bulletins and emergencies; needs 129, 130, 131)
+// app.js · Colorado Referees Hub · 2026-11-23 (b: PWA shell: manifest, service worker, icons; a: dual-write retired for switches, bulletins and emergencies; needs 129, 130, 131)
 // Reads from the database as the signed-in person. Coaching notes write
 // to the database directly; the 10 day submission countdown sits on
 // every evaluation not yet submitted.
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.23-a';
+  var VERSION = '2026.11.23-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };

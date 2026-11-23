@@ -9,6 +9,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0D1525">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>Evaluator · Colorado Referees</title>
 <link rel="stylesheet" href="fonts/fonts.css">
 <style>
@@ -4543,5 +4545,6 @@ checkResumeOnLoad();
   boot();
 })();
 </script>
+<script>if ("serviceWorker" in navigator) { addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); }); }</script>
 </body>
 </html>
