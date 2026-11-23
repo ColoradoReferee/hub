@@ -1,11 +1,11 @@
-// app.js · Colorado Referees Hub · 2026-11-23 (b: PWA shell: manifest, service worker, icons; a: dual-write retired for switches, bulletins and emergencies; needs 129, 130, 131)
+// app.js · Colorado Referees Hub · 2026-11-23 (c: board refetch floor, 15s, emergencies exempt; b: PWA shell: manifest, service worker, icons; a: dual-write retired for switches, bulletins and emergencies; needs 129, 130, 131)
 // Reads from the database as the signed-in person. Coaching notes write
 // to the database directly; the 10 day submission countdown sits on
 // every evaluation not yet submitted.
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.23-b';
+  var VERSION = '2026.11.23-c';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -316,7 +316,7 @@
   function busy(on) { BUSY += on ? 1 : -1; if (BUSY < 0) BUSY = 0; var b = $('busy'); if (b) b.style.display = BUSY === 0 ? 'none' : 'flex'; }
   async function load(p) { busy(true); LOADING = true; try { return await p; } finally { busy(false); LOADING = false; LAST_ACTIVE = Date.now(); } }
   async function loadDay() { return load(loadDay_()); }
-  async function loadOps() { return load(loadOps_()); }
+  async function loadOps() { if (typeof LIVE !== 'undefined') LIVE.lastLoad = Date.now(); return load(loadOps_()); }
   async function loadCenter() { return load(loadCenter_()); }
   async function loadSetup() { return load(loadSetup_()); }
   async function loadReview() { return load(loadReview_()); }
@@ -5077,7 +5077,7 @@
       LIVE.channel = sb.channel('hub-live');
       LIVE.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'checkins', filter: 'date=eq.' + today }, function () { liveBump(); });
       LIVE.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'staff_messages', filter: 'date=eq.' + today }, function () { liveBump(); });
-      LIVE.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'emergencies' }, function () { liveBump(); });
+      LIVE.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'emergencies' }, function () { liveBump(true); });
       LIVE.channel.on('postgres_changes', { event: '*', schema: 'public', table: 'late_notices', filter: 'date=eq.' + today }, function () { liveBump(); });
       LIVE.channel.subscribe();
     } catch (e) { LIVE.channel = null; }
@@ -5092,12 +5092,18 @@
   // Never redraw under someone's fingers: if a box on this screen has focus, wait.
   function typing() { var a = document.activeElement; return !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== 'button'); }
   // Many changes in a burst (a whole crew checking in) become one reload.
-  function liveBump() {
+  // Debounced 3s; full refetches are floored to one per 15s so a
+  // check-in rush does not re-pull the whole day per tap. An
+  // emergency event (urgent) skips the floor.
+  function liveBump(urgent) {
+    if (urgent) LIVE.urgent = true;
     clearTimeout(LIVE.timer);
+    var wait = LIVE.urgent ? 1000 : Math.max(3000, (LIVE.lastLoad || 0) + 15000 - Date.now());
     LIVE.timer = setTimeout(function () {
       if (LOADING || typing()) { liveBump(); return; }
+      LIVE.urgent = false;
       if (location.hash === '#ops' && !document.hidden) loadOps().then(renderOps);
-    }, 3000);
+    }, wait);
   }
   // Coming back to the app after a while: one fresh read of the screen you are on.
   var LAST_ACTIVE = Date.now();
