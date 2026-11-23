@@ -1,11 +1,11 @@
-// app.js · Colorado Referees Hub · 2026-11-23 (d: sign-in bounce copy names the fix; c: board refetch floor, 15s, emergencies exempt; b: PWA shell: manifest, service worker, icons; a: dual-write retired for switches, bulletins and emergencies; needs 129, 130, 131)
+// app.js · Colorado Referees Hub · 2026-11-23 (e: link extra sign-in emails on the person card, needs 134; d: sign-in bounce copy names the fix; c: board refetch floor, 15s, emergencies exempt; b: PWA shell: manifest, service worker, icons; a: dual-write retired for switches, bulletins and emergencies; needs 129, 130, 131)
 // Reads from the database as the signed-in person. Coaching notes write
 // to the database directly; the 10 day submission countdown sits on
 // every evaluation not yet submitted.
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.23-d';
+  var VERSION = '2026.11.23-e';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -3731,6 +3731,7 @@
     var r = await sb.from('person_titles').select('title_code,source').eq('person_id', p.id);
     PP.held = r.data || [];
     try { var aw = await sb.from('awards').select('id,code,label,season').eq('person_id', p.id).order('season', { ascending: false }); PP.awards = aw.data || []; } catch (e) { PP.awards = []; }
+    try { var al = await sb.rpc('list_emails', { p_person: p.id }); PP.aliases = al.data || []; } catch (e2) { PP.aliases = []; }
     await loadCatalog();
     // The card belongs under the tapped name, not at the bottom of a
     // long result list.
@@ -3784,6 +3785,9 @@
         '<input id="awLabel" placeholder="' + esc(t('awLabelPh')) + '" hidden style="font:inherit;width:100%;margin-top:6px;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div>' +
       '<div><div class="hint" style="font-weight:700">' + esc(t('signinHelp')) + '</div><div class="go" style="margin-top:6px"><input id="ppEmail" type="email" value="' + esc(p.email || '') + '" placeholder="' + esc(t('emailLabel')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn outline" id="ppEmailSave">' + esc(t('save')) + '</button></div>' +
         (iCan('setup') ? '<button class="btn outline small" id="ppCode" style="margin-top:8px">' + esc(t('signinCodeBtn')) + '</button><div id="ppCodeBox"></div>' : '') + '</div>' +
+      '<div><div class="hint" style="font-weight:700">' + esc(t('aliasTitle')) + '</div><div class="hint">' + esc(t('aliasLead')) + '</div><div>' +
+        ((PP.aliases || []).length ? PP.aliases.map(function (a) { return '<span class="pill" style="margin:4px 4px 0 0">' + esc(a.email) + ' <button class="linkbtn" style="display:inline;min-height:0;padding:0 0 0 6px;color:inherit" data-altake="' + a.id + '">' + esc(t('remove')) + '</button></span>'; }).join('') : '<span class="hint">' + esc(t('noneYet')) + '</span>') + '</div>' +
+        '<div class="go" style="margin-top:6px"><input id="ppAliasEmail" type="email" placeholder="' + esc(t('aliasPh')) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn outline" id="ppAliasAdd">' + esc(t('aliasAdd')) + '</button></div></div>' +
       '<div class="msg" id="ppMsg" hidden></div></div>';
     $('personCard').querySelectorAll('[data-give]').forEach(function (b) { b.onclick = async function () { b.disabled = true; var r = await sb.rpc('give_title', { p_person: p.id, p_code: b.getAttribute('data-give') }); if (r.error) { say('ppMsg', r.error.message, 'bad'); b.disabled = false; return; } await openPerson(p.id); say('ppMsg', t('titleGiven') + ': ' + b.textContent, 'good'); }; });
     var awSel = $('awCode'), awGv = $('awGive');
@@ -3797,6 +3801,18 @@
     $('personCard').querySelectorAll('[data-awtake]').forEach(function (b) { b.onclick = async function () { b.disabled = true; var r = await sb.rpc('take_award', { p_id: parseInt(b.getAttribute('data-awtake'), 10) }); if (r.error) { say('ppMsg', r.error.message, 'bad'); b.disabled = false; return; } await openPerson(p.id); }; });
     var es = $('ppEmailSave');
     if (es) es.onclick = async function () { es.disabled = true; var r = await sb.rpc('set_person_email', { p_person: p.id, p_email: $('ppEmail').value.trim() }); es.disabled = false; if (r.error) { say('ppMsg', r.error.message, 'bad'); return; } p.email = $('ppEmail').value.trim().toLowerCase(); say('ppMsg', t('emailSaved'), 'good'); };
+    var aa = $('ppAliasAdd');
+    if (aa) aa.onclick = async function () {
+      var em = ($('ppAliasEmail').value || '').trim(); if (!em) return;
+      aa.disabled = true;
+      var r = await sb.rpc('link_email', { p_person: p.id, p_email: em });
+      aa.disabled = false;
+      var d = r.data || {};
+      if (r.error || !d.ok) { say('ppMsg', r.error ? r.error.message : t(d.err === 'in_use' ? 'aliasInUse' : 'aliasBad'), 'bad'); return; }
+      await openPerson(p.id);
+      say('ppMsg', t(d.claimed ? 'aliasLinkedClaimed' : 'aliasLinked'), 'good');
+    };
+    $('personCard').querySelectorAll('[data-altake]').forEach(function (b) { b.onclick = async function () { b.disabled = true; var r = await sb.rpc('unlink_email', { p_id: parseInt(b.getAttribute('data-altake'), 10) }); if (r.error || !(r.data || {}).ok) { say('ppMsg', r.error ? r.error.message : 'error', 'bad'); b.disabled = false; return; } await openPerson(p.id); }; });
     var pc = $('ppCode');
     if (pc) pc.onclick = async function () {
       var em = ($('ppEmail').value || p.email || '').trim().toLowerCase(); if (!em) { say('ppMsg', t('emailFirst'), 'bad'); return; }
