@@ -1,11 +1,11 @@
-// app.js · Colorado Referees Hub · 2026-11-22 (b: the Names to link count sits on the People chip; uncapped list via 126)
+// app.js · Colorado Referees Hub · 2026-11-23 (a: dual-write retired for switches, bulletins and emergencies; needs 129, 130, 131)
 // Reads from the database as the signed-in person. Coaching notes write
 // to the database directly; the 10 day submission countdown sits on
 // every evaluation not yet submitted.
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.22-b';
+  var VERSION = '2026.11.23-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   var $ = function (id) { return document.getElementById(id); };
@@ -412,7 +412,7 @@
       sb.from('observations').select('id,date,ref_name,observer,rater_role,final_note,cleaned_note,public_notes,cleanup_status,area,game_id,field')
         .or((S.me.nameKeys || []).map(function (k) { return 'ref_name.ilike.' + k.replace(/[,()]/g, ' ').trim(); }).join(',') || 'ref_name.ilike.' + ((S.me.first_name || '') + ' ' + (S.me.last_name || '')).trim())
         .order('date', { ascending: false }).limit(50),
-      sb.from('announcements').select('title,body,severity,created_at,venue,event_id,start_date,end_date').lte('start_date', today).gte('end_date', today).order('created_at', { ascending: false }).limit(5),
+      sb.from('announcements').select('title,body,severity,created_at,venue,event_id,start_date,end_date').eq('active', true).lte('start_date', today).gte('end_date', today).order('created_at', { ascending: false }).limit(5),
       sb.from('scores').select('game_id,home_score,away_score,status,entered_by,created_at').eq('date', today),
       loadEvalRequests(),
       wide ? sb.from('staff_messages').select('id,from_name,to_venue,body,created_at').eq('date', today).order('created_at', { ascending: false }).limit(20) : Promise.resolve({ data: [] }),
@@ -1572,7 +1572,7 @@
       var r = await sb.from('sessions').insert({ org_id: S.me.org_id, kind: f.kind, title: f.title, date: f.date, start_time: f.start_time, end_time: f.end_time, venue: f.venue, address: f.address, capacity: f.capacity, open_to: f.open_to, notes: f.notes, standard: f.kind === 'fitness' ? f.standard : null, fee_cents: f.fee && parseFloat(f.fee) > 0 ? Math.round(parseFloat(f.fee) * 100) : null, created_by: S.me.first_name + ' ' + S.me.last_name });
       if (r.error) { sv.disabled = false; say('sesFormMsg', r.error.message, 'bad'); return; }
       // A bulletin so referees hear about it on Your day without anyone sending an email.
-      if (f.bulletin) { try { await post({ action: 'postAnnouncement', title: t('sesKind.' + f.kind) + ': ' + f.title, bodyText: t('sesBulletinBody').replace('{when}', sessionLine(f).replace(/&#39;/g, "'").replace(/&amp;/g, '&')) + (f.kind === 'fitness' ? ' ' + stdLine(f) + '. ' + t('fitWaiverBulletin') : ''), startDate: todayStr(), endDate: f.date, severity: 'info', postedBy: S.me.first_name + ' ' + S.me.last_name }); } catch (e) {} }
+      if (f.bulletin) { try { await sb.rpc('post_bulletin', { p_title: t('sesKind.' + f.kind) + ': ' + f.title, p_body: t('sesBulletinBody').replace('{when}', sessionLine(f).replace(/&#39;/g, "'").replace(/&amp;/g, '&')) + (f.kind === 'fitness' ? ' ' + stdLine(f) + '. ' + t('fitWaiverBulletin') : ''), p_start: todayStr(), p_end: f.date, p_severity: 'info' }); } catch (e) {} }
       SES.form = null; await loadSessions_(); renderSetup();
     };
     root.querySelectorAll('[data-ses-open]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); openSession(parseInt(a.getAttribute('data-ses-open'), 10)); }; });
@@ -3489,7 +3489,7 @@
         var games = OPS.games.filter(function (g) { return g.venue === OPS.venue; });
         var helps = OPS.help.filter(function (h) { return h.venue === OPS.venue; });
         body += '<div class="pad" style="padding-top:12px;display:flex;gap:8px"><button class="btn outline small" data-venue="">' + esc(t('allVenues')) + '</button><a class="btn outline small" href="#map/' + encodeURIComponent(OPS.venue) + '/">' + esc(t('map')) + '</a></div><div class="disp h2">' + esc(OPS.venue) + '</div>' +
-          (helps.length ? helps.map(function (h) { return '<div class="card" style="border-color:' + (h.status === 'open' ? 'var(--red)' : 'var(--line)') + '"><b>' + esc(h.reason || '') + '</b><div class="hint">' + esc(h.ref_name || '') + ', ' + esc(h.field || '') + ', ' + esc(clock(h.created_at)) + (h.status !== 'open' ? ', ' + esc(h.status) + (h.ack_by ? ' ' + esc(h.ack_by) : '') : '') + '</div>' + (h.status === 'open' && iCan('scheduling') ? '<div class="actions" style="padding:0"><button class="btn outline small" data-ack="enroute" data-key="' + esc(h.src_key) + '">' + esc(t('ackEnroute')) + '</button><button class="btn go small" data-ack="handled" data-key="' + esc(h.src_key) + '">' + esc(t('ackHandled')) + '</button></div>' : (h.status === 'open' ? '<div class="hint" style="color:var(--red)">' + esc(t('ackInOld')) + '</div>' : '')) + '</div>'; }).join('') : '') +
+          (helps.length ? helps.map(function (h) { return '<div class="card" style="border-color:' + (h.status === 'open' ? 'var(--red)' : 'var(--line)') + '"><b>' + esc(h.reason || '') + '</b><div class="hint">' + esc(h.ref_name || '') + ', ' + esc(h.field || '') + ', ' + esc(clock(h.created_at)) + (h.status !== 'open' ? ', ' + esc(h.status) + (h.ack_by ? ' ' + esc(h.ack_by) : '') : '') + '</div>' + (h.status === 'open' && iCan('scheduling') ? '<div class="actions" style="padding:0"><button class="btn outline small" data-ack="enroute" data-key="' + h.id + '">' + esc(t('ackEnroute')) + '</button><button class="btn go small" data-ack="handled" data-key="' + h.id + '">' + esc(t('ackHandled')) + '</button></div>' : (h.status === 'open' ? '<div class="hint" style="color:var(--red)">' + esc(t('ackInOld')) + '</div>' : '')) + '</div>'; }).join('') : '') +
           hqCardHtml(games) + searchHtml() + slotsHtml(games, ins) +
           '<div class="list" style="display:' + (OPS.editForm ? '' : 'none') + '">' + games.filter(function (g) { return !OPS.editForm || String(g.game_id) === String(OPS.edit); }).map(function (g) {
             var crew = ['cr', 'ar1', 'ar2', 'fourth'].filter(function (k) { return g[k]; }).map(function (k) { var at = ins[key(g[k])]; return '<span class="' + (at ? 'in' : 'out') + '">' + esc(g[k]) + (at ? ' ' + esc(clock(at)) : (iCan('scheduling') || iCan('command_center') ? ' <button class="linkbtn" style="display:inline;min-height:0;padding:0 4px;color:var(--green);text-decoration:underline" data-checkin="' + esc(g[k]) + '" data-gid="' + esc(g.game_id) + '">' + esc(t('staffCheckin')) + '</button>' : '')) + '</span>'; }).join(', ');
@@ -3552,7 +3552,7 @@
     function bulCard(b) {
           var today = todayStr();
           var state = !b.active ? 'over' : (b.end_date && b.end_date < today) ? 'over' : (b.start_date && b.start_date > today) ? 'future' : 'live';
-          return '<div class="card" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + esc(b.title || '') + '</b><span class="pill' + (state === 'live' ? ' ok' : '') + '">' + esc(t(state === 'live' ? 'bulletinLive' : state === 'future' ? 'bulletinFuture' : 'bulletinOver')) + '</span></div><div style="font-size:15px">' + esc(b.body || '') + '</div><div class="hint">' + esc(b.start_date || '') + (b.end_date && b.end_date !== b.start_date ? ' to ' + esc(b.end_date) : '') + (b.venue ? ', ' + esc(b.venue) : '') + (b.posted_by ? ', ' + esc(b.posted_by) : '') + '</div>' + (b.active && state !== 'over' ? '<div class="chips no-print"><button class="chip-btn small' + (b.on_signin ? ' on' : '') + '" data-bul-signin="' + b.id + '|' + (b.on_signin ? 0 : 1) + '">' + esc(t('bulSignin')) + '</button><button class="btn outline small" data-clear="' + esc(b.src_key) + '">' + esc(t('bulClear')) + '</button></div>' : '') + '</div>';
+          return '<div class="card" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + esc(b.title || '') + '</b><span class="pill' + (state === 'live' ? ' ok' : '') + '">' + esc(t(state === 'live' ? 'bulletinLive' : state === 'future' ? 'bulletinFuture' : 'bulletinOver')) + '</span></div><div style="font-size:15px">' + esc(b.body || '') + '</div><div class="hint">' + esc(b.start_date || '') + (b.end_date && b.end_date !== b.start_date ? ' to ' + esc(b.end_date) : '') + (b.venue ? ', ' + esc(b.venue) : '') + (b.posted_by ? ', ' + esc(b.posted_by) : '') + '</div>' + (b.active && state !== 'over' ? '<div class="chips no-print"><button class="chip-btn small' + (b.on_signin ? ' on' : '') + '" data-bul-signin="' + b.id + '|' + (b.on_signin ? 0 : 1) + '">' + esc(t('bulSignin')) + '</button><button class="btn outline small" data-clear="' + b.id + '">' + esc(t('bulClear')) + '</button></div>' : '') + '</div>';
     }
     $('opsBody').innerHTML = head + body;
     $('opsBody').querySelectorAll('[data-otab]').forEach(function (b) { b.onclick = function () { OPS.tab = b.getAttribute('data-otab'); if (OPS.tab === 'retain' && !CC.cov.length) { loadCenter().then(renderOps); return; } if (OPS.tab === 'premium' && OPS.prem == null) { renderOps(); sb.rpc('premium_queue').then(function (r) { OPS.prem = r.data || []; renderOps(); }); return; } renderOps(); }; });
@@ -3615,11 +3615,19 @@
         b.disabled = true; b.textContent = t('saving');
         var crew = { CR: $('sw-cr') ? $('sw-cr').value.trim() : '', AR1: $('sw-ar1') ? $('sw-ar1').value.trim() : '', AR2: $('sw-ar2') ? $('sw-ar2').value.trim() : '', FOURTH: $('sw-fourth') ? $('sw-fourth').value.trim() : '' };
         var field = $('sw-field').value.trim();
-        var ev = eventFor(g);
         try {
+          // Database-first (129): one transaction writes the switch log and
+          // the game row; edited = true keeps the sync off and feeds the
+          // Enter in Assignr fold. The office email retired with the sheet.
           var changed = ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return (g[k] || '') !== crew[k.toUpperCase()]; });
-          if (changed) await post({ action: 'crewSwitch', event: ev ? ev.id : '', gameId: g.game_id, date: OPS.date, crew: crew, handledBy: S.me.first_name + ' ' + S.me.last_name });
-          if (field && field !== (g.field || '')) await post({ action: 'moveField', event: ev ? ev.id : '', gameId: g.game_id, date: OPS.date, newField: field, handledBy: S.me.first_name + ' ' + S.me.last_name });
+          if (changed) {
+            var r1 = await sb.rpc('crew_switch', { p_game: g.game_id, p_crew: crew, p_reason: '', p_notes: '' });
+            if (r1.error || !(r1.data && r1.data.ok)) throw new Error(r1.error ? r1.error.message : (r1.data && r1.data.err) || 'refused');
+          }
+          if (field && field !== (g.field || '')) {
+            var r2 = await sb.rpc('move_field', { p_game: g.game_id, p_field: field, p_reason: '' });
+            if (r2.error || !(r2.data && r2.data.ok)) throw new Error(r2.error ? r2.error.message : (r2.data && r2.data.err) || 'refused');
+          }
           OPS.edit = null; OPS.editForm = false; await loadOps(); renderOps();
         } catch (e) { b.disabled = false; b.textContent = t('saveChanges'); var m = $('sw-msg'); if (m) { m.hidden = false; m.textContent = t('reviewFailed') + ' ' + (e.message || ''); } }
       };
@@ -3656,10 +3664,13 @@
     });
     $('opsBody').querySelectorAll('[data-ack]').forEach(function (b) {
       b.onclick = async function () {
-        var k = b.getAttribute('data-key'), ts = (k || '').split('|')[0];
+        var eid = parseInt(b.getAttribute('data-key'), 10);
         b.disabled = true;
-        try { await post({ action: 'ackEmergency', timestamp: ts, ackStatus: b.getAttribute('data-ack'), ackBy: S.me.first_name + ' ' + S.me.last_name, date: OPS.date }); await loadOps(); renderOps(); }
-        catch (e) { b.disabled = false; }
+        try {
+          var ar = await sb.rpc('emergency_ack', { p_id: eid, p_status: b.getAttribute('data-ack') });
+          if (ar.error || !(ar.data && ar.data.ok)) throw new Error(ar.error ? ar.error.message : 'refused');
+          await loadOps(); renderOps();
+        } catch (e) { b.disabled = false; }
       };
     });
     var postBtn = $('bulPost');
@@ -3668,17 +3679,21 @@
       if (!title && !text) return;
       postBtn.disabled = true; postBtn.textContent = t('bulPosting');
       try {
-        await post({ action: 'postAnnouncement', title: title, bodyText: text, startDate: $('bulFrom').value, endDate: $('bulTo').value, severity: 'info', postedBy: S.me.first_name + ' ' + S.me.last_name });
+        var pr = await sb.rpc('post_bulletin', { p_title: title, p_body: text, p_start: $('bulFrom').value, p_end: $('bulTo').value, p_severity: 'info' });
+        if (pr.error || !(pr.data && pr.data.ok)) throw new Error(pr.error ? pr.error.message : (pr.data && pr.data.err) || 'refused');
         await loadOps(); renderOps();
         var m = $('bulMsg'); if (m) { m.hidden = false; m.className = 'msg good'; m.textContent = t('bulPosted'); }
       } catch (e) { postBtn.disabled = false; postBtn.textContent = t('bulPost'); var mm = $('bulMsg'); mm.hidden = false; mm.className = 'msg bad'; mm.textContent = t('reviewFailed') + ' ' + (e.message || ''); }
     };
     $('opsBody').querySelectorAll('[data-clear]').forEach(function (b) {
       b.onclick = async function () {
-        var k = b.getAttribute('data-clear'); var ts = k.split('|')[0];
+        var bid = parseInt(b.getAttribute('data-clear'), 10);
         b.disabled = true;
-        try { await post({ action: 'clearAnnouncement', timestamp: ts, clearedBy: S.me.first_name + ' ' + S.me.last_name }); await loadOps(); renderOps(); }
-        catch (e) { b.disabled = false; }
+        try {
+          var cr = await sb.rpc('clear_bulletin', { p_id: bid });
+          if (cr.error || !(cr.data && cr.data.ok)) throw new Error(cr.error ? cr.error.message : 'refused');
+          await loadOps(); renderOps();
+        } catch (e) { b.disabled = false; }
       };
     });
   }
@@ -4980,9 +4995,19 @@
       var b = $('sendHelp'); b.disabled = true; b.textContent = t('sendingHelp');
       var ev = g ? eventFor(g) : S.events[0];
       try {
-        var res = await fetch(C.backend, { method: 'POST', body: JSON.stringify({ action: 'emergency', event: ev ? ev.id : '', refName: myNameOn(g || {}), venue: g ? g.venue : '', field: g ? g.field : '', gameId: g ? g.game_id : '', reason: r.backend, details: '' }) });
-        var j = await res.json();
-        if (!j || j.status !== 'ok') throw new Error(j && j.message || 'error');
+        // Database first (131): the row lands on the board live and the
+        // command center is texted urgently. The old Apps Script call is
+        // the fallback, so the help path never has one point of failure.
+        var sent = false;
+        try {
+          var er = await sb.rpc('emergency_raise', { p_reason: t('reasons.' + r.id), p_details: '', p_game: g ? g.game_id : null, p_venue: g ? (g.venue || '') : '', p_field: g ? (g.field || '') : '' });
+          sent = !er.error && er.data && er.data.ok;
+        } catch (e2) { sent = false; }
+        if (!sent) {
+          var res = await fetch(C.backend, { method: 'POST', body: JSON.stringify({ action: 'emergency', event: ev ? ev.id : '', refName: myNameOn(g || {}), venue: g ? g.venue : '', field: g ? g.field : '', gameId: g ? g.game_id : '', reason: r.backend, details: '' }) });
+          var j = await res.json();
+          if (!j || j.status !== 'ok') throw new Error(j && j.message || 'error');
+        }
         $('helpConfirm').innerHTML = '<div class="confirm" style="border-color:var(--green)"><div class="v">' + esc(t('helpSent')) + '</div><div class="hint" style="color:var(--ink)">' + esc(t('helpSentAt')) + ' ' + esc(clock(new Date().toISOString())) + '.</div></div>';
       } catch (e) {
         b.disabled = false; b.textContent = t('sendIt');
