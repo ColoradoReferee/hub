@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.24-c';
+  var VERSION = '2026.11.24-d';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   // Unexpected client errors report themselves (135); five per page
@@ -2627,6 +2627,14 @@
         (tp.data || []).forEach(function (x) { S.coach.notes.forEach(function (n2) { if (n2.id === x.id) n2.coach_tip = x.coach_tip; }); });
       }
     } catch (eT) {}
+    // A flag the coach raised on their own note (141), equally tolerant.
+    try {
+      var fIds = S.coach.notes.map(function (x) { return x.id; }).filter(Boolean);
+      if (fIds.length) {
+        var fq = await sb.from('observations').select('id,coach_issue').in('id', fIds).not('coach_issue', 'is', null);
+        if (!fq.error) { S.coach.issueCol = true; (fq.data || []).forEach(function (x) { S.coach.notes.forEach(function (n2) { if (n2.id === x.id) n2.coach_issue = x.coach_issue; }); }); }
+      }
+    } catch (eF) {}
     var mine = S.coach.notes.map(function (x) { return x.id; }).filter(Boolean);
     var names = {};
     S.coach.games.forEach(function (g) { ['cr', 'ar1', 'ar2', 'fourth'].forEach(function (k) { if (g[k]) names[g[k]] = 1; }); });
@@ -2860,10 +2868,22 @@
       var readAt = (S.coach.reads || {})[String(n.id)];
       if (ok && readAt) label = t('readBy') + ' ' + dayLong(readAt.slice(0, 10));
       return '<div class="card" style="gap:8px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div><b>' + refLink(n.ref_name || '') + '</b> <span class="hint">' + esc(dayLong(n.date)) + (n.field ? ', ' + esc(n.field) : '') + (n.area ? ', ' + esc(t('areas.' + n.area)) : '') + '</span></div><span class="pill' + (ok ? ' ok' : '') + '">' + esc(label) + '</span></div>' +
-        '<div class="side three"><div class="col"><b>' + esc(t('rawLabel')) + '</b>' + esc(n.public_notes || '') + '</div><div class="col"><b>' + esc(t('aiLabel')) + '</b>' + (n.cleaned_note ? esc(n.cleaned_note) : '<span class="hint">' + esc(t('notCleaned')) + '</span>') + '</div><div class="col"><b>' + esc(t('releasedLabel')) + '</b>' + (ok ? esc(n.final_note || n.cleaned_note || '') : '<span class="hint">' + esc(t('notReleased')) + '</span>') + '</div></div>' + (n.coach_tip ? '<div class="hint" style="margin-top:6px"><b>' + esc(t('tipLabel')) + '</b> ' + esc(n.coach_tip) + '</div>' : '') + '</div>';
+        '<div class="side three"><div class="col"><b>' + esc(t('rawLabel')) + '</b>' + esc(n.public_notes || '') + '</div><div class="col"><b>' + esc(t('aiLabel')) + '</b>' + (n.cleaned_note ? esc(n.cleaned_note) : '<span class="hint">' + esc(t('notCleaned')) + '</span>') + '</div><div class="col"><b>' + esc(t('releasedLabel')) + '</b>' + (ok ? esc(n.final_note || n.cleaned_note || '') : '<span class="hint">' + esc(t('notReleased')) + '</span>') + '</div></div>' + (n.coach_tip ? '<div class="hint" style="margin-top:6px"><b>' + esc(t('tipLabel')) + '</b> ' + esc(n.coach_tip) + '</div>' : '') +
+        (n.coach_issue ? '<div class="hint" style="border:1px solid var(--gold);border-radius:8px;padding:8px">' + esc(t('flagNoteSet').replace('{w}', n.coach_issue)) + '</div>' : (n.id ? '<div><button class="linkbtn" data-flagnote="' + n.id + '">' + esc(t('flagNoteBtn')) + '</button></div>' : '')) + '</div>';
     };
     var recent = S.coach.notes.filter(function (n) { return !n.date || n.date >= cut; }), older = S.coach.notes.filter(function (n) { return n.date && n.date < cut; });
     $('myNotesList').innerHTML = S.coach.notes.length ? recent.map(myCard).join('') + (older.length ? fold('mynotes-older', t('olderNotes'), older.length, older.map(myCard).join(''), !recent.length) : '') : '<div class="card"><div class="hint">' + esc(t('noMyNotes')) + '</div></div>';
+    $('myNotesList').querySelectorAll('[data-flagnote]').forEach(function (b) {
+      b.onclick = async function () {
+        var why = window.prompt(t('flagNoteWhy'), '');
+        if (why === null || !String(why).trim()) return;
+        b.disabled = true;
+        var r = await sb.rpc('flag_own_note', { p_id: parseInt(b.getAttribute('data-flagnote'), 10), p_why: String(why).trim().slice(0, 200) });
+        if (r.error) { b.disabled = false; b.textContent = t('flagNoteFail'); return; }
+        S.coach.notes.forEach(function (n2) { if (String(n2.id) === b.getAttribute('data-flagnote')) n2.coach_issue = String(why).trim().slice(0, 200); });
+        renderMyNotes();
+      };
+    });
   }
 
   // ── Review (Scheduling): clean, read both, approve ───────────────
@@ -2899,6 +2919,17 @@
         (dd.data || []).forEach(function (x) { REV.notes.forEach(function (n) { if (n.rowNum === x.id) { n.dismissReason = x.dismissed_reason || ''; n.dismissBy = x.dismissed_by || ''; n.dismissAt = x.dismissed_at || ''; } }); });
       }
     } catch (eD) {}
+    // Coach-raised flags (141), tolerant before the migration runs.
+    REV.issueCol = false;
+    try {
+      var allIds = REV.notes.map(function (n) { return n.rowNum; }).filter(Boolean);
+      for (var ii = 0; ii < allIds.length; ii += 200) {
+        var fq2 = await sb.from('observations').select('id,coach_issue,coach_issue_by,coach_issue_at').in('id', allIds.slice(ii, ii + 200)).not('coach_issue', 'is', null);
+        if (fq2.error) break;
+        REV.issueCol = true;
+        (fq2.data || []).forEach(function (x) { REV.notes.forEach(function (n) { if (n.rowNum === x.id) { n.coachIssue = x.coach_issue || ''; n.coachIssueBy = x.coach_issue_by || ''; n.coachIssueAt = x.coach_issue_at || ''; } }); });
+      }
+    } catch (eF2) {}
   }
   function revStatus(n) {
     var s = String(n.cleanupStatus || 'pending').toLowerCase();
@@ -2914,6 +2945,8 @@
     var coaches = {}; REV.notes.forEach(function (n) { if (n.observer) coaches[n.observer] = (coaches[n.observer] || 0) + 1; });
     var coachList = Object.keys(coaches).sort();
     var listAll = REV.notes.filter(function (n) { return revStatus(n) === REV.filter && (!REV.coach || n.observer === REV.coach); });
+    // A coach's own flag outranks everything else on any chip.
+    listAll.sort(function (a, b) { return (b.coachIssue ? 1 : 0) - (a.coachIssue ? 1 : 0); });
     var pageN = REV.page || 20, list = listAll.slice(0, pageN);
     $('reviewTools').innerHTML = '<div class="filters">' + ['pending', 'cleaned', 'approved', 'rejected'].map(function (k) {
       return '<button class="chip-btn' + (REV.filter === k ? ' on' : '') + '" data-filter="' + k + '">' + esc(lbl(k, counts[k])) + '</button>';
@@ -2943,6 +2976,7 @@
             '<button class="btn outline small" data-edit="' + n.rowNum + '">' + esc(t('editRelease')) + '</button>' +
             '<button class="linkbtn" style="color:var(--red)" data-reject="' + n.rowNum + '">' + esc(t('rejectNote')) + '</button>' +
           '</div>' : '')) +
+        (n.coachIssue ? '<div class="hint" style="border:1px solid var(--gold);border-radius:8px;padding:8px"><b>' + esc(t('revCoachFlag').replace('{by}', n.coachIssueBy || n.observer)) + '</b> ' + esc(n.coachIssue) + (n.coachIssueAt ? ' <span class="hint">(' + esc(String(n.coachIssueAt).slice(0, 10)) + ')</span>' : '') + '</div>' : '') +
         '<div class="msg bad" id="revmsg-' + n.rowNum + '" hidden></div>' +
         (st === 'rejected' ? ((n.dismissReason || n.dismissBy) ? '<div class="hint" style="border:1px solid var(--gold);border-radius:8px;padding:8px"><b>' + esc(t('dismissedAs').replace('{by}', n.dismissBy || '')) + '</b> ' + esc(n.dismissReason || '') + (n.dismissAt ? ' <span class="hint">(' + esc(String(n.dismissAt).slice(0, 10)) + ')</span>' : '') + '</div>' : '') + '<div class="actions" style="padding:0"><button class="btn outline small" data-restore="' + n.rowNum + '">' + esc(t('restoreNote')) + '</button></div>' : '') +
         '</div>';
@@ -2993,6 +3027,7 @@
       var nowTs = new Date().toISOString();
       var upd = async function (n, patch) {
         patch.reviewed_by = by; patch.reviewed_at = nowTs;
+        if (REV.issueCol && n.coachIssue) { patch.coach_issue = null; patch.coach_issue_by = null; patch.coach_issue_at = null; n.coachIssue = ''; }
         var u = await sb.from('observations').update(patch).eq('id', n.rowNum);
         if (u.error) throw new Error(u.error.message);
       };
