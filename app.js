@@ -1,13 +1,24 @@
-// app.js · Colorado Referees Hub · 2026-11-23 (e: link extra sign-in emails on the person card, needs 134; d: sign-in bounce copy names the fix; c: board refetch floor, 15s, emergencies exempt; b: PWA shell: manifest, service worker, icons; a: dual-write retired for switches, bulletins and emergencies; needs 129, 130, 131)
+// app.js · Colorado Referees Hub · 2026-11-23 (f: client errors report themselves, errors fold on the State view, needs 135; e: link extra sign-in emails on the person card, needs 134; d: sign-in bounce copy names the fix; c: board refetch floor, 15s, emergencies exempt; b: PWA shell: manifest, service worker, icons; a: dual-write retired for switches, bulletins and emergencies; needs 129, 130, 131)
 // Reads from the database as the signed-in person. Coaching notes write
 // to the database directly; the 10 day submission countdown sits on
 // every evaluation not yet submitted.
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.23-e';
+  var VERSION = '2026.11.23-f';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
+  // Unexpected client errors report themselves (135); five per page
+  // load at most, silent, nothing personal beyond the signed-in id.
+  var ERRN = 0;
+  function logErr(m, s) {
+    try {
+      if (ERRN >= 5 || !m) return; ERRN++;
+      sb.rpc('log_err', { p_version: VERSION, p_screen: (location.hash || '').slice(0, 40), p_msg: String(m).slice(0, 300), p_stack: String(s || '').slice(0, 800), p_online: navigator.onLine !== false, p_org: C.org || '', p_ua: navigator.userAgent.slice(0, 200) }).then(function () {}, function () {});
+    } catch (e) {}
+  }
+  window.addEventListener('error', function (e) { logErr(e.message, e.error && e.error.stack); });
+  window.addEventListener('unhandledrejection', function (e) { var r = e.reason || {}; logErr(r.message || String(e.reason || ''), r.stack); });
   var $ = function (id) { return document.getElementById(id); };
   var S = { lang: 'en', me: null, games: [], checkins: {}, notes: [], bulletins: [], events: [], game: null, reason: null,
             coach: { games: [], venue: null, game: null, ref: null, area: null, notes: [] } };
@@ -4148,6 +4159,7 @@
     // Live season numbers from the same view the Coverage tab uses.
     try { var cov = await sb.rpc('coverage_rows'); ST.cov = cov.data || []; } catch (e) { ST.cov = []; }
     try { var fs = await sb.rpc('fitness_summary'); ST.fit = fs.data || []; } catch (e) { ST.fit = []; }
+    try { var er = await sb.rpc('err_recent'); ST.errs = er.data || []; } catch (e3) { ST.errs = []; }
     try { var ac = await sb.rpc('crest_academy_stats'); ST.acad = ac.data || null; } catch (e) { ST.acad = null; }
     try { var sn = await sb.from('registration_snapshots').select('season,taken_on,licensed,first_year,continuing,gap_return').order('taken_on'); ST.snaps = sn.data || []; } catch (e) { ST.snaps = []; }
     // ZIP centroids and the fields we use, static files in this folder.
@@ -4400,6 +4412,13 @@
     html += '<div class="pad"><button class="btn outline small" id="stTable">' + esc(t(ST.table ? 'stHideTable' : 'stShowTable')) + '</button></div>' +
       (ST.table ? '<div class="pad"><table class="dt"><thead><tr><th>' + esc(t('stYear')) + '</th><th>' + esc(t('stRefereesCol')) + '</th><th>' + esc(t('stFirstTime')) + '</th><th>' + esc(t('stRetAllShort')) + '</th><th>' + esc(t('ageU18')) + '</th></tr></thead><tbody>' + allYears.map(function (y) { var r = pct(stVal(y, 'retained_from_prev'), stVal(y, 'prev_total')); return '<tr><td>' + y + (y === open ? '*' : '') + '</td><td>' + fmtN(stVal(y, 'referees')) + '</td><td>' + fmtN(stVal(y, 'new')) + '</td><td>' + (r == null ? '' : r + '%') + '</td><td>' + fmtN(stVal(y, 'age', 'u18')) + '</td></tr>'; }).join('') + '</tbody></table></div>' : '') +
       '<div class="pad hint" style="padding-top:12px">' + esc(t('stSources')) + '</div>';
+    if ((ST.errs || []).length) {
+      html += '<div class="pad"><details class="fold"><summary>' + esc(t('errFold').replace('{n}', ST.errs.length)) + '</summary>' + ST.errs.map(function (x) {
+        return '<div class="hint" style="margin-top:8px"><b>' + esc(x.msg || '') + '</b><br>' + esc((x.version || '') + ' · ' + t('errTimes').replace('{n}', x.n) + ' · ' + (x.screens || '') + ' · ' + String(x.last_at || '').slice(0, 16).replace('T', ' ')) + '</div>';
+      }).join('') + '</details></div>';
+    } else {
+      html += '<div class="pad hint">' + esc(t('errNone')) + '</div>';
+    }
     $('stateBody').innerHTML = html;
     $('stateBody').querySelectorAll('[data-styear]').forEach(function (b) { b.onclick = function () { ST.year = parseInt(b.getAttribute('data-styear'), 10); renderState(); }; });
     $('stTable').onclick = function () { ST.table = !ST.table; renderState(); };
