@@ -1,11 +1,11 @@
-// app.js · Colorado Referees Hub · 2026-11-24 (a: note nudge, coach writing tip (needs 136 + note-clean v2), never-seen counts in scheduling, released-but-unread fold; 2026-11-23 f: client errors report themselves, errors fold on the State view, needs 135; e: link extra sign-in emails on the person card, needs 134; d: sign-in bounce copy names the fix; c: board refetch floor, 15s, emergencies exempt; b: PWA shell: manifest, service worker, icons; a: dual-write retired for switches, bulletins and emergencies; needs 129, 130, 131)
+// app.js · Colorado Referees Hub · 2026-11-24 (b: Do not send asks why and the Not sent folder shows it (needs 137), gold nudge, unread fold speaks when empty; a: note nudge, coach writing tip (needs 136 + note-clean v2), never-seen counts in scheduling, released-but-unread fold; 2026-11-23 f: client errors report themselves, errors fold on the State view, needs 135; e: link extra sign-in emails on the person card, needs 134; d: sign-in bounce copy names the fix; c: board refetch floor, 15s, emergencies exempt; b: PWA shell: manifest, service worker, icons; a: dual-write retired for switches, bulletins and emergencies; needs 129, 130, 131)
 // Reads from the database as the signed-in person. Coaching notes write
 // to the database directly; the 10 day submission countdown sits on
 // every evaluation not yet submitted.
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.24-a';
+  var VERSION = '2026.11.24-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   // Unexpected client errors report themselves (135); five per page
@@ -2797,7 +2797,7 @@
       // to add the moment and the next step; the second press saves.
       if (text.length < 40 && !S.coach.nudged) {
         S.coach.nudged = true;
-        say('noteMsg', t('noteNudge'), '');
+        say('noteMsg', t('noteNudge'), 'nudge');
         save.textContent = t('saveAnyway');
         return;
       }
@@ -2873,6 +2873,15 @@
         cleanupStatus: o.cleanup_status || 'pending', reviewedBy: o.reviewed_by || '',
         flagged: /^\s*FLAG:/i.test(o.cleaned_note || '') && !o.flag_override_by };
     }).filter(function (n) { return n.notesPublic || n.cleanedNote; });
+    // Dismissal reasons (137), fetched tolerantly so the screen is
+    // whole before the migration runs.
+    try {
+      var rj = REV.notes.filter(function (n) { return String(n.cleanupStatus || '').toLowerCase() === 'rejected'; }).map(function (n) { return n.rowNum; });
+      if (rj.length) {
+        var dd = await sb.from('observations').select('id,dismissed_reason,dismissed_by,dismissed_at').in('id', rj);
+        (dd.data || []).forEach(function (x) { REV.notes.forEach(function (n) { if (n.rowNum === x.id) { n.dismissReason = x.dismissed_reason || ''; n.dismissBy = x.dismissed_by || ''; n.dismissAt = x.dismissed_at || ''; } }); });
+      }
+    } catch (eD) {}
   }
   function revStatus(n) {
     var s = String(n.cleanupStatus || 'pending').toLowerCase();
@@ -2918,7 +2927,7 @@
             '<button class="linkbtn" style="color:var(--red)" data-reject="' + n.rowNum + '">' + esc(t('rejectNote')) + '</button>' +
           '</div>' : '')) +
         '<div class="msg bad" id="revmsg-' + n.rowNum + '" hidden></div>' +
-        (st === 'rejected' ? '<div class="actions" style="padding:0"><button class="btn outline small" data-restore="' + n.rowNum + '">' + esc(t('restoreNote')) + '</button></div>' : '') +
+        (st === 'rejected' ? ((n.dismissReason || n.dismissBy) ? '<div class="hint" style="border:1px solid var(--gold);border-radius:8px;padding:8px"><b>' + esc(t('dismissedAs').replace('{by}', n.dismissBy || '')) + '</b> ' + esc(n.dismissReason || '') + (n.dismissAt ? ' <span class="hint">(' + esc(String(n.dismissAt).slice(0, 10)) + ')</span>' : '') + '</div>' : '') + '<div class="actions" style="padding:0"><button class="btn outline small" data-restore="' + n.rowNum + '">' + esc(t('restoreNote')) + '</button></div>' : '') +
         '</div>';
     }).join('') + (listAll.length > list.length ? '<div class="pad"><button class="btn outline" id="revMore" style="width:100%">' + esc(t('showMore').replace('{n}', Math.min(20, listAll.length - list.length)).replace('{left}', listAll.length - list.length)) + '</button></div>' : '') : '<div class="card"><div class="hint">' + esc(t('revEmpty')) + '</div></div>';
     var rm = $('revMore'); if (rm) rm.onclick = function () { REV.page = pageN + 20; renderReview(); };
@@ -2953,7 +2962,11 @@
     if (!notes.length || REV.busy) return;
     REV.busy = true;
     if (btn) { btn.disabled = true; btn.textContent = t(what === 'clean' ? 'cleaning' : 'approving'); }
-    if (what === 'reject' && !window.confirm(t('rejectConfirm'))) { REV.busy = false; renderReview(); return; }
+    if (what === 'reject') {
+      var why = window.prompt(t('dismissWhy'), '');
+      if (why === null || !String(why).trim()) { REV.busy = false; renderReview(); return; }
+      REV.why = String(why).trim().slice(0, 200);
+    }
     var m = $('revMsg'); if (m) m.hidden = true;
     try {
       // Database-first (dual-write retirement, slice two): review writes
@@ -2990,9 +3003,10 @@
         }
         REV.editing = null; REV.draft = '';
       } else if (what === 'reject') {
-        for (var r2 = 0; r2 < notes.length; r2++) await upd(notes[r2], { cleanup_status: 'rejected' });
+        for (var r2 = 0; r2 < notes.length; r2++) await upd(notes[r2], { cleanup_status: 'rejected', dismissed_reason: REV.why || '', dismissed_by: by, dismissed_at: nowTs });
+        REV.why = '';
       } else if (what === 'restore') {
-        for (var r3 = 0; r3 < notes.length; r3++) await upd(notes[r3], { cleanup_status: 'pending' });
+        for (var r3 = 0; r3 < notes.length; r3++) await upd(notes[r3], { cleanup_status: 'pending', dismissed_reason: null, dismissed_by: null, dismissed_at: null });
       } else {
         for (var i = 0; i < notes.length; i++) {
           var rc2 = await sb.functions.invoke('note-clean', { body: { id: notes[i].rowNum } });
@@ -3123,7 +3137,7 @@
       var covPick = Object.keys(nextVenues).length > 1 ? '<div class="pad" style="padding-top:8px"><select id="covVenue" style="font:inherit;width:100%;padding:12px;border:2px solid var(--navy);border-radius:8px;background:var(--surface);color:var(--ink)"><option value="">' + esc(t('covAnyVenue')) + ' (' + never0.length + ')</option>' + Object.keys(nextVenues).sort().map(function (v) { return '<option value="' + esc(v) + '"' + (CC.covVenue === v ? ' selected' : '') + '>' + esc(v) + ' (' + nextVenues[v] + ')</option>'; }).join('') + '</select></div>' : '';
       body = '<div class="stats"><div class="stat"><b>' + worked + '</b><i>' + esc(t('stWorked')) + '</i></div><div class="stat green"><b>' + seen + '</b><i>' + esc(t('stSeen')) + '</i></div><div class="stat red"><b>' + never + '</b><i>' + esc(t('stNever')) + '</i></div></div>' +
         '<div class="pad" style="padding-top:12px"><div class="hint">' + esc(t('stRead')) + ': ' + read + ' / ' + rel + '</div><div class="bar"><i style="width:' + (rel ? Math.round(100 * read / rel) : 0) + '%"></i></div></div>' +
-        (unread.length ? '<div class="pad"><details class="fold"><summary>' + esc(t('unreadFold').replace('{n}', unread.length)) + '</summary>' + unread.slice(0, 40).map(function (u) { return '<div class="rowline"><div><a class="refname" href="#ref/' + encodeURIComponent(u.name) + '"><b>' + esc(u.name) + '</b></a><br><span class="hint">' + esc(t('unreadLine').replace('{n}', u.n).replace('{d}', u.oldest || '')) + '</span></div><div class="n">' + u.n + '</div></div>'; }).join('') + '</details></div>' : '') +
+        (unread.length ? '<div class="pad"><details class="fold"><summary>' + esc(t('unreadFold').replace('{n}', unread.length)) + '</summary>' + unread.slice(0, 40).map(function (u) { return '<div class="rowline"><div><a class="refname" href="#ref/' + encodeURIComponent(u.name) + '"><b>' + esc(u.name) + '</b></a><br><span class="hint">' + esc(t('unreadLine').replace('{n}', u.n).replace('{d}', u.oldest || '')) + '</span></div><div class="n">' + u.n + '</div></div>'; }).join('') + '</details></div>' : '<div class="pad hint">' + esc(t('unreadNone')) + '</div>') +
         '<div class="disp h2">' + esc(t('neverSeenTitle')) + '</div>' + covPick + '<div class="pad">' + list.map(function (r) {
           return '<div class="rowline"><div><b>' + refLink(r.name) + '</b><br><span class="hint">' + esc(t('lastGame')) + ' ' + esc(r.last_game ? dayLong(r.last_game) : '') + (r.next_game ? '. <b>' + esc(t('refNext')) + '</b> ' + esc(dayLong(r.next_game)) + ', ' + esc(r.next_venue || '') : '') + '</span></div><div class="n">' + r.games + '</div></div>';
         }).join('') + '</div>';
