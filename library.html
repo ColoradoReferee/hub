@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- library.html v2026.11.15-a · 2026-11-15 · Colorado Referees Library -->
+<!-- library.html v2026.11.24-a · 2026-11-24 · Colorado Referees Library -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -493,7 +493,7 @@ a{color:inherit;text-decoration:none;}
       <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program">
     </div>
     <div class="footer-text">
-      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.20-a<br>
+      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.24-a<br>
       <a href="https://coloradosoccer.org" class="footer-link">ColoradoSoccer.org</a> &middot;
       <span data-l="questions">Questions:</span> <a href="mailto:refeducation@coloradoreferees.com" class="footer-link">refeducation@coloradoreferees.com</a> &middot; 303.888.6863
     </div>
@@ -577,7 +577,7 @@ var MODULES = [
     iconBg:"rgba(30,58,115,.12)",
     title:"Getting started",
     sub:"Sign in, put it on your phone, language, light or dark",
-    eyebrow:"Using the Hub · 1 of 7",
+    eyebrow:"Using the Hub · 1 of 8",
     keywords:"tutorial how to start sign in install home screen phone language spanish dark mode version",
     build: function() {
       return ds("Sign in once",
@@ -596,11 +596,31 @@ var MODULES = [
     }
   },
   {
+    id:"hub-signin-email", cat:"hub", icon:"&#128273;",
+    iconBg:"rgba(30,58,115,.12)",
+    title:"Sign-in emails",
+    sub:"Which email works, and what to do when the Hub does not know you",
+    eyebrow:"Using the Hub · 2 of 8",
+    keywords:"sign in email code link learning center old email new email changed gmail hotmail no referee record alias us soccer account",
+    build: function() {
+      return ds("Which email to use",
+        dt("The Hub knows the email on your U.S. Soccer Learning Center account, the one you registered with this season. Sign in with that one and everything just works: one email, one code, no password.")) +
+      ds("Signed in, but the Hub says it does not know you",
+        stp(1, "You typed a code that worked, and the Hub says you are signed in but <strong>no referee record carries that email</strong>. Nothing is wrong with your account. It usually means you registered as a referee years ago under one email and U.S. Soccer now signs you in with another.") +
+        stp(2, "Try once with the email you used when you <strong>first registered as a referee</strong>, even an old one you rarely open. If the Hub knows that one, you are in right away, and from then on it links the two by itself.") +
+        stp(3, "If no old email works, tell your referee coach or CSA Referee Operations which email you are signing in with. They link it to your referee card in under a minute, and the sign-in you already made starts working the moment they do. Both emails work from then on.")) +
+      ds("Changed your email?",
+        dt("Tell CSA Referee Operations so game emails and feedback reach the inbox you actually read. The Hub can carry more than one email for you; none of them is ever removed from your history.") +
+        callout("126,87,194","&#9993;","Questions: CSA Referee Operations &middot; dduncanallen@coloradoreferees.com"));
+    }
+  },
+
+  {
     id:"hub-day", cat:"hub", icon:"&#9917;",
     iconBg:"rgba(30,58,115,.12)",
     title:"Your day",
     sub:"Your games, the field map, check-in, and the board",
-    eyebrow:"Using the Hub · 2 of 7",
+    eyebrow:"Using the Hub · 3 of 8",
     keywords:"tutorial your day games game card check in checkin map field board gold red crew rules availability offers bottom bar tabs",
     build: function() {
       return ds("What you see",
@@ -624,7 +644,7 @@ var MODULES = [
     iconBg:"rgba(30,58,115,.12)",
     title:"When something goes wrong",
     sub:"The Help button and the Referee Hotline",
-    eyebrow:"Using the Hub · 3 of 7",
+    eyebrow:"Using the Hub · 4 of 8",
     keywords:"tutorial help late missing injured incident emergency referee hq command center",
     build: function() {
       return ds("The red Help button",
@@ -645,7 +665,7 @@ var MODULES = [
     iconBg:"rgba(30,58,115,.12)",
     title:"Feedback and your card",
     sub:"Notes from referee coaches, your season, your evaluations",
-    eyebrow:"Using the Hub · 4 of 7",
+    eyebrow:"Using the Hub · 5 of 8",
     keywords:"tutorial notes feedback coach observation acknowledge referee card season evaluation progress upgrade maintenance request",
     build: function() {
       return ds("Feedback from a referee coach",
@@ -663,7 +683,7 @@ var MODULES = [
     iconBg:"rgba(30,58,115,.12)",
     title:"Fitness test",
     sub:"Sign up, waiver, standards, what the badge means",
-    eyebrow:"Using the Hub · 5 of 7",
+    eyebrow:"Using the Hub · 6 of 8",
     keywords:"tutorial fitness test sign up waiver sprint interval coda badge premium pay standard",
     build: function() {
       return ds("Before the test",
@@ -681,7 +701,7 @@ var MODULES = [
     iconBg:"rgba(30,58,115,.12)",
     title:"For referee coaches",
     sub:"Notes, the Evaluator, the debrief, writing the evaluation",
-    eyebrow:"Using the Hub · 6 of 7",
+    eyebrow:"Using the Hub · 7 of 8",
     keywords:"tutorial coach coaching notes observation evaluator live log post-match ratings debrief pdf formal evaluation write submit review refeval",
     build: function() {
       return ds("Observation notes",
@@ -704,7 +724,7 @@ var MODULES = [
     iconBg:"rgba(30,58,115,.12)",
     title:"Command Center, State view, Setup",
     sub:"For site coordinators, referee operations and admins",
-    eyebrow:"Using the Hub · 7 of 7",
+    eyebrow:"Using the Hub · 8 of 8",
     keywords:"tutorial command center site coordinator sc board switches announcements weather state view setup events venues sessions assignr sync not registered people",
     build: function() {
       return ds("Command Center (site coordinators and HQ)",
@@ -2190,7 +2210,7 @@ var ES = {
     }
   },
   "hub-start": {
-    title: "Primeros pasos", sub: "Inicia sesión, ponlo en tu teléfono, idioma, claro u oscuro", eyebrow: "Cómo usar el Hub · 1 de 7",
+    title: "Primeros pasos", sub: "Inicia sesión, ponlo en tu teléfono, idioma, claro u oscuro", eyebrow: "Cómo usar el Hub · 1 de 8",
     keywords: "tutorial cómo empezar iniciar sesión instalar pantalla de inicio teléfono idioma español modo oscuro versión",
     build: function() {
       return ds("Inicia sesión una sola vez",
@@ -2209,8 +2229,24 @@ var ES = {
     }
   },
 
+  "hub-signin-email": {
+    title: "Correos para iniciar sesión", sub: "Cuál correo funciona y qué hacer cuando el Hub no te reconoce", eyebrow: "Cómo usar el Hub · 2 de 8",
+    keywords: "iniciar sesión correo código vincular learning center correo viejo correo nuevo cambié gmail hotmail sin registro de árbitro alias cuenta us soccer",
+    build: function() {
+      return ds("Cuál correo usar",
+        dt("El Hub conoce el correo de tu cuenta del Learning Center de U.S. Soccer, con el que te registraste esta temporada. Inicia sesión con ese y todo funciona: un correo, un código, sin contraseña.")) +
+      ds("Iniciaste sesión, pero el Hub no te reconoce",
+        stp(1, "Escribiste un código que funcionó y el Hub dice que tu sesión está activa pero <strong>ningún registro de árbitro tiene ese correo</strong>. Tu cuenta no tiene nada malo. Casi siempre significa que te registraste como árbitro hace años con un correo y que U.S. Soccer ahora te conecta con otro.") +
+        stp(2, "Prueba una vez con el correo que usaste cuando te <strong>registraste como árbitro por primera vez</strong>, aunque sea uno viejo que casi no abres. Si el Hub conoce ese, entras de inmediato, y desde entonces vincula los dos por sí solo.") +
+        stp(3, "Si ningún correo viejo funciona, dile a tu coach de árbitros o a CSA Referee Operations con cuál correo estás entrando. Lo vinculan a tu tarjeta de árbitro en menos de un minuto, y la sesión que ya iniciaste empieza a funcionar en ese momento. Después, los dos correos sirven.")) +
+      ds("¿Cambiaste de correo?",
+        dt("Avisa a CSA Referee Operations para que los correos de partidos y la retroalimentación lleguen a la bandeja que sí revisas. El Hub puede guardar más de un correo tuyo; ninguno se borra de tu historial.") +
+        callout("126,87,194","&#9993;","Preguntas: CSA Referee Operations &middot; dduncanallen@coloradoreferees.com"));
+    }
+  },
+
   "hub-day": {
-    title: "Tu día", sub: "Tus partidos, el mapa de canchas, el registro al llegar y el tablero", eyebrow: "Cómo usar el Hub · 2 de 7",
+    title: "Tu día", sub: "Tus partidos, el mapa de canchas, el registro al llegar y el tablero", eyebrow: "Cómo usar el Hub · 3 de 8",
     keywords: "tutorial tu día partidos tarjeta del partido registrarme registro mapa cancha tablero dorado rojo equipo arbitral reglas disponibilidad ofertas barra inferior pestañas notas",
     build: function() {
       return ds("Lo que ves",
@@ -2231,7 +2267,7 @@ var ES = {
   },
 
   "hub-help": {
-    title: "Cuando algo sale mal", sub: "El botón de Ayuda y la línea de árbitros", eyebrow: "Cómo usar el Hub · 3 de 7",
+    title: "Cuando algo sale mal", sub: "El botón de Ayuda y la línea de árbitros", eyebrow: "Cómo usar el Hub · 4 de 8",
     keywords: "tutorial ayuda tarde falta compañero lesión incidente emergencia carpa de árbitros centro de mando",
     build: function() {
       return ds("El botón rojo de Ayuda",
@@ -2249,7 +2285,7 @@ var ES = {
   },
 
   "hub-notes": {
-    title: "Comentarios y tu tarjeta", sub: "Notas de los coaches de árbitros, tu temporada, tus evaluaciones", eyebrow: "Cómo usar el Hub · 4 de 7",
+    title: "Comentarios y tu tarjeta", sub: "Notas de los coaches de árbitros, tu temporada, tus evaluaciones", eyebrow: "Cómo usar el Hub · 5 de 8",
     keywords: "tutorial notas comentarios coach observación confirmar lectura tarjeta de árbitro temporada evaluación progreso ascenso mantenimiento pedir",
     build: function() {
       return ds("Comentarios de un coach de árbitros",
@@ -2264,7 +2300,7 @@ var ES = {
   },
 
   "hub-fitness": {
-    title: "Prueba física", sub: "Inscripción, exención de responsabilidad, estándares, qué significa la insignia", eyebrow: "Cómo usar el Hub · 5 de 7",
+    title: "Prueba física", sub: "Inscripción, exención de responsabilidad, estándares, qué significa la insignia", eyebrow: "Cómo usar el Hub · 6 de 8",
     keywords: "tutorial prueba física inscribirme exención de responsabilidad sprint intervalos coda insignia pago premium estándar",
     build: function() {
       return ds("Antes de la prueba",
@@ -2279,7 +2315,7 @@ var ES = {
   },
 
   "hub-coach": {
-    title: "Para coaches de árbitros", sub: "Notas, el Evaluador, el debrief, cómo redactar la evaluación", eyebrow: "Cómo usar el Hub · 6 de 7",
+    title: "Para coaches de árbitros", sub: "Notas, el Evaluador, el debrief, cómo redactar la evaluación", eyebrow: "Cómo usar el Hub · 7 de 8",
     keywords: "tutorial coach coaching notas observación evaluador registro en vivo post-partido calificaciones debrief pdf evaluación formal redactar enviar revisión refeval",
     build: function() {
       return ds("Notas de observación",
@@ -2299,7 +2335,7 @@ var ES = {
   },
 
   "hub-ops": {
-    title: "Centro de mando, Estado del programa, Configuración", sub: "Para coordinadores de sede, operaciones arbitrales y administradores", eyebrow: "Cómo usar el Hub · 7 de 7",
+    title: "Centro de mando, Estado del programa, Configuración", sub: "Para coordinadores de sede, operaciones arbitrales y administradores", eyebrow: "Cómo usar el Hub · 8 de 8",
     keywords: "tutorial centro de mando coordinador de sede tablero cambios avisos clima estado del programa configuración eventos sedes sesiones assignr sincronización no registrados personas",
     build: function() {
       return ds("Centro de mando (coordinadores de sede y carpa de árbitros)",
