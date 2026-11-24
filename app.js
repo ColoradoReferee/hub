@@ -1,11 +1,11 @@
-// app.js · Colorado Referees Hub · 2026-11-23 (f: client errors report themselves, errors fold on the State view, needs 135; e: link extra sign-in emails on the person card, needs 134; d: sign-in bounce copy names the fix; c: board refetch floor, 15s, emergencies exempt; b: PWA shell: manifest, service worker, icons; a: dual-write retired for switches, bulletins and emergencies; needs 129, 130, 131)
+// app.js · Colorado Referees Hub · 2026-11-24 (a: note nudge, coach writing tip (needs 136 + note-clean v2), never-seen counts in scheduling, released-but-unread fold; 2026-11-23 f: client errors report themselves, errors fold on the State view, needs 135; e: link extra sign-in emails on the person card, needs 134; d: sign-in bounce copy names the fix; c: board refetch floor, 15s, emergencies exempt; b: PWA shell: manifest, service worker, icons; a: dual-write retired for switches, bulletins and emergencies; needs 129, 130, 131)
 // Reads from the database as the signed-in person. Coaching notes write
 // to the database directly; the 10 day submission countdown sits on
 // every evaluation not yet submitted.
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.23-f';
+  var VERSION = '2026.11.24-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   // Unexpected client errors report themselves (135); five per page
@@ -2601,6 +2601,15 @@
     var days = {}; (r[4].data || []).forEach(function (x) { days[x.date] = { am: x.am == null ? 1 : x.am, pm: x.pm == null ? 1 : x.pm }; }); S.coach.halves = days; S.coach.days = Object.keys(days).sort();
     S.coach.avail = {}; (r[5].data || []).forEach(function (x) { S.coach.avail[x.date + x.block] = 1; });
     S.coach.notes = (r[6].data || []).filter(function (x) { return keys.indexOf(key(x.observer)) >= 0; });
+    // Writing tips arrive once 136 lands; fetched tolerantly so the
+    // screen is whole either way.
+    try {
+      var tipIds = S.coach.notes.map(function (x) { return x.id; }).filter(Boolean);
+      if (tipIds.length) {
+        var tp = await sb.from('observations').select('id,coach_tip').in('id', tipIds).not('coach_tip', 'is', null);
+        (tp.data || []).forEach(function (x) { S.coach.notes.forEach(function (n2) { if (n2.id === x.id) n2.coach_tip = x.coach_tip; }); });
+      }
+    } catch (eT) {}
     var mine = S.coach.notes.map(function (x) { return x.id; }).filter(Boolean);
     var names = {};
     S.coach.games.forEach(function (g) { ['cr', 'ar1', 'ar2', 'fourth'].forEach(function (k) { if (g[k]) names[g[k]] = 1; }); });
@@ -2778,12 +2787,20 @@
         '<div class="hint" style="font-weight:700">' + esc(t('areaLabel')) + '</div><div class="chips">' + AREAS.map(function (a) { return '<button class="chip-btn' + (S.coach.area === a ? ' on' : '') + '" data-area="' + a + '">' + esc(t('areas.' + a)) + '</button>'; }).join('') + '</div>' +
         '<div class="hint">' + esc(t('signedAs')) + ' ' + esc(S.me.first_name + ' ' + S.me.last_name) + ', ' + esc(signed) + '</div></div>' : '');
     var mb = $('micBtn'); if (mb) mb.onclick = function () { Mic.toggle($('noteText'), mb, $('micHint')); };
-    $('coachGameBody').querySelectorAll('[data-crew]').forEach(function (b) { var pick = function () { S.coach.ref = b.getAttribute('data-crew'); S.coach.area = null; renderCoachGame(id); var ta = $('noteText'); if (ta) ta.focus(); }; b.onclick = pick; b.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } }; });
+    $('coachGameBody').querySelectorAll('[data-crew]').forEach(function (b) { var pick = function () { S.coach.ref = b.getAttribute('data-crew'); S.coach.area = null; S.coach.nudged = false; renderCoachGame(id); var ta = $('noteText'); if (ta) ta.focus(); }; b.onclick = pick; b.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } }; });
     $('coachGameBody').querySelectorAll('[data-area]').forEach(function (b) { b.onclick = function () { var a = b.getAttribute('data-area'); S.coach.area = S.coach.area === a ? null : a; $('coachGameBody').querySelectorAll('[data-area]').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-area') === S.coach.area); }); }; });
     var save = $('saveNote');
     if (save) save.onclick = async function () {
       var text = ($('noteText').value || '').trim();
       if (!text) { $('noteText').focus(); return; }
+      // The note-quality nudge: a very short note gets one gentle ask
+      // to add the moment and the next step; the second press saves.
+      if (text.length < 40 && !S.coach.nudged) {
+        S.coach.nudged = true;
+        say('noteMsg', t('noteNudge'), '');
+        save.textContent = t('saveAnyway');
+        return;
+      }
       save.disabled = true; save.textContent = t('savingNote');
       try {
         // Database-first (dual-write retirement, slice two): the note
@@ -2826,7 +2843,7 @@
       var readAt = (S.coach.reads || {})[String(n.id)];
       if (ok && readAt) label = t('readBy') + ' ' + dayLong(readAt.slice(0, 10));
       return '<div class="card" style="gap:8px"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><div><b>' + refLink(n.ref_name || '') + '</b> <span class="hint">' + esc(dayLong(n.date)) + (n.field ? ', ' + esc(n.field) : '') + (n.area ? ', ' + esc(t('areas.' + n.area)) : '') + '</span></div><span class="pill' + (ok ? ' ok' : '') + '">' + esc(label) + '</span></div>' +
-        '<div class="side three"><div class="col"><b>' + esc(t('rawLabel')) + '</b>' + esc(n.public_notes || '') + '</div><div class="col"><b>' + esc(t('aiLabel')) + '</b>' + (n.cleaned_note ? esc(n.cleaned_note) : '<span class="hint">' + esc(t('notCleaned')) + '</span>') + '</div><div class="col"><b>' + esc(t('releasedLabel')) + '</b>' + (ok ? esc(n.final_note || n.cleaned_note || '') : '<span class="hint">' + esc(t('notReleased')) + '</span>') + '</div></div></div>';
+        '<div class="side three"><div class="col"><b>' + esc(t('rawLabel')) + '</b>' + esc(n.public_notes || '') + '</div><div class="col"><b>' + esc(t('aiLabel')) + '</b>' + (n.cleaned_note ? esc(n.cleaned_note) : '<span class="hint">' + esc(t('notCleaned')) + '</span>') + '</div><div class="col"><b>' + esc(t('releasedLabel')) + '</b>' + (ok ? esc(n.final_note || n.cleaned_note || '') : '<span class="hint">' + esc(t('notReleased')) + '</span>') + '</div></div>' + (n.coach_tip ? '<div class="hint" style="margin-top:6px"><b>' + esc(t('tipLabel')) + '</b> ' + esc(n.coach_tip) + '</div>' : '') + '</div>';
     };
     var recent = S.coach.notes.filter(function (n) { return !n.date || n.date >= cut; }), older = S.coach.notes.filter(function (n) { return n.date && n.date < cut; });
     $('myNotesList').innerHTML = S.coach.notes.length ? recent.map(myCard).join('') + (older.length ? fold('mynotes-older', t('olderNotes'), older.length, older.map(myCard).join(''), !recent.length) : '') : '<div class="card"><div class="hint">' + esc(t('noMyNotes')) + '</div></div>';
@@ -3092,12 +3109,21 @@
     if (CC.tab === 'coverage') {
       var worked = CC.cov.length, seen = CC.cov.filter(function (r) { return r.notes > 0; }).length, never = worked - seen;
       var rel = 0, read = 0; CC.cov.forEach(function (r) { rel += r.released; read += r.read; });
+      var ub = {}; CC.obs.forEach(function (o) {
+        if ((o.cleanup_status === 'approved' || o.cleanup_status === 'edited') && !CC.reads[String(o.id)]) {
+          var k2 = key(o.ref_name); if (!k2) return;
+          var u = ub[k2] = ub[k2] || { name: o.ref_name, n: 0, oldest: o.date || '' };
+          u.n++; if (o.date && (!u.oldest || o.date < u.oldest)) u.oldest = o.date;
+        }
+      });
+      var unread = Object.keys(ub).map(function (k2) { return ub[k2]; }).sort(function (a, b) { return String(a.oldest).localeCompare(String(b.oldest)); });
       var never0 = CC.cov.filter(function (r) { return r.notes === 0; });
       var nextVenues = {}; never0.forEach(function (r) { if (r.next_venue) nextVenues[r.next_venue] = (nextVenues[r.next_venue] || 0) + 1; });
       var list = (CC.covVenue ? never0.filter(function (r) { return r.next_venue === CC.covVenue; }) : never0).slice(0, 60);
       var covPick = Object.keys(nextVenues).length > 1 ? '<div class="pad" style="padding-top:8px"><select id="covVenue" style="font:inherit;width:100%;padding:12px;border:2px solid var(--navy);border-radius:8px;background:var(--surface);color:var(--ink)"><option value="">' + esc(t('covAnyVenue')) + ' (' + never0.length + ')</option>' + Object.keys(nextVenues).sort().map(function (v) { return '<option value="' + esc(v) + '"' + (CC.covVenue === v ? ' selected' : '') + '>' + esc(v) + ' (' + nextVenues[v] + ')</option>'; }).join('') + '</select></div>' : '';
       body = '<div class="stats"><div class="stat"><b>' + worked + '</b><i>' + esc(t('stWorked')) + '</i></div><div class="stat green"><b>' + seen + '</b><i>' + esc(t('stSeen')) + '</i></div><div class="stat red"><b>' + never + '</b><i>' + esc(t('stNever')) + '</i></div></div>' +
         '<div class="pad" style="padding-top:12px"><div class="hint">' + esc(t('stRead')) + ': ' + read + ' / ' + rel + '</div><div class="bar"><i style="width:' + (rel ? Math.round(100 * read / rel) : 0) + '%"></i></div></div>' +
+        (unread.length ? '<div class="pad"><details class="fold"><summary>' + esc(t('unreadFold').replace('{n}', unread.length)) + '</summary>' + unread.slice(0, 40).map(function (u) { return '<div class="rowline"><div><a class="refname" href="#ref/' + encodeURIComponent(u.name) + '"><b>' + esc(u.name) + '</b></a><br><span class="hint">' + esc(t('unreadLine').replace('{n}', u.n).replace('{d}', u.oldest || '')) + '</span></div><div class="n">' + u.n + '</div></div>'; }).join('') + '</details></div>' : '') +
         '<div class="disp h2">' + esc(t('neverSeenTitle')) + '</div>' + covPick + '<div class="pad">' + list.map(function (r) {
           return '<div class="rowline"><div><b>' + refLink(r.name) + '</b><br><span class="hint">' + esc(t('lastGame')) + ' ' + esc(r.last_game ? dayLong(r.last_game) : '') + (r.next_game ? '. <b>' + esc(t('refNext')) + '</b> ' + esc(dayLong(r.next_game)) + ', ' + esc(r.next_venue || '') : '') + '</span></div><div class="n">' + r.games + '</div></div>';
         }).join('') + '</div>';
@@ -3137,10 +3163,11 @@
     } else if (CC.tab === 'schedule') {
       var todayAss = CC.assigns.filter(function (a) { return a.date === CC.sdate; });
       var avCount = Object.keys(CC.avail || {}).filter(function (k) { return CC.avail[k][CC.block]; }).length;
+      var nsMap = {}; CC.cov.forEach(function (r) { if (!r.notes && r.next_venue) nsMap[r.next_venue] = (nsMap[r.next_venue] || 0) + 1; });
       body = '<div class="datebar"><button class="iconbtn" data-sday="-1" aria-label="Previous day">&#8249;</button><div class="d">' + esc(dayLong(CC.sdate)) + '</div><button class="iconbtn" data-sday="1" aria-label="Next day">&#8250;</button></div>' +
         '<div class="pad lead" style="padding-top:8px">' + esc(t('scheduleLead')) + '</div>' +
         '<div class="pad" style="padding-top:10px"><div class="chips"><button class="chip-btn' + (CC.block === 'am' ? ' on' : '') + '" data-sblock="am">' + esc(t('blockAm')) + '</button><button class="chip-btn' + (CC.block === 'pm' ? ' on' : '') + '" data-sblock="pm">' + esc(t('blockPm')) + '</button></div><div class="hint" style="padding-top:6px">' + esc(t('availableCount').replace('{n}', avCount)) + '</div></div>' +
-        (CC.venues.length ? '<div class="pad" style="padding-top:10px"><label for="schedVenue" class="hint" style="font-weight:700;padding-bottom:6px;display:block">' + esc(t('venue')) + '</label><select id="schedVenue" style="font:inherit;width:100%;padding:12px;border:2px solid var(--navy);border-radius:8px;background:var(--surface);color:var(--ink)"><option value="">' + esc(t('schedVenuePick')) + '</option>' + CC.venues.map(function (v) { var n = todayAss.filter(function (a) { return a.venue === v && a.block === CC.block; }).length; return '<option value="' + esc(v) + '"' + (CC.pick === v ? ' selected' : '') + '>' + esc(v) + (n ? ' (' + n + ')' : '') + '</option>'; }).join('') + '</select></div>' : '<div class="card"><div class="hint">' + esc(t('noGamesDay')) + '</div></div>') +
+        (CC.venues.length ? '<div class="pad" style="padding-top:10px"><label for="schedVenue" class="hint" style="font-weight:700;padding-bottom:6px;display:block">' + esc(t('venue')) + '</label><select id="schedVenue" style="font:inherit;width:100%;padding:12px;border:2px solid var(--navy);border-radius:8px;background:var(--surface);color:var(--ink)"><option value="">' + esc(t('schedVenuePick')) + '</option>' + CC.venues.map(function (v) { var n = todayAss.filter(function (a) { return a.venue === v && a.block === CC.block; }).length; return '<option value="' + esc(v) + '"' + (CC.pick === v ? ' selected' : '') + '>' + esc(v) + (n ? ' (' + n + ')' : '') + (nsMap[v] ? ' · ' + t('nsNever').replace('{n}', nsMap[v]) : '') + '</option>'; }).join('') + '</select></div>' : '<div class="card"><div class="hint">' + esc(t('noGamesDay')) + '</div></div>') +
         (CC.pick ? '<div class="disp h2">' + esc(CC.pick) + ', ' + esc(t(CC.block === 'am' ? 'blockAm' : 'blockPm')) + '</div><div class="pad">' + todayAss.filter(function (a) { return a.venue === CC.pick && a.block === CC.block; }).map(function (a) {
             return '<div class="rowline"><div><b>' + esc(a.name) + '</b> <span class="hint">' + esc(a.title || '') + '</span><br><span class="hint">' + esc((a.fields || []).join(', ') || t('wholeVenue')) + '</span></div><button class="linkbtn" data-unassign="' + a.id + '">' + esc(t('remove')) + '</button></div>';
           }).join('') + '</div><div class="card" style="gap:8px"><div class="hint" style="font-weight:700">' + esc(t('pickFields')) + '</div><div class="chips">' + (CC.fieldsAt[CC.pick] || []).map(function (f) { return '<button class="chip-btn' + (CC.pickFields.indexOf(f) >= 0 ? ' on' : '') + '" data-sfield="' + esc(f) + '">' + esc(fieldShort(f)) + '</button>'; }).join('') + '</div>' +
