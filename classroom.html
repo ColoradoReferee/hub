@@ -90,6 +90,7 @@
 </div>
 <div id="busy" style="display:none" aria-live="polite"><span class="ball">&#9917;</span></div>
 <script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 (function () {
   var C = window.HUB, q = new URLSearchParams(location.search);
@@ -97,8 +98,8 @@
   var $ = function (id) { return document.getElementById(id); };
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   var T = {
-    en: { lead: 'Referee class', demo: 'DEMO', noClass: 'No class on this link. Scan the QR sign in your classroom.', notStarted: 'Class starts {d}.', dayOf: 'Day {d} of {n}', ended: 'The class has finished. The board stays up.', paceLead: 'Where the class should be today', paceBody: 'Module {m} of {t} by now; everything done by Day {c}.', reportBtn: 'Report my progress', whoAre: 'Who are you?', howMany: 'How many modules have you finished in the Learning Center?', nowAt: 'You are recorded at {n}.', certQ: 'I passed the assessment and my certification shows in my account', save: 'Save my progress', saved: 'Saved. {n} of {t} on the board.', savedCert: 'Saved, and marked certified. Welcome to the crew.', back: 'Back to the board', cancel: 'Cancel', onlyUp: 'Your number only goes up. Tell a mentor if something is wrong.', certified: 'Certified', reportedToday: 'reported today', err: 'Could not save. Try again, or tell a mentor.', lang: 'Español' },
-    es: { lead: 'Clase de arbitraje', demo: 'DEMO', noClass: 'No hay clase en este enlace. Escanea el letrero QR de tu salón.', notStarted: 'La clase comienza el {d}.', dayOf: 'Día {d} de {n}', ended: 'La clase terminó. El tablero sigue aquí.', paceLead: 'Dónde debería ir la clase hoy', paceBody: 'Módulo {m} de {t} a esta altura; todo terminado para el Día {c}.', reportBtn: 'Reportar mi avance', whoAre: '¿Quién eres?', howMany: '¿Cuántos módulos has terminado en el Learning Center?', nowAt: 'Estás registrado con {n}.', certQ: 'Aprobé la evaluación y mi certificación aparece en mi cuenta', save: 'Guardar mi avance', saved: 'Guardado. {n} de {t} en el tablero.', savedCert: 'Guardado, y marcado como certificado. Bienvenido al equipo.', back: 'Volver al tablero', cancel: 'Cancelar', onlyUp: 'Tu número solo puede subir. Avisa a un mentor si algo está mal.', certified: 'Certificado', reportedToday: 'reportó hoy', err: 'No se pudo guardar. Intenta de nuevo o avisa a un mentor.', lang: 'English' }
+    en: { lead: 'Referee class', demo: 'DEMO', noClass: 'No class on this link. Scan the QR sign in your classroom.', notStarted: 'Class starts {d}.', dayOf: 'Day {d} of {n}', ended: 'The class has finished. The board stays up.', paceLead: 'Where the class should be today', paceBody: 'Module {m} of {t} by now; everything done by Day {c}.', reportBtn: 'Report my progress', whoAre: 'Who are you?', howMany: 'How many modules have you finished in the Learning Center?', nowAt: 'You are recorded at {n}.', certQ: 'I passed the assessment and my certification shows in my account', save: 'Save my progress', saved: 'Saved. {n} of {t} on the board.', savedCert: 'Saved, and marked certified. Welcome to the crew.', back: 'Back to the board', cancel: 'Cancel', onlyUp: 'Your number only goes up. Tell a mentor if something is wrong.', certified: 'Certified', reportedToday: 'reported today', err: 'Could not save. Try again, or tell a mentor.', staffLead: 'Mentor view', staffBody: 'You are signed in with the classroom unlock. Corrections here move a number in either direction and can clear a wrong certification.', correctBtn: 'Correct a student', exportBtn: 'Download the grading list', setTo: 'Set the exact number of modules done', certSet: 'Certified', staffSaved: 'Corrected. The board shows it now.', staffErr: 'Could not save the correction.', lang: 'Español' },
+    es: { lead: 'Clase de arbitraje', demo: 'DEMO', noClass: 'No hay clase en este enlace. Escanea el letrero QR de tu salón.', notStarted: 'La clase comienza el {d}.', dayOf: 'Día {d} de {n}', ended: 'La clase terminó. El tablero sigue aquí.', paceLead: 'Dónde debería ir la clase hoy', paceBody: 'Módulo {m} de {t} a esta altura; todo terminado para el Día {c}.', reportBtn: 'Reportar mi avance', whoAre: '¿Quién eres?', howMany: '¿Cuántos módulos has terminado en el Learning Center?', nowAt: 'Estás registrado con {n}.', certQ: 'Aprobé la evaluación y mi certificación aparece en mi cuenta', save: 'Guardar mi avance', saved: 'Guardado. {n} de {t} en el tablero.', savedCert: 'Guardado, y marcado como certificado. Bienvenido al equipo.', back: 'Volver al tablero', cancel: 'Cancelar', onlyUp: 'Tu número solo puede subir. Avisa a un mentor si algo está mal.', certified: 'Certificado', reportedToday: 'reportó hoy', err: 'No se pudo guardar. Intenta de nuevo o avisa a un mentor.', staffLead: 'Vista del mentor', staffBody: 'Tu sesión tiene el acceso de salón. Las correcciones aquí mueven un número en cualquier dirección y pueden quitar una certificación equivocada.', correctBtn: 'Corregir a un estudiante', exportBtn: 'Descargar la lista de calificaciones', setTo: 'Fija el número exacto de módulos terminados', certSet: 'Certificado', staffSaved: 'Corregido. El tablero ya lo muestra.', staffErr: 'No se pudo guardar la corrección.', lang: 'English' }
   };
   var LANG = 'en';
   try { LANG = localStorage.getItem('hub-lang') || ((navigator.language || '').toLowerCase().indexOf('es') === 0 ? 'es' : 'en'); } catch (e) {}
@@ -111,7 +112,7 @@
   $('clsLead').textContent = t('lead');
   try { var th = localStorage.getItem('hub-theme'); if (th) document.documentElement.setAttribute('data-theme', th); } catch (e) {}
   if (C && C.marks) $('mark').src = C.marks.program || C.marks.ja;
-  document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v2026.11.08-a'; });
+  document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v2026.11.24-a'; });
 
   async function rpc(name, args) {
     var r = await fetch(C.supabaseUrl + '/rest/v1/rpc/' + name, {
@@ -191,6 +192,65 @@
       }
     };
   }
+  // ── Mentor view ─────────────────────────────────────────────────
+  // The Hub and this page share an origin, so a mentor signed in to the
+  // Hub on this phone is signed in here too. If that session carries the
+  // classroom unlock (classroom_rows answers), the correction tools and
+  // the grading export appear. Everyone else sees exactly the public
+  // board they always did.
+  var SB = null, STAFF = null;
+  async function staffProbe() {
+    try {
+      if (!window.supabase) return;
+      SB = SB || window.supabase.createClient(C.supabaseUrl, C.publishableKey);
+      var sess = await SB.auth.getSession();
+      if (!sess || !sess.data || !sess.data.session) { STAFF = null; return; }
+      var r = await SB.rpc('classroom_rows', { p_class: CLASS });
+      STAFF = (r.error || !r.data) ? null : r.data;
+    } catch (e) { STAFF = null; }
+  }
+  function staffBand() {
+    var el = $('staff');
+    if (!el) { el = document.createElement('div'); el.id = 'staff'; $('report').parentNode.appendChild(el); }
+    if (!STAFF || !STAFF.length) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div class="card" style="margin-top:14px"><div class="hint" style="font-weight:800">' + esc(t('staffLead')) + '</div>' +
+      '<div class="hint">' + esc(t('staffBody')) + '</div>' +
+      '<div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn outline" id="stCorrect">' + esc(t('correctBtn')) + '</button><button class="btn outline" id="stExport">' + esc(t('exportBtn')) + '</button></div>' +
+      '<div id="stBody" style="margin-top:10px"></div></div>';
+    $('stExport').onclick = function () {
+      var lines = ['First name,Last name,Modules done,Certified,Last report'];
+      STAFF.forEach(function (r) { lines.push([r.first_name, r.last_name, r.modules_done, r.certified ? 'yes' : 'no', r.last_report_at || ''].map(function (x) { return '"' + String(x).replace(/"/g, '""') + '"'; }).join(',')); });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+      a.download = (CLASS || 'class') + '-grading.csv'; a.click();
+    };
+    $('stCorrect').onclick = function () {
+      $('stBody').innerHTML = '<div class="pick">' + (B.students || []).map(function (s) { return '<button data-stsid="' + s.id + '">' + esc(s.name) + '</button>'; }).join('') + '</div><div id="stPick" style="margin-top:10px"></div>';
+      document.querySelectorAll('[data-stsid]').forEach(function (b) {
+        b.onclick = function () {
+          var st = (B.students || []).filter(function (x) { return String(x.id) === b.getAttribute('data-stsid'); })[0];
+          if (!st) return;
+          var btns = '';
+          for (var i = 0; i <= B.target_modules; i++) btns += '<button data-stn="' + i + '"' + (i === st.done ? ' class="on"' : '') + '>' + i + '</button>';
+          $('stPick').innerHTML = '<div style="font-weight:800">' + esc(st.name) + '</div><div class="hint">' + esc(t('setTo')) + '</div><div class="nums">' + btns + '</div>' +
+            '<label class="certrow"><input type="checkbox" id="stCert"' + (st.certified ? ' checked' : '') + '><span>' + esc(t('certSet')) + '</span></label>' +
+            '<div style="margin-top:12px"><button class="btn primary" id="stSave">' + esc(t('save')) + '</button></div><div id="stMsg" style="margin-top:8px"></div>';
+          var num = st.done;
+          document.querySelectorAll('[data-stn]').forEach(function (x) { x.onclick = function () { num = Number(x.getAttribute('data-stn')); document.querySelectorAll('[data-stn]').forEach(function (y) { y.classList.toggle('on', Number(y.getAttribute('data-stn')) === num); }); }; });
+          $('stSave').onclick = async function () {
+            $('stSave').disabled = true;
+            try {
+              var r = await SB.rpc('classroom_set', { p_student: st.id, p_done: num, p_certified: $('stCert').checked });
+              if (r.error) throw r.error;
+              await staffProbe(); await load(); board(); staffBand();
+              $('stBody').innerHTML = '<div class="msg ok">' + esc(t('staffSaved')) + '</div>';
+            } catch (e) { $('stMsg').innerHTML = '<div class="msg bad">' + esc(t('staffErr')) + '</div>'; $('stSave').disabled = false; }
+          };
+        };
+      });
+    };
+  }
+
   async function load() {
     try { B = await rpc('classroom_board', { p_class: CLASS }); } catch (e) { B = null; }
   }
@@ -199,6 +259,7 @@
     $('busy').style.display = 'flex';
     await load();
     board();
+    staffProbe().then(staffBand);
     $('busy').style.display = 'none';
     // The projected board ticks along; nothing runs while the tab is hidden.
     setInterval(function () { if (document.hidden || PICK) return; load().then(function () { if (!PICK) board(); }); }, 60000);
