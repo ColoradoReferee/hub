@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- library.html v2026.11.24-a · 2026-11-24 · Colorado Referees Library -->
+<!-- library.html v2026.11.24-b · 2026-11-24 · Colorado Referees Library -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -493,7 +493,7 @@ a{color:inherit;text-decoration:none;}
       <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program">
     </div>
     <div class="footer-text">
-      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.24-a<br>
+      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.24-b<br>
       <a href="https://coloradosoccer.org" class="footer-link">ColoradoSoccer.org</a> &middot;
       <span data-l="questions">Questions:</span> <a href="mailto:refeducation@coloradoreferees.com" class="footer-link">refeducation@coloradoreferees.com</a> &middot; 303.888.6863
     </div>
@@ -1959,6 +1959,43 @@ var MODULES = [
 
   /* ══════════ POLICY ══════════ */
   {
+    id:"policy-banned-terms", cat:"policy", icon:"&#128683;",
+    iconBg:"rgba(230,57,70,.12)",
+    title:"Banned Terms",
+    sub:"Discriminatory language: the crew procedure and the sanctions",
+    eyebrow:"Policy",
+    keywords:"banned terms discriminatory language slur abuse use policy procedure crew pocket guide red card send off report incident sanction suspension",
+    build: function() {
+      return dt("No one may say, write, chant or gesture a Banned Term at any CSA activity, in any language, whether in passing or aimed at a person. Every incident is recorded by the referee, reviewed by CSA, and sanctioned with a minimum suspension plus education. A term said in passing is a <strong>Use</strong>; a term aimed at someone is <strong>Abuse</strong>, and any Banned Term said by an adult to a minor is Abuse.") +
+      ds("The crew heard it",
+        stp(1, "<strong>Stop play.</strong> Immediately if it was aimed at a person; otherwise at the next stoppage. Confirm the speaker and the exact words with the crew.") +
+        stp(2, "<strong>Player, substitute or team official: send off.</strong> Offensive, insulting or abusive language under Law 12. Never a warning or caution in its place.") +
+        stp(3, "<strong>Spectator:</strong> the coach or site director has them leave the facility. No restart until they have gone.") +
+        stp(4, "Tell both coaches in one sentence what was sanctioned, take notes before the next restart (minute, exact words, speaker, target, who heard it), restart, and file the Incident Report.")) +
+      ds("Reported, but no crew member heard it",
+        stp(1, "Hear the report at the next stoppage: who said it, the exact words, who else heard it. Check with the ARs; if any crew member heard it, use the steps above.") +
+        stp(2, "<strong>No card on a report alone.</strong> Bring both coaches together, say a report has been made and the crew is now listening for it.") +
+        stp(3, "File the Incident Report marked reported, not witnessed. CSA investigates from there.")) +
+      ds("It continues, or it comes from a group",
+        bul("<strong>Stop</strong>, and have both coaches address their players and sideline.") +
+        bul("<strong>Suspend</strong> if it happens again: teams to their benches until the coaches confirm it has stopped.") +
+        bul("<strong>Abandon</strong> on a third time, or if a removed spectator will not leave, and report. CSA decides the result.")) +
+      ds("What to say",
+        bul("Send-off: <strong>Number [X], I heard what you said. That is discriminatory language and it is a send-off.</strong>") +
+        bul("Spectator: <strong>Coach, I need that person to leave the facility. We restart once they have gone.</strong>") +
+        dt("Say discriminatory language out loud; the exact word goes in the report, not across the field. The referee never decides Use or Abuse; the Disciplinary Committee does.")) +
+      ds("Minimum sanctions",
+        bul("<strong>Player:</strong> Use 3 matches, Abuse 6 matches. Any later offense at least doubles.") +
+        bul("<strong>Coach, official, parent or spectator:</strong> Use 30 days, Abuse 90 days up to 6 months.") +
+        bul("<strong>Match official who willfully does not report:</strong> up to 6 months off assignments.") +
+        dt("Every suspension also requires the education piece and does not end until it is complete.")) +
+      ds("The documents",
+        bul("<a href=\"docs/banned-terms-pocket-guide.pdf\" target=\"_blank\" rel=\"noopener\"><strong>Crew pocket guide (PDF)</strong></a>, one page, print it for the bag.") +
+        bul("<a href=\"docs/banned-terms-policy.pdf\" target=\"_blank\" rel=\"noopener\"><strong>Full policy and procedure (PDF)</strong></a>, 2026 r2."));
+    }
+  },
+
+  {
     id:"policy-rap", cat:"policy", icon:"&#128737;",
     iconBg:"rgba(230,57,70,.12)",
     title:"RAP: Referee Abuse Prevention",
@@ -3329,6 +3366,39 @@ var ES = {
         bul("<strong>¿No aprobaste?</strong> Vuelve a intentarlo en cualquier sesión antes de la fecha límite, sin espera mínima. Con la educación y la D&G completas aún calificas para el Nivel 2") +
         bul("El pago premium se puede perder si tu aprobación vence, tu certificación caduca o dejas de cumplir los demás requisitos")) +
       callout("39,174,96","&#128172;","¿Preguntas? Prueba física: el Director Estatal de Desarrollo Arbitral. Pago premium: Operaciones Arbitrales en <strong>refeducation@coloradoreferees.com</strong>. ¿Ayuda para entrenar? Pide un mentor o coach de árbitros a través de CREST.");
+    }
+  },
+
+  "policy-banned-terms": {
+    title: "T\u00e9rminos prohibidos", sub: "Lenguaje discriminatorio: el procedimiento del equipo arbitral y las sanciones", eyebrow: "Pol\u00edtica",
+    keywords: "t\u00e9rminos prohibidos lenguaje discriminatorio insulto abuso uso pol\u00edtica procedimiento gu\u00eda de bolsillo tarjeta roja expulsi\u00f3n reporte incidente sanci\u00f3n suspensi\u00f3n",
+    build: function() {
+      return dt("Nadie puede decir, escribir, corear ni gesticular un t\u00e9rmino prohibido en ninguna actividad de CSA, en ning\u00fan idioma, ya sea al aire o dirigido a una persona. Cada incidente lo registra el \u00e1rbitro, lo revisa CSA y se sanciona con una suspensi\u00f3n m\u00ednima m\u00e1s educaci\u00f3n. Un t\u00e9rmino dicho al aire es un <strong>Uso</strong>; dirigido a alguien es <strong>Abuso</strong>, y cualquier t\u00e9rmino prohibido dicho por un adulto a un menor es Abuso.") +
+      ds("El equipo arbitral lo escuch\u00f3",
+        stp(1, "<strong>Detén el juego.</strong> De inmediato si fue dirigido a una persona; si no, en la siguiente detenci\u00f3n. Confirma con el equipo qui\u00e9n lo dijo y las palabras exactas.") +
+        stp(2, "<strong>Jugador, suplente u oficial de equipo: expulsi\u00f3n.</strong> Lenguaje ofensivo, insultante o abusivo bajo la Regla 12. Nunca una advertencia o amonestaci\u00f3n en su lugar.") +
+        stp(3, "<strong>Espectador:</strong> el entrenador o el director de sede lo hace salir de la instalaci\u00f3n. No se reanuda hasta que se haya ido.") +
+        stp(4, "Dile a ambos entrenadores en una oraci\u00f3n qu\u00e9 se sancion\u00f3, toma notas antes de la siguiente reanudaci\u00f3n (minuto, palabras exactas, qui\u00e9n lo dijo, a qui\u00e9n, qui\u00e9n lo escuch\u00f3), reanuda y presenta el reporte de incidente.")) +
+      ds("Lo reportaron, pero el equipo no lo escuch\u00f3",
+        stp(1, "Escucha el reporte en la siguiente detenci\u00f3n: qui\u00e9n lo dijo, las palabras exactas, qui\u00e9n m\u00e1s lo escuch\u00f3. Consulta con los asistentes; si alguno lo escuch\u00f3, usa los pasos de arriba.") +
+        stp(2, "<strong>Sin tarjeta por un reporte solo.</strong> Re\u00fane a ambos entrenadores, diles que hay un reporte y que el equipo arbitral ahora est\u00e1 atento.") +
+        stp(3, "Presenta el reporte de incidente marcado como reportado, no presenciado. CSA investiga desde ah\u00ed.")) +
+      ds("Contin\u00faa, o viene de un grupo",
+        bul("<strong>Detén</strong> el juego y que ambos entrenadores hablen con sus jugadores y su banda.") +
+        bul("<strong>Suspende</strong> si vuelve a pasar: equipos a sus bancas hasta que los entrenadores confirmen que par\u00f3.") +
+        bul("<strong>Abandona</strong> a la tercera vez, o si un espectador retirado no se va, y rep\u00f3rtalo. CSA decide el resultado.")) +
+      ds("Qu\u00e9 decir",
+        bul("Expulsi\u00f3n: <strong>N\u00famero [X], escuch\u00e9 lo que dijiste. Eso es lenguaje discriminatorio y es expulsi\u00f3n.</strong>") +
+        bul("Espectador: <strong>Entrenador, necesito que esa persona salga de la instalaci\u00f3n. Reanudamos cuando se haya ido.</strong>") +
+        dt("Di lenguaje discriminatorio en voz alta; la palabra exacta va en el reporte, no a trav\u00e9s de la cancha. El \u00e1rbitro nunca decide si fue Uso o Abuso; eso lo decide el Comit\u00e9 Disciplinario.")) +
+      ds("Sanciones m\u00ednimas",
+        bul("<strong>Jugador:</strong> Uso 3 partidos, Abuso 6 partidos. Una reincidencia al menos duplica.") +
+        bul("<strong>Entrenador, oficial, padre o espectador:</strong> Uso 30 d\u00edas, Abuso 90 d\u00edas hasta 6 meses.") +
+        bul("<strong>Oficial de partido que deliberadamente no reporta:</strong> hasta 6 meses sin designaciones.") +
+        dt("Toda suspensi\u00f3n requiere adem\u00e1s la parte educativa y no termina hasta completarla.")) +
+      ds("Los documentos",
+        bul("<a href=\"docs/banned-terms-pocket-guide.pdf\" target=\"_blank\" rel=\"noopener\"><strong>Gu\u00eda de bolsillo del equipo arbitral (PDF)</strong></a>, una p\u00e1gina, impr\u00edmela para la mochila. En ingl\u00e9s.") +
+        bul("<a href=\"docs/banned-terms-policy.pdf\" target=\"_blank\" rel=\"noopener\"><strong>Pol\u00edtica y procedimiento completos (PDF)</strong></a>, 2026 r2. En ingl\u00e9s."));
     }
   },
 

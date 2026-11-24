@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.24-d';
+  var VERSION = '2026.11.24-e';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   // Unexpected client errors report themselves (135); five per page
@@ -1275,6 +1275,15 @@
     } catch (e) {}
   }
   function money(c) { return '$' + (c % 100 === 0 ? String(c / 100) : (c / 100).toFixed(2)); }
+  function evalFeeKey(p) {
+    if (p === 'upgrade_regional') return 'regional';
+    if (p === 'upgrade_national') return 'national';
+    if (p === 'maintenance') {
+      var nat = (S.me.titles || []).some(function (x) { return /^(national|fifa) referee$/i.test(String(x.label || '').trim()); });
+      return nat ? 'national' : 'regional';
+    }
+    return p;
+  }
   async function payStart(body, msgId) {
     try {
       var r = await sb.functions.invoke('stripe-checkout', { body: body });
@@ -1448,7 +1457,10 @@
   // ── Setup side: list, create, roster and results.
   // Fees: evaluation purposes org-wide; session fees sit on each session.
   function feesSetupHtml() {
-    var evp = ['maintenance', 'upgrade_regional', 'upgrade_national'];
+    // Priced by the LEVEL of the evaluation, not the purpose: a Regional
+    // evaluation costs the same for upgrade and maintenance (the referee
+    // is charged exactly what the coach is paid).
+    var evp = ['developmental', 'regional', 'national'];
     var val = function (p) { var r = (SU.fees || []).filter(function (x) { return x.kind === 'evaluation' && x.purpose === p; })[0]; return r && r.active && r.amount_cents > 0 ? String(r.amount_cents % 100 === 0 ? r.amount_cents / 100 : (r.amount_cents / 100).toFixed(2)) : ''; };
     var inp = function (id, v) { return '<input id="' + id + '" type="number" min="0" step="1" inputmode="decimal" value="' + esc(v) + '" placeholder="0" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">'; };
     var rows = evp.map(function (p) { return '<div class="grid2" style="align-items:center"><label class="hint" for="fee_' + p + '">' + esc(t('evalPurpose.' + p)) + '</label>' + inp('fee_' + p, val(p)) + '</div>'; }).join('');
@@ -1462,7 +1474,7 @@
     var b = $('feesSave'); if (!b) return;
     b.onclick = async function () {
       b.disabled = true;
-      var rows = ['maintenance', 'upgrade_regional', 'upgrade_national'].map(function (p) { var v = parseFloat($('fee_' + p).value || '0'), c = isNaN(v) ? 0 : Math.round(v * 100); return { org_id: S.me.org_id, kind: 'evaluation', purpose: p, amount_cents: c, active: c > 0, updated_at: new Date().toISOString() }; });
+      var rows = ['developmental', 'regional', 'national'].map(function (p) { var v = parseFloat($('fee_' + p).value || '0'), c = isNaN(v) ? 0 : Math.round(v * 100); return { org_id: S.me.org_id, kind: 'evaluation', purpose: p, amount_cents: c, active: c > 0, updated_at: new Date().toISOString() }; });
       var r = await sb.from('fees').upsert(rows, { onConflict: 'org_id,kind,purpose' });
       b.disabled = false;
       if (r.error) { say('feesMsg', r.error.message, 'bad'); return; }
@@ -1482,7 +1494,7 @@
     }
     var f = SES.form;
     var inp = function (id, v, type, extra) { return '<input id="' + id + '" type="' + (type || 'text') + '" value="' + esc(v == null ? '' : v) + '" ' + (extra || '') + ' style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">'; };
-    var form = !f ? '<div class="pad" style="padding-top:12px"><button class="btn outline" id="sesNew" style="width:100%">' + esc(t('sesNew')) + '</button></div>' :
+    var form = !f ? '<div class="pad" style="padding-top:12px"><button class="btn primary" id="sesNew" style="width:100%">' + esc(t('sesNew')) + '</button></div>' :
       '<div class="card" style="gap:8px"><b>' + esc(t('sesNew')) + '</b><div class="chips">' + ['fitness', 'class', 'clinic'].map(function (k) { return '<button class="chip-btn small' + (f.kind === k ? ' on' : '') + '" data-ses-kind="' + k + '">' + esc(t('sesKind.' + k)) + '</button>'; }).join('') + '</div>' +
       (f.kind === 'fitness' ? '<label class="hint">' + esc(t('fitStandard')) + '</label><div class="chips">' + Object.keys(FIT).map(function (k) { return '<button class="chip-btn small' + (f.standard === k ? ' on' : '') + '" data-ses-std="' + k + '">' + esc(t('fitStd.' + k)) + '</button>'; }).join('') + '</div><div class="hint">' + esc(stdLine({ standard: f.standard })) + '</div>' : '') +
       '<label class="hint" for="sesTitle">' + esc(t('sesFieldTitle')) + '</label>' + inp('sesTitle', f.title) +
@@ -4130,7 +4142,12 @@
   // grouped by day with a total per day, then a total per person.
   function renderEodPay() {
     var P = EOD.pay, from = P.from, to = P.to, v = P.venue || '';
-    var list = EOD.all.filter(function (r) { return r.date && r.date >= from && r.date <= to && (!v || r.venue === v); });
+    // An event is its set of venues, so one report covers a tournament
+    // running at several grounds; a person filter pulls one human's
+    // hours across everything.
+    var evSel = P.event ? (S.events || []).filter(function (x) { return String(x.id) === String(P.event); })[0] : null;
+    var evVenues = evSel ? (evSel.venues || []) : null;
+    var list = EOD.all.filter(function (r) { return r.date && r.date >= from && r.date <= to && (!v || r.venue === v) && (!evVenues || evVenues.indexOf(r.venue) >= 0) && (!P.person || key(r.staff_name) === P.person); });
     list.sort(function (a, b) { return (a.date || '').localeCompare(b.date || '') || (a.venue || '').localeCompare(b.venue || '') || (a.staff_name || '').localeCompare(b.staff_name || ''); });
     var venues = {}; EOD.all.forEach(function (r) { if (r.venue) venues[r.venue] = 1; });
     var vlist = Object.keys(venues).sort();
@@ -4154,9 +4171,11 @@
     }).join('');
     $('eodBody').innerHTML = '<div class="card no-print" style="gap:10px"><div class="hint" style="font-weight:700">' + esc(t('eodPayroll')) + '</div>' +
       '<div class="grid2"><div><label class="hint" style="font-weight:700" for="payFrom">' + esc(t('eodFrom')) + '</label><input id="payFrom" type="date" value="' + esc(from) + '" style="' + inp + ';width:100%"></div><div><label class="hint" style="font-weight:700" for="payTo">' + esc(t('eodTo')) + '</label><input id="payTo" type="date" value="' + esc(to) + '" style="' + inp + ';width:100%"></div></div>' +
+      '<label class="hint" style="font-weight:700" for="payEvent">' + esc(t('eodEvent')) + '</label><select id="payEvent" style="' + inp + ';width:100%"><option value="">' + esc(t('allEventsPick')) + '</option>' + (S.events || []).map(function (x) { return '<option value="' + esc(x.id) + '"' + (String(x.id) === String(P.event || '') ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('') + '</select>' +
       '<label class="hint" style="font-weight:700" for="payVenue">' + esc(t('eodVenue')) + '</label><select id="payVenue" style="' + inp + ';width:100%"><option value="">' + esc(t('allVenuesPick')) + '</option>' + vlist.map(function (x) { return '<option value="' + esc(x) + '"' + (x === v ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>' +
+      '<label class="hint" style="font-weight:700" for="payPerson">' + esc(t('eodPerson')) + '</label><select id="payPerson" style="' + inp + ';width:100%"><option value="">' + esc(t('allPeoplePick')) + '</option>' + (function () { var ns = {}; EOD.all.forEach(function (r) { if (r.staff_name) ns[key(r.staff_name)] = r.staff_name; }); return Object.keys(ns).sort(function (a, b) { return ns[a].localeCompare(ns[b]); }).map(function (k) { return '<option value="' + esc(k) + '"' + (k === (P.person || '') ? ' selected' : '') + '>' + esc(ns[k]) + '</option>'; }).join(''); })() + '</select>' +
       '<div style="display:flex;gap:8px"><button class="btn outline" id="eodPayBack">' + esc(t('back')) + '</button><button class="btn outline" id="eodPayGo">' + esc(t('go')) + '</button><button class="btn primary" id="eodPayPrint" style="flex:1">' + esc(t('print')) + '</button></div></div>' +
-      '<div class="pad eod-pay"><div class="disp h2 print-keep" style="padding:0">' + esc(t('eodPayroll')) + '</div><div class="hint" style="margin-bottom:6px">' + esc(range) + (v ? ', ' + esc(v) : ', ' + esc(t('allVenuesPick'))) + '. ' + list.length + ' ' + esc(t(list.length === 1 ? 'eodReportOne' : 'eodReportMany')) + ', ' + total.toFixed(1) + ' ' + esc(t('eodHours')) + '.</div>' +
+      '<div class="pad eod-pay"><div class="disp h2 print-keep" style="padding:0">' + esc(t('eodPayroll')) + '</div><div class="hint" style="margin-bottom:6px">' + esc(range) + (evSel ? ', ' + esc(evSel.name) : '') + (v ? ', ' + esc(v) : (evSel ? '' : ', ' + esc(t('allVenuesPick')))) + (P.person ? ', ' + esc((EOD.all.filter(function (r) { return key(r.staff_name) === P.person; })[0] || {}).staff_name || '') : '') + '. ' + list.length + ' ' + esc(t(list.length === 1 ? 'eodReportOne' : 'eodReportMany')) + ', ' + total.toFixed(1) + ' ' + esc(t('eodHours')) + '.</div>' +
       (list.length ? '<table style="width:100%;border-collapse:collapse;font-size:14px"><thead><tr>' + th(t('eodName')) + th(t('eodRole')) + th(t('eodVenue')) + th(t('eodIn')) + th(t('eodOut')) + th(t('eodHours'), 1) + '</tr></thead><tbody>' + body +
         '<tr><td colspan="5" style="' + cell + ';border-bottom:0;font-weight:800;padding-top:14px">' + esc(t('eodTotal')) + '</td><td style="' + cell + ';border-bottom:0;text-align:right;font-weight:800;padding-top:14px">' + total.toFixed(1) + '</td></tr></tbody></table>' +
         '<div class="disp h2 print-keep" style="padding:18px 0 6px">' + esc(t('eodByPerson')) + '</div><table style="width:100%;border-collapse:collapse;font-size:14px"><thead><tr>' + th(t('eodName')) + th(t('eodRole')) + th(t('eodDays'), 1) + th(t('eodHours'), 1) + '</tr></thead><tbody>' +
@@ -4164,8 +4183,8 @@
       '<div class="hint" style="margin-top:14px">' + esc(t('eodPayNote')) + '</div></div>';
     $('eodPayBack').onclick = function () { EOD.pay = null; renderEod(); };
     $('eodPayPrint').onclick = function () { window.print(); };
-    var go = function () { var f = $('payFrom').value, tt = $('payTo').value; if (!f || !tt) return; if (tt < f) { var x = f; f = tt; tt = x; } EOD.pay = { from: f, to: tt, venue: $('payVenue').value }; renderEodPay(); };
-    $('eodPayGo').onclick = go; $('payVenue').onchange = go;
+    var go = function () { var f = $('payFrom').value, tt = $('payTo').value; if (!f || !tt) return; if (tt < f) { var x = f; f = tt; tt = x; } EOD.pay = { from: f, to: tt, venue: $('payVenue').value, event: $('payEvent').value, person: $('payPerson').value }; renderEodPay(); };
+    $('eodPayGo').onclick = go; $('payVenue').onchange = go; $('payEvent').onchange = go; $('payPerson').onchange = go;
     $('payFrom').onchange = go; $('payTo').onchange = go;
   }
   function renderEod() {
@@ -4977,7 +4996,7 @@
         '<div class="msg" id="evalReqMsg" hidden></div></div>';
     }
     if (!ER.open) return '<div class="pad" style="padding-top:10px"><button class="chip-btn small" id="evalReqOpen">' + esc(t('evalReqShort')) + '</button></div>';
-    return '<div class="pad" style="padding-top:10px"><div class="hint" style="padding-bottom:6px">' + esc(t('evalReqWhy')) + '</div><div class="chips">' + ['maintenance', 'upgrade_regional', 'upgrade_national'].map(function (p) { return '<button class="chip-btn small" data-purpose="' + p + '">' + esc(t('evalPurpose.' + p) + (FEES.eval[p] ? ' · ' + money(FEES.eval[p]) : '')) + '</button>'; }).join('') + '<button class="chip-btn small" id="evalReqCancel">' + esc(t('neverMind')) + '</button></div><div class="msg" id="evalReqMsg" hidden></div></div>';
+    return '<div class="pad" style="padding-top:10px"><div class="hint" style="padding-bottom:6px">' + esc(t('evalReqWhy')) + '</div><div class="chips">' + ['maintenance', 'upgrade_regional', 'upgrade_national'].map(function (p) { return '<button class="chip-btn small" data-purpose="' + p + '">' + esc(t('evalPurpose.' + p) + (FEES.eval[evalFeeKey(p)] ? ' · ' + money(FEES.eval[evalFeeKey(p)]) : '')) + '</button>'; }).join('') + '<button class="chip-btn small" id="evalReqCancel">' + esc(t('neverMind')) + '</button></div><div class="msg" id="evalReqMsg" hidden></div></div>';
   }
   function wireEvalRequest(g) {
     var pn = $('evalPayNow'); if (pn) pn.onclick = async function () {
@@ -4997,7 +5016,7 @@
       // (the Stripe go-live carries that contract).
       var r = await sb.from('eval_requests').insert({ org_id: S.me.org_id, ref_person_id: S.me.person_id, ref_name: myNameOn(g), purpose: pp, game_id: g.game_id, game_date: g.date, venue: g.venue, status: 'requested' }).select('id').single();
       if (r.error) { b.disabled = false; b.textContent = t('evalPurpose.' + pp); say('evalReqMsg', r.error.message, 'bad'); return; }
-      if (FEES.eval[pp]) {
+      if (FEES.eval[evalFeeKey(pp)]) {
         var paid = await payStart({ kind: 'evaluation', purpose: pp, game_id: g.game_id, ref_name: myNameOn(g), request_id: r.data && r.data.id }, 'evalReqMsg');
         if (paid) return; // redirecting to checkout; the request already exists
         say('evalReqMsg', t('evalReqPendingSent'), 'good');
