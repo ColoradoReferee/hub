@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.24-h';
+  var VERSION = '2026.11.24-i';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   // Unexpected client errors report themselves (135); five per page
@@ -2511,6 +2511,7 @@
     $('eodEntry').innerHTML = canEod() ? '<a class="rowbtn" href="#eod" style="margin-top:8px"><span><span class="t">' + esc(t('eodEntry')) + '</span>' + pillBadge('pay') + '<br><span class="s">' + esc(t('eodEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
     $('setupEntry').innerHTML = iCan('setup') ? '<a class="rowbtn" href="#setup" style="margin-top:8px"><span><span class="t">' + esc(t('setupEntry')) + '</span><br><span class="s">' + esc(t('setupEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
     $('peopleEntry').innerHTML = iCan('people') ? '<a class="rowbtn" href="#people" style="margin-top:8px"><span><span class="t">' + esc(t('peopleEntry')) + '</span>' + pillBadge('names') + '<br><span class="s">' + esc(t('peopleEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
+    wireFeedback();
     loadPills();
     var bl = $('badgeLink'); if (bl) bl.onclick = function (e) { e.preventDefault(); var bx = $('badgeBox'); bx.hidden = !bx.hidden; };
     var r = rulesFor(g || S.games[0]);
@@ -3570,7 +3571,7 @@
   function renderOps() {
     // Thumbnails need the venue layouts; fetch once, then repaint.
     if (!MAPS.all) ensureMaps().then(function () { if (location.hash.indexOf('#ops') === 0) renderOps(); });
-    var tabs = iCan('people') ? ['board', 'staff', 'protection', 'retain', 'premium', 'bulletins'] : ['board', 'staff', 'protection', 'retain', 'bulletins'];
+    var tabs = iCan('people') ? ['board', 'staff', 'protection', 'retain', 'premium', 'bulletins', 'matrix', 'feedback'] : ['board', 'staff', 'protection', 'retain', 'bulletins', 'matrix', 'feedback'];
     var openAlerts = OPS.alerts.filter(function (a) { return a.status === 'open'; }).length, msgCount = (OPS.msgs || []).length;
     var head = '<div class="tabs">' + tabs.map(function (k) { return '<button class="chip-btn' + (OPS.tab === k ? ' on' : '') + '" data-otab="' + k + '">' + esc(t('tab' + k.charAt(0).toUpperCase() + k.slice(1))) + (k === 'protection' && openAlerts ? ' ' + openAlerts : '') + (k === 'staff' && msgCount ? ' ' + msgCount : '') + '</button>'; }).join('') + '</div>';
     // Her A4: filter the whole screen to one assigning group when the day
@@ -3669,6 +3670,23 @@
       var quiet = CC.cov.filter(function (r) { return r.last_game && r.last_game < cut && !r.next_game; }).sort(function (a, b) { return b.games - a.games; }).slice(0, 40);
       var rows = function (list) { return list.length ? list.map(function (r) { return '<div class="rowline"><div><b>' + refLink(r.name) + '</b><br><span class="hint">' + esc(t('lastGame')) + ' ' + esc(r.last_game ? dayLong(r.last_game) : '') + (r.next_game ? '. <b>' + esc(t('refNext')) + '</b> ' + esc(dayLong(r.next_game)) + ', ' + esc(r.next_venue || '') : '') + '</span></div><div class="n">' + r.games + '</div></div>'; }).join('') : '<div class="hint">' + esc(t('noneHere')) + '</div>'; };
       body = '<div class="pad lead" style="padding-top:12px">' + esc(t('retainLead')) + '</div><div class="disp h2">' + esc(t('retainNever')) + '</div><div class="pad">' + rows(never) + '</div><div class="disp h2">' + esc(t('retainQuiet')) + '</div><div class="pad">' + rows(quiet) + '</div>';
+    } else if (OPS.tab === 'matrix') {
+      // Her accountability table: officials carried per league and age
+      // group. Required counts join in once the crew worksheet is back.
+      var mx = OPS.mx;
+      var mr = OPS.mxRange || 'season';
+      body = '<div class="pad lead" style="padding-top:12px">' + esc(t('mxLead')) + '</div>' +
+        '<div class="chips pad" style="padding-top:8px">' + [['season', 'mxSeason'], ['30', 'mx30']].map(function (p2) { return '<button class="chip-btn small' + (mr === p2[0] ? ' on' : '') + '" data-mxrange="' + p2[0] + '">' + esc(t(p2[1])) + '</button>'; }).join('') + '</div>' +
+        (mx == null ? '<div class="pad hint">' + esc(t('loadingReview')) + '</div>' :
+         !mx.length ? '<div class="card"><div class="hint">' + esc(t('mxNone')) + '</div></div>' :
+         '<div class="pad" style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th style="padding:6px;text-align:left">' + esc(t('mxLeague')) + '</th><th style="padding:6px;text-align:right">' + esc(t('mxGames')) + '</th><th style="padding:6px;text-align:right">3</th><th style="padding:6px;text-align:right">2</th><th style="padding:6px;text-align:right">1</th><th style="padding:6px;text-align:right;color:var(--red)">0</th><th style="padding:6px;text-align:right">' + esc(t('mxReq')) + '</th><th style="padding:6px;text-align:right;color:var(--red)">' + esc(t('mxShort')) + '</th></tr></thead><tbody>' +
+         mx.map(function (r2) { return '<tr style="border-top:1px solid var(--line)"><td style="padding:6px"><b>' + esc(r2.competition || '') + '</b>' + (r2.age_group ? ' <span class="hint">' + esc(r2.age_group) + '</span>' : '') + '</td><td style="padding:6px;text-align:right">' + r2.games + '</td><td style="padding:6px;text-align:right">' + r2.with3 + '</td><td style="padding:6px;text-align:right">' + r2.with2 + '</td><td style="padding:6px;text-align:right;color:var(--gold)">' + r2.with1 + '</td><td style="padding:6px;text-align:right;font-weight:800;color:' + (r2.with0 > 0 ? 'var(--red)' : 'var(--muted)') + '">' + r2.with0 + '</td><td style="padding:6px;text-align:right"><input type="number" min="0" max="4" inputmode="numeric" value="' + (r2.required == null ? '' : r2.required) + '" data-mxreq data-comp="' + esc(r2.competition || '') + '" data-age="' + esc(r2.age_group || '') + '" style="width:46px;font:inherit;padding:6px;border:1px solid var(--muted);border-radius:6px;background:var(--surface);color:var(--ink);text-align:right"></td><td style="padding:6px;text-align:right;font-weight:800;color:' + (r2.short > 0 ? 'var(--red)' : 'var(--muted)') + '">' + (r2.required == null ? '' : r2.short) + '</td></tr>'; }).join('') + '</tbody></table></div><div class="pad hint">' + esc(t('mxReqHint')) + '</div><div class="msg" id="mxMsg" hidden style="margin:0 20px"></div>');
+    } else if (OPS.tab === 'feedback') {
+      var fb = OPS.fb;
+      body = '<div class="pad lead" style="padding-top:12px">' + esc(t('fbReadLead')) + '</div>' +
+        (fb == null ? '<div class="pad hint">' + esc(t('loadingReview')) + '</div>' :
+         !fb.length ? '<div class="card"><div class="hint">' + esc(t('fbNone')) + '</div></div>' :
+         fb.map(function (x) { return '<div class="card" style="gap:6px' + (x.done_at ? ';opacity:.55' : '') + '"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + esc(x.name || '') + '</b><span class="hint">' + esc(dayShort(String(x.created_at).slice(0, 10))) + ', ' + esc(x.screen || '') + '</span></div><div>' + esc(x.body || '') + '</div>' + (x.done_at ? '<div class="hint">' + esc(t('fbDoneBy').replace('{by}', x.done_by || '')) + '</div>' : '<div class="actions" style="padding:0"><button class="btn outline small" data-fbdone="' + x.id + '">' + esc(t('fbDone')) + '</button></div>') + '</div>'; }).join(''));
     } else if (OPS.tab === 'premium') {
       var pq = OPS.prem;
       var chk = function (c) { if (!c) return ''; return esc(t('premCenters').replace('{n}', c.centers || 0)) + (c.drl ? ' · DRL' : '') + (c.advanced ? ' · ' + esc(t('premAdvanced')) : '') + (c.fitness_date ? ' · ' + esc(t('premFitPass')) + ' ' + esc(dayShort(c.fitness_date)) : '') + ' · ' + esc(t('premEvals').replace('{n}', c.evals || 0)); };
@@ -3697,7 +3715,24 @@
           return '<div class="card" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + esc(b.title || '') + '</b><span class="pill' + (state === 'live' ? ' ok' : '') + '">' + esc(t(state === 'live' ? 'bulletinLive' : state === 'future' ? 'bulletinFuture' : 'bulletinOver')) + '</span></div><div style="font-size:15px">' + esc(b.body || '') + '</div><div class="hint">' + esc(b.start_date || '') + (b.end_date && b.end_date !== b.start_date ? ' to ' + esc(b.end_date) : '') + (b.venue ? ', ' + esc(b.venue) : '') + (b.posted_by ? ', ' + esc(b.posted_by) : '') + '</div>' + (b.active && state !== 'over' ? '<div class="chips no-print"><button class="chip-btn small' + (b.on_signin ? ' on' : '') + '" data-bul-signin="' + b.id + '|' + (b.on_signin ? 0 : 1) + '">' + esc(t('bulSignin')) + '</button><button class="btn outline small" data-clear="' + b.id + '">' + esc(t('bulClear')) + '</button></div>' : '') + '</div>';
     }
     $('opsBody').innerHTML = head + body;
-    $('opsBody').querySelectorAll('[data-otab]').forEach(function (b) { b.onclick = function () { OPS.tab = b.getAttribute('data-otab'); if (OPS.tab === 'retain' && !CC.cov.length) { loadCenter().then(renderOps); return; } if (OPS.tab === 'premium' && OPS.prem == null) { renderOps(); sb.rpc('premium_queue').then(function (r) { OPS.prem = r.data || []; renderOps(); }); return; } renderOps(); }; });
+    $('opsBody').querySelectorAll('[data-otab]').forEach(function (b) { b.onclick = function () { OPS.tab = b.getAttribute('data-otab'); if (OPS.tab === 'retain' && !CC.cov.length) { loadCenter().then(renderOps); return; } if (OPS.tab === 'premium' && OPS.prem == null) { renderOps(); sb.rpc('premium_queue').then(function (r) { OPS.prem = r.data || []; renderOps(); }); return; } if (OPS.tab === 'matrix' && OPS.mx == null) { renderOps(); loadMatrix(); return; } if (OPS.tab === 'feedback' && OPS.fb == null) { renderOps(); sb.from('feedback').select('id,name,screen,body,created_at,done_at,done_by').order('created_at', { ascending: false }).limit(60).then(function (r) { OPS.fb = r.data || []; renderOps(); }); return; } renderOps(); }; });
+    function loadMatrix() {
+      var mr = OPS.mxRange || 'season';
+      var from = mr === '30' ? new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10) : todayStr().slice(0, 4) + '-01-01';
+      sb.rpc('scheduling_matrix', { p_from: from, p_to: todayStr() }).then(function (r) { OPS.mx = r.data || []; renderOps(); }, function () { OPS.mx = []; renderOps(); });
+    }
+    $('opsBody').querySelectorAll('[data-mxrange]').forEach(function (b) { b.onclick = function () { OPS.mxRange = b.getAttribute('data-mxrange'); OPS.mx = null; renderOps(); loadMatrix(); }; });
+    $('opsBody').querySelectorAll('[data-mxreq]').forEach(function (inp) { inp.onchange = async function () {
+      var v = inp.value === '' ? null : parseInt(inp.value, 10);
+      var comp = inp.getAttribute('data-comp'), age = inp.getAttribute('data-age');
+      var by = S.me.first_name + ' ' + S.me.last_name;
+      var r = v == null
+        ? await sb.from('crew_requirements').delete().eq('org_id', S.me.org_id).eq('competition', comp).eq('age_group', age)
+        : await sb.from('crew_requirements').upsert({ org_id: S.me.org_id, competition: comp, age_group: age, required: v, set_by: by, updated_at: new Date().toISOString() }, { onConflict: 'org_id,competition,age_group' });
+      if (r.error) { say('mxMsg', r.error.message, 'bad'); return; }
+      OPS.mx = null; loadMatrix();
+    }; });
+    $('opsBody').querySelectorAll('[data-fbdone]').forEach(function (b) { b.onclick = async function () { b.disabled = true; var r = await sb.from('feedback').update({ done_at: new Date().toISOString(), done_by: S.me.first_name + ' ' + S.me.last_name }).eq('id', parseInt(b.getAttribute('data-fbdone'), 10)); if (r.error) { b.disabled = false; return; } OPS.fb = null; sb.from('feedback').select('id,name,screen,body,created_at,done_at,done_by').order('created_at', { ascending: false }).limit(60).then(function (r2) { OPS.fb = r2.data || []; renderOps(); }); }; });
     $('opsBody').querySelectorAll('[data-prem-ok]').forEach(function (b) { b.onclick = async function () {
       b.disabled = true;
       var r = await sb.from('premium_apps').update({ status: 'approved', tier_approved: parseInt(b.getAttribute('data-tier'), 10), reviewed_by: S.me.person_id, reviewed_at: new Date().toISOString() }).eq('id', parseInt(b.getAttribute('data-prem-ok'), 10));
@@ -5094,6 +5129,37 @@
   }
 
   // ── Notes ────────────────────────────────────────────────────────
+  // ── Feedback, from any footer ────────────────────────────────────
+  // One sentence from anyone makes the Hub better. Lands in the
+  // feedback table (146); the program office reads it on the Board.
+  function wireFeedback() {
+    document.querySelectorAll('.credit .ver').forEach(function (v) {
+      if (v.parentNode.querySelector('[data-fbk]')) return;
+      var a = document.createElement('a');
+      a.href = '#'; a.setAttribute('data-fbk', '1'); a.textContent = t('fbBtn');
+      a.style.marginLeft = '8px';
+      a.onclick = function (e) { e.preventDefault(); openFeedback(); };
+      v.parentNode.appendChild(a);
+    });
+  }
+  function openFeedback() {
+    var old = document.getElementById('fbkCard'); if (old) old.remove();
+    var d = document.createElement('div');
+    d.id = 'fbkCard';
+    d.innerHTML = '<div class="card" style="position:fixed;left:12px;right:12px;bottom:70px;z-index:60;gap:8px;box-shadow:0 12px 40px rgba(0,0,0,.45)"><b>' + esc(t('fbTitle')) + '</b><div class="hint">' + esc(t('fbHint')) + '</div><textarea id="fbkBody" style="min-height:110px"></textarea><div class="actions" style="padding:0"><button class="btn primary small" id="fbkSend">' + esc(t('fbSend')) + '</button><button class="btn outline small" id="fbkCancel">' + esc(t('neverMind')) + '</button></div><div class="msg" id="fbkMsg" hidden></div></div>';
+    document.body.appendChild(d);
+    var ta = document.getElementById('fbkBody'); ta.focus();
+    document.getElementById('fbkCancel').onclick = function () { d.remove(); };
+    document.getElementById('fbkSend').onclick = async function () {
+      var body = ta.value.trim();
+      if (!body) { say('fbkMsg', t('fbEmpty'), 'bad'); return; }
+      var b = document.getElementById('fbkSend'); b.disabled = true;
+      var r = await sb.from('feedback').insert({ org_id: S.me.org_id, person_id: S.me.person_id, name: S.me.first_name + ' ' + S.me.last_name, screen: (location.hash || '#day').slice(0, 40), version: VERSION, body: body.slice(0, 1000) });
+      if (r.error) { b.disabled = false; say('fbkMsg', r.error.message, 'bad'); return; }
+      say('fbkMsg', t('fbThanks'), 'good');
+      setTimeout(function () { d.remove(); }, 1400);
+    };
+  }
   function updateNoteBadge() {
     var a = document.querySelector('[data-tab-notes]');
     if (!a) return;
