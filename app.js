@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.24-i';
+  var VERSION = '2026.11.24-j';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   // Unexpected client errors report themselves (135); five per page
@@ -3675,12 +3675,41 @@
       // group. Required counts join in once the crew worksheet is back.
       var mx = OPS.mx;
       var mr = OPS.mxRange || 'season';
+      OPS.mxOpen = OPS.mxOpen || {};
+      // One row per league, age groups folded inside. A Req typed on the
+      // league row sets every age group under it in one write; expand to
+      // override a single age group where the format differs.
+      var cell9 = 'padding:6px;text-align:right';
+      var reqInp = function (attrs, val, ph) { return '<input type="number" min="0" max="4" inputmode="numeric" value="' + (val == null ? '' : val) + '"' + (ph ? ' placeholder="' + esc(ph) + '"' : '') + ' ' + attrs + ' style="width:46px;font:inherit;padding:6px;border:1px solid var(--muted);border-radius:6px;background:var(--surface);color:var(--ink);text-align:right">'; };
+      var groups = {};
+      (mx || []).forEach(function (r2) { var k = r2.competition || ''; (groups[k] = groups[k] || []).push(r2); });
+      var gk = Object.keys(groups).map(function (k) {
+        var rows = groups[k], tot = { games: 0, with3: 0, with2: 0, with1: 0, with0: 0, short: 0, reqs: {}, anyReq: false };
+        rows.forEach(function (r2) { tot.games += +r2.games; tot.with3 += +r2.with3; tot.with2 += +r2.with2; tot.with1 += +r2.with1; tot.with0 += +r2.with0; if (r2.required != null) { tot.anyReq = true; tot.short += +r2.short; } tot.reqs[r2.required == null ? 'x' : r2.required] = 1; });
+        var rk = Object.keys(tot.reqs);
+        tot.oneReq = rk.length === 1 && rk[0] !== 'x' ? Number(rk[0]) : null;
+        tot.mixed = rk.length > 1;
+        return { comp: k, rows: rows, tot: tot };
+      }).sort(function (a, b) { return (b.tot.anyReq ? b.tot.short : b.tot.with0) - (a.tot.anyReq ? a.tot.short : a.tot.with0) || b.tot.games - a.tot.games; });
       body = '<div class="pad lead" style="padding-top:12px">' + esc(t('mxLead')) + '</div>' +
         '<div class="chips pad" style="padding-top:8px">' + [['season', 'mxSeason'], ['30', 'mx30']].map(function (p2) { return '<button class="chip-btn small' + (mr === p2[0] ? ' on' : '') + '" data-mxrange="' + p2[0] + '">' + esc(t(p2[1])) + '</button>'; }).join('') + '</div>' +
         (mx == null ? '<div class="pad hint">' + esc(t('loadingReview')) + '</div>' :
-         !mx.length ? '<div class="card"><div class="hint">' + esc(t('mxNone')) + '</div></div>' :
-         '<div class="pad" style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th style="padding:6px;text-align:left">' + esc(t('mxLeague')) + '</th><th style="padding:6px;text-align:right">' + esc(t('mxGames')) + '</th><th style="padding:6px;text-align:right">3</th><th style="padding:6px;text-align:right">2</th><th style="padding:6px;text-align:right">1</th><th style="padding:6px;text-align:right;color:var(--red)">0</th><th style="padding:6px;text-align:right">' + esc(t('mxReq')) + '</th><th style="padding:6px;text-align:right;color:var(--red)">' + esc(t('mxShort')) + '</th></tr></thead><tbody>' +
-         mx.map(function (r2) { return '<tr style="border-top:1px solid var(--line)"><td style="padding:6px"><b>' + esc(r2.competition || '') + '</b>' + (r2.age_group ? ' <span class="hint">' + esc(r2.age_group) + '</span>' : '') + '</td><td style="padding:6px;text-align:right">' + r2.games + '</td><td style="padding:6px;text-align:right">' + r2.with3 + '</td><td style="padding:6px;text-align:right">' + r2.with2 + '</td><td style="padding:6px;text-align:right;color:var(--gold)">' + r2.with1 + '</td><td style="padding:6px;text-align:right;font-weight:800;color:' + (r2.with0 > 0 ? 'var(--red)' : 'var(--muted)') + '">' + r2.with0 + '</td><td style="padding:6px;text-align:right"><input type="number" min="0" max="4" inputmode="numeric" value="' + (r2.required == null ? '' : r2.required) + '" data-mxreq data-comp="' + esc(r2.competition || '') + '" data-age="' + esc(r2.age_group || '') + '" style="width:46px;font:inherit;padding:6px;border:1px solid var(--muted);border-radius:6px;background:var(--surface);color:var(--ink);text-align:right"></td><td style="padding:6px;text-align:right;font-weight:800;color:' + (r2.short > 0 ? 'var(--red)' : 'var(--muted)') + '">' + (r2.required == null ? '' : r2.short) + '</td></tr>'; }).join('') + '</tbody></table></div><div class="pad hint">' + esc(t('mxReqHint')) + '</div><div class="msg" id="mxMsg" hidden style="margin:0 20px"></div>');
+         !gk.length ? '<div class="card"><div class="hint">' + esc(t('mxNone')) + '</div></div>' :
+         '<div class="pad" style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr><th style="padding:6px;text-align:left">' + esc(t('mxLeague')) + '</th><th style="' + cell9 + '">' + esc(t('mxGames')) + '</th><th style="' + cell9 + '">3</th><th style="' + cell9 + '">2</th><th style="' + cell9 + '">1</th><th style="' + cell9 + ';color:var(--red)">0</th><th style="' + cell9 + '">' + esc(t('mxReq')) + '</th><th style="' + cell9 + ';color:var(--red)">' + esc(t('mxShort')) + '</th></tr></thead><tbody>' +
+         gk.map(function (g3) {
+           var open = !!OPS.mxOpen[g3.comp], tt = g3.tot;
+           var lead = '<tr style="border-top:2px solid var(--line);cursor:pointer" data-mxfold="' + esc(g3.comp) + '"><td style="padding:8px 6px"><b>' + (open ? '\u2212' : '+') + ' ' + esc(g3.comp || '?') + '</b> <span class="hint">' + g3.rows.length + '</span></td>' +
+             '<td style="' + cell9 + ';font-weight:700">' + tt.games + '</td><td style="' + cell9 + '">' + tt.with3 + '</td><td style="' + cell9 + '">' + tt.with2 + '</td><td style="' + cell9 + ';color:var(--gold)">' + tt.with1 + '</td><td style="' + cell9 + ';font-weight:800;color:' + (tt.with0 > 0 ? 'var(--red)' : 'var(--muted)') + '">' + tt.with0 + '</td>' +
+             '<td style="' + cell9 + '">' + reqInp('data-mxreqall data-comp="' + esc(g3.comp) + '"', tt.oneReq, tt.mixed ? t('mxMixed') : '') + '</td>' +
+             '<td style="' + cell9 + ';font-weight:800;color:' + (tt.anyReq && tt.short > 0 ? 'var(--red)' : 'var(--muted)') + '">' + (tt.anyReq ? tt.short : '') + '</td></tr>';
+           var kids = open ? g3.rows.map(function (r2) {
+             return '<tr style="border-top:1px solid var(--line)"><td style="padding:6px 6px 6px 22px"><span class="hint">' + esc(r2.age_group || '?') + '</span></td><td style="' + cell9 + '">' + r2.games + '</td><td style="' + cell9 + '">' + r2.with3 + '</td><td style="' + cell9 + '">' + r2.with2 + '</td><td style="' + cell9 + ';color:var(--gold)">' + r2.with1 + '</td><td style="' + cell9 + ';font-weight:800;color:' + (r2.with0 > 0 ? 'var(--red)' : 'var(--muted)') + '">' + r2.with0 + '</td>' +
+               '<td style="' + cell9 + '">' + reqInp('data-mxreq data-comp="' + esc(r2.competition || '') + '" data-age="' + esc(r2.age_group || '') + '"', r2.required) + '</td>' +
+               '<td style="' + cell9 + ';font-weight:800;color:' + (r2.short > 0 ? 'var(--red)' : 'var(--muted)') + '">' + (r2.required == null ? '' : r2.short) + '</td></tr>';
+           }).join('') : '';
+           return lead + kids;
+         }).join('') + '</tbody></table></div>' +
+         '<div class="pad hint">' + esc(t('mxReqHint2')) + '</div><div class="msg" id="mxMsg" hidden style="margin:0 20px"></div>');
     } else if (OPS.tab === 'feedback') {
       var fb = OPS.fb;
       body = '<div class="pad lead" style="padding-top:12px">' + esc(t('fbReadLead')) + '</div>' +
@@ -3722,7 +3751,18 @@
       sb.rpc('scheduling_matrix', { p_from: from, p_to: todayStr() }).then(function (r) { OPS.mx = r.data || []; renderOps(); }, function () { OPS.mx = []; renderOps(); });
     }
     $('opsBody').querySelectorAll('[data-mxrange]').forEach(function (b) { b.onclick = function () { OPS.mxRange = b.getAttribute('data-mxrange'); OPS.mx = null; renderOps(); loadMatrix(); }; });
-    $('opsBody').querySelectorAll('[data-mxreq]').forEach(function (inp) { inp.onchange = async function () {
+    $('opsBody').querySelectorAll('[data-mxfold]').forEach(function (r4) { r4.onclick = function (e) { if (e.target && e.target.hasAttribute && e.target.hasAttribute('data-mxreqall')) return; var k = r4.getAttribute('data-mxfold'); OPS.mxOpen = OPS.mxOpen || {}; OPS.mxOpen[k] = !OPS.mxOpen[k]; renderOps(); }; });
+    $('opsBody').querySelectorAll('[data-mxreqall]').forEach(function (inp) { inp.onclick = function (e) { e.stopPropagation(); }; inp.onchange = async function () {
+      var v = inp.value === '' ? null : parseInt(inp.value, 10);
+      if (v == null) return;
+      var comp = inp.getAttribute('data-comp');
+      var by = S.me.first_name + ' ' + S.me.last_name;
+      var rows = (OPS.mx || []).filter(function (r5) { return (r5.competition || '') === comp; }).map(function (r5) { return { org_id: S.me.org_id, competition: comp, age_group: r5.age_group || '', required: v, set_by: by, updated_at: new Date().toISOString() }; });
+      var r = await sb.from('crew_requirements').upsert(rows, { onConflict: 'org_id,competition,age_group' });
+      if (r.error) { say('mxMsg', r.error.message, 'bad'); return; }
+      OPS.mx = null; loadMatrix();
+    }; });
+    $('opsBody').querySelectorAll('[data-mxreq]:not([data-mxreqall])').forEach(function (inp) { inp.onchange = async function () {
       var v = inp.value === '' ? null : parseInt(inp.value, 10);
       var comp = inp.getAttribute('data-comp'), age = inp.getAttribute('data-age');
       var by = S.me.first_name + ' ' + S.me.last_name;
