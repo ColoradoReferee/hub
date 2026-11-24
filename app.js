@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.24-f';
+  var VERSION = '2026.11.24-g';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   // Unexpected client errors report themselves (135); five per page
@@ -2508,7 +2508,7 @@
       vq.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(vt); runViewAs(); } };
       $('viewAsGo').onclick = runViewAs;
     }
-    $('eodEntry').innerHTML = canEod() ? '<a class="rowbtn" href="#eod" style="margin-top:8px"><span><span class="t">' + esc(t('eodEntry')) + '</span><br><span class="s">' + esc(t('eodEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
+    $('eodEntry').innerHTML = canEod() ? '<a class="rowbtn" href="#eod" style="margin-top:8px"><span><span class="t">' + esc(t('eodEntry')) + '</span>' + pillBadge('pay') + '<br><span class="s">' + esc(t('eodEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
     $('setupEntry').innerHTML = iCan('setup') ? '<a class="rowbtn" href="#setup" style="margin-top:8px"><span><span class="t">' + esc(t('setupEntry')) + '</span><br><span class="s">' + esc(t('setupEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
     $('peopleEntry').innerHTML = iCan('people') ? '<a class="rowbtn" href="#people" style="margin-top:8px"><span><span class="t">' + esc(t('peopleEntry')) + '</span>' + pillBadge('names') + '<br><span class="s">' + esc(t('peopleEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
     loadPills();
@@ -4146,6 +4146,22 @@
     EOD.error = mine.error ? (mine.error.message || String(mine.error)) : '';
     EOD.all = mine.data || [];
     EOD.mine = EOD.all.filter(function (r) { return keys.indexOf(key(r.staff_name)) >= 0; });
+    // Approval stamps (145), fetched tolerantly so the screen is whole
+    // before the migration runs.
+    EOD.approvalCol = false;
+    try {
+      var aIds = EOD.all.map(function (r) { return r.id; }).filter(Boolean);
+      for (var ai = 0; ai < aIds.length; ai += 200) {
+        var aq = await sb.from('eod_reports').select('id,approved_by,approved_at').in('id', aIds.slice(ai, ai + 200));
+        if (aq.error) break;
+        EOD.approvalCol = true;
+        var am = {}; (aq.data || []).forEach(function (x) { am[String(x.id)] = x; });
+        EOD.all.forEach(function (r) { var x = am[String(r.id)]; if (x) { r.approved_by = x.approved_by; r.approved_at = x.approved_at; } });
+      }
+    } catch (eA) {}
+    // Completed evaluations owed to a coach (145), equally tolerant.
+    EOD.evalsPay = [];
+    if (iCan('command_center')) { try { var ep = await sb.rpc('evals_to_pay'); if (!ep.error) EOD.evalsPay = ep.data || []; } catch (eE) {} }
     EOD.venues = await eodVenuesFor(EOD.date || todayStr());
     if (!EOD.role) EOD.role = iCan('command_center') || iCan('scheduling') ? 'sc' : 'coach';
   }
@@ -4201,7 +4217,7 @@
       '<label class="hint" style="font-weight:700" for="payVenue">' + esc(t('eodVenue')) + '</label><select id="payVenue" style="' + inp + ';width:100%"><option value="">' + esc(t('allVenuesPick')) + '</option>' + vlist.map(function (x) { return '<option value="' + esc(x) + '"' + (x === v ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>' +
       '<label class="hint" style="font-weight:700" for="payPerson">' + esc(t('eodPerson')) + '</label><select id="payPerson" style="' + inp + ';width:100%"><option value="">' + esc(t('allPeoplePick')) + '</option>' + (function () { var ns = {}; EOD.all.forEach(function (r) { if (r.staff_name) ns[key(r.staff_name)] = r.staff_name; }); return Object.keys(ns).sort(function (a, b) { return ns[a].localeCompare(ns[b]); }).map(function (k) { return '<option value="' + esc(k) + '"' + (k === (P.person || '') ? ' selected' : '') + '>' + esc(ns[k]) + '</option>'; }).join(''); })() + '</select>' +
       '<div style="display:flex;gap:8px"><button class="btn outline" id="eodPayBack">' + esc(t('back')) + '</button><button class="btn outline" id="eodPayGo">' + esc(t('go')) + '</button><button class="btn primary" id="eodPayPrint" style="flex:1">' + esc(t('print')) + '</button></div></div>' +
-      '<div class="pad eod-pay"><div class="disp h2 print-keep" style="padding:0">' + esc(t('eodPayroll')) + '</div><div class="hint" style="margin-bottom:6px">' + esc(range) + (evSel ? ', ' + esc(evSel.name) : '') + (v ? ', ' + esc(v) : (evSel ? '' : ', ' + esc(t('allVenuesPick')))) + (P.person ? ', ' + esc((EOD.all.filter(function (r) { return key(r.staff_name) === P.person; })[0] || {}).staff_name || '') : '') + '. ' + list.length + ' ' + esc(t(list.length === 1 ? 'eodReportOne' : 'eodReportMany')) + ', ' + total.toFixed(1) + ' ' + esc(t('eodHours')) + '.</div>' +
+      '<div class="pad eod-pay"><div class="disp h2 print-keep" style="padding:0">' + esc(t('eodPayroll')) + '</div><div class="hint" style="margin-bottom:6px">' + esc(range) + (evSel ? ', ' + esc(evSel.name) : '') + (v ? ', ' + esc(v) : (evSel ? '' : ', ' + esc(t('allVenuesPick')))) + (P.person ? ', ' + esc((EOD.all.filter(function (r) { return key(r.staff_name) === P.person; })[0] || {}).staff_name || '') : '') + '. ' + list.length + ' ' + esc(t(list.length === 1 ? 'eodReportOne' : 'eodReportMany')) + ', ' + total.toFixed(1) + ' ' + esc(t('eodHours')) + '.' + (function () { if (!EOD.approvalCol || !iCan('command_center')) return ''; var pend = list.filter(function (r) { return !r.approved_at; }); var ah = 0, ph = 0; list.forEach(function (r) { if (r.approved_at) ah += Number(r.hours || 0); else ph += Number(r.hours || 0); }); return ' ' + esc(t('eodSplit').replace('{a}', ah.toFixed(1)).replace('{p}', ph.toFixed(1))) + (pend.length ? '</div><div class="no-print" style="margin-bottom:8px"><button class="btn primary small" id="eodApproveAll">' + esc(t('eodApproveAll').replace('{n}', pend.length)) + '</button><span class="msg" id="eodApproveMsg" hidden></span><div' : ''); })() + '</div>' +
       (list.length ? '<table style="width:100%;border-collapse:collapse;font-size:14px"><thead><tr>' + th(t('eodName')) + th(t('eodRole')) + th(t('eodVenue')) + th(t('eodIn')) + th(t('eodOut')) + th(t('eodHours'), 1) + '</tr></thead><tbody>' + body +
         '<tr><td colspan="5" style="' + cell + ';border-bottom:0;font-weight:800;padding-top:14px">' + esc(t('eodTotal')) + '</td><td style="' + cell + ';border-bottom:0;text-align:right;font-weight:800;padding-top:14px">' + total.toFixed(1) + '</td></tr></tbody></table>' +
         '<div class="disp h2 print-keep" style="padding:18px 0 6px">' + esc(t('eodByPerson')) + '</div><table style="width:100%;border-collapse:collapse;font-size:14px"><thead><tr>' + th(t('eodName')) + th(t('eodRole')) + th(t('eodDays'), 1) + th(t('eodHours'), 1) + '</tr></thead><tbody>' +
@@ -4209,6 +4225,13 @@
       '<div class="hint" style="margin-top:14px">' + esc(t('eodPayNote')) + '</div></div>';
     $('eodPayBack').onclick = function () { EOD.pay = null; renderEod(); };
     $('eodPayPrint').onclick = function () { window.print(); };
+    var ab = $('eodApproveAll'); if (ab) ab.onclick = async function () {
+      ab.disabled = true;
+      var ids = list.filter(function (r) { return !r.approved_at; }).map(function (r) { return r.id; });
+      var r = await sb.rpc('eod_approve', { p_ids: ids });
+      if (r.error) { ab.disabled = false; say('eodApproveMsg', r.error.message, 'bad'); return; }
+      await loadEod(); renderEodPay();
+    };
     var go = function () { var f = $('payFrom').value, tt = $('payTo').value; if (!f || !tt) return; if (tt < f) { var x = f; f = tt; tt = x; } EOD.pay = { from: f, to: tt, venue: $('payVenue').value, event: $('payEvent').value, person: $('payPerson').value }; renderEodPay(); };
     $('eodPayGo').onclick = go; $('payVenue').onchange = go; $('payEvent').onchange = go; $('payPerson').onchange = go;
     $('payFrom').onchange = go; $('payTo').onchange = go;
@@ -4224,7 +4247,7 @@
     var canEditAny = !!S.me.real_admin && !S.me.previewing;
     var row = function (r) {
       var mine = (S.me.nameKeys || []).indexOf(key(r.staff_name)) >= 0, editable = mine || canEditAny;
-      var body = '<div><b>' + esc(r.staff_name) + '</b> <span class="hint">' + esc(roleLabel(r.role)) + '</span><br><span class="hint">' + esc(dayLong(r.date)) + ', ' + esc(r.venue || '') + ', ' + esc(hhmm(r.time_in)) + ' to ' + esc(hhmm(r.time_out)) + (r.notes ? '. ' + esc(r.notes) : '') + '</span>' + (editable ? '<br><span class="hint no-print" style="color:var(--navy);font-weight:700">' + esc(t('eodTapEdit')) + '</span>' : '') + '</div><div class="n">' + esc(r.hours != null ? r.hours : '') + '</div>';
+      var body = '<div><b>' + esc(r.staff_name) + '</b> <span class="hint">' + esc(roleLabel(r.role)) + '</span><br><span class="hint">' + esc(dayLong(r.date)) + ', ' + esc(r.venue || '') + ', ' + esc(hhmm(r.time_in)) + ' to ' + esc(hhmm(r.time_out)) + (r.notes ? '. ' + esc(r.notes) : '') + '</span>' + (EOD.approvalCol && iCan('command_center') ? '<br><span class="hint" style="color:var(--' + (r.approved_at ? 'green' : 'gold') + ');font-weight:700">' + esc(r.approved_at ? t('eodApprovedBy').replace('{by}', r.approved_by || '') : t('eodAwait')) + '</span>' : '') + (editable ? '<br><span class="hint no-print" style="color:var(--navy);font-weight:700">' + esc(t('eodTapEdit')) + '</span>' : '') + '</div><div class="n">' + esc(r.hours != null ? r.hours : '') + '</div>';
       return editable ? '<button class="rowline rowbtn" style="width:100%;text-align:left" data-eodedit="' + r.id + '">' + body + '</button>' : '<div class="rowline">' + body + '</div>';
     };
     $('eodBody').innerHTML = (EOD.error ? '<div class="msg bad" style="margin:10px 20px 0">' + esc(t('loadFailed')) + ' ' + esc(EOD.error) + '</div>' : '') +
@@ -4239,10 +4262,24 @@
       '<label class="hint" style="font-weight:700" for="eodNotes">' + esc(t('eodNotes')) + '</label><textarea id="eodNotes" placeholder="' + esc(t('eodNotesPlaceholder')) + '" style="min-height:100px">' + esc(e ? (e.notes || '') : '') + '</textarea>' +
       '<button class="btn primary" id="eodFile">' + esc(t(e ? 'eodUpdate' : 'eodFile')) + '</button><div class="msg" id="eodMsg" hidden></div></div>' +
       '<div class="pad no-print"><button class="rowbtn" style="margin:8px 0 0;width:100%" id="eodMineToggle"><span><span class="t">' + esc(t('eodMine')) + '</span><br><span class="s">' + EOD.mine.length + ' ' + esc(t(EOD.mine.length === 1 ? 'eodReportOne' : 'eodReportMany')) + '</span></span><span class="disp" style="font-size:22px">' + (EOD.mineOpen ? '\u2212' : '+') + '</span></button></div>' + (EOD.mineOpen ? '<div class="pad">' + (EOD.mine.length ? EOD.mine.slice(0, 10).map(row).join('') : '<div class="hint">' + esc(t('eodNone')) + '</div>') + '</div>' : '') +
+      (iCan('command_center') && (EOD.evalsPay || []).length ? (function () {
+        var tot = 0; EOD.evalsPay.forEach(function (x) { tot += Number(x.amount_cents || 0); });
+        return fold('evalpay', t('evalPayTitle'), EOD.evalsPay.length,
+          '<div class="hint">' + esc(t('evalPayHint')) + '</div>' +
+          EOD.evalsPay.map(function (x) { return '<div class="rowline"><div><b>' + esc(x.coach_name || '') + '</b><br><span class="hint">' + esc(x.ref_name || '') + ', ' + esc(x.game_date ? dayLong(x.game_date) : '') + (x.venue ? ', ' + esc(x.venue) : '') + ', ' + esc(x.purpose || '') + '</span></div><div style="display:flex;gap:8px;align-items:center"><b>' + (x.amount_cents ? money(x.amount_cents) : '') + '</b><button class="btn outline small" data-evalpaid="' + x.id + '">' + esc(t('evalPayMark')) + '</button></div></div>'; }).join('') +
+          '<div class="hint" style="font-weight:700;padding-top:6px">' + esc(t('evalPayTotal').replace('{n}', EOD.evalsPay.length)) + ' ' + money(tot) + '</div><div class="msg" id="evalPayMsg" hidden></div>', true);
+      })() : '') +
       (iCan('command_center') ? '<div class="disp h2">' + esc(t('eodAll')) + '</div>' + eodArchive(row) : '');
     var pb = $('eodPrint'); if (pb) pb.onclick = function () { window.print(); };
     var vf = $('eodVenueFilter'); if (vf) vf.onchange = function () { EOD.vfilter = vf.value; EOD.date = $('eodDate').value; renderEod(); };
     $('eodMineToggle').onclick = function () { EOD.mineOpen = !EOD.mineOpen; EOD.date = $('eodDate').value; renderEod(); };
+    $('eodBody').querySelectorAll('[data-evalpaid]').forEach(function (b) { b.onclick = async function () {
+      if (!window.confirm(t('evalPayConfirm'))) return;
+      b.disabled = true;
+      var r = await sb.rpc('eval_mark_paid', { p_id: parseInt(b.getAttribute('data-evalpaid'), 10) });
+      if (r.error) { b.disabled = false; say('evalPayMsg', r.error.message, 'bad'); return; }
+      await loadEod(); renderEod();
+    }; });
     var ec = $('eodEditCancel'); if (ec) ec.onclick = function () { EOD.edit = null; EOD.date = ''; renderEod(); };
     $('eodBody').querySelectorAll('[data-eodday]').forEach(function (b) { b.onclick = function () { var d = b.getAttribute('data-eodday'); EOD.open = EOD.open === d ? null : d; EOD.date = $('eodDate').value; renderEod(); }; });
     $('eodBody').querySelectorAll('[data-eodpay]').forEach(function (b) { b.onclick = function () { var d = b.getAttribute('data-eodpay'); EOD.pay = { from: d, to: d, venue: EOD.vfilter || '' }; renderEod(); }; });
