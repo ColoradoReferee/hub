@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.24-e';
+  var VERSION = '2026.11.24-f';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   // Unexpected client errors report themselves (135); five per page
@@ -1262,7 +1262,7 @@
   function stdKey(x) { return FIT[x && x.standard] ? x.standard : 'national'; }
   function fitStd(x) { return FIT[stdKey(x)]; }
   function stdLine(x) { var f = fitStd(x); return t('fitStd.' + stdKey(x)) + ': ' + t('fitStdLine').replace('{rsa}', f.rsa.toFixed(1)).replace('{run}', f.run).replace('{walk}', f.walk); }
-  var SES_SEL = 'id,kind,title,date,start_time,end_time,venue,address,capacity,open_to,notes,active,standard,fee_cents';
+  var SES_SEL = 'id,kind,title,date,start_time,end_time,venue,address,capacity,open_to,notes,active,standard,fee_cents,video_url';
   // ── Payments (Stripe collections; free stays free) ───────────────
   var FEES = { loaded: false, eval: {} };
   async function loadFees_() {
@@ -1372,6 +1372,7 @@
       var state = me ? (me.status === 'passed' ? t('sesPassed') : me.status === 'failed' ? t('sesFailed') : me.status === 'premium' ? t('fitPremium') : me.status === 'no_show' ? t('sesNoShow') : me.status === 'waitlist' ? t('sesWaitlisted') : t('sesIn')) : (full ? t('sesFull') : (x.capacity ? t('sesSpots').replace('{n}', x.capacity - n) : ''));
       var join = !me && !full ? (fit ? '<div class="no-print" style="margin-top:8px"><a class="chip-btn small" style="display:inline-block;text-decoration:none" href="' + FIT_WAIVER_URL + '" target="_blank" rel="noopener">' + esc(t('fitWaiverOpen')) + '</a><label style="display:flex;gap:10px;align-items:flex-start;min-height:44px;margin-top:6px"><input type="checkbox" data-waiver="' + x.id + '" style="width:22px;height:22px;flex:none;margin-top:2px"> <span class="hint">' + esc(t('fitWaiverConfirm')) + '</span></label><button class="btn primary small" data-ses-in="' + x.id + '" disabled>' + esc(payLbl) + '</button></div>' : '<div style="margin-top:8px"><button class="btn primary small" data-ses-in="' + x.id + '">' + esc(payLbl) + '</button></div>') : '';
       return '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div style="flex:1"><b>' + esc(t('sesKind.' + x.kind)) + ': ' + esc(x.title) + '</b><br><span class="hint">' + sessionLine(x) + (state ? '. ' + esc(state) : '') + '</span>' + (x.notes ? '<br><span class="hint">' + esc(x.notes) + '</span>' : '') +
+        (x.video_url && (me || runsSessions()) ? '<br><a class="chip-btn small" style="display:inline-block;margin-top:6px;text-decoration:none" href="' + esc(x.video_url) + '" target="_blank" rel="noopener">' + esc(t('sesVideoOpen')) + '</a>' : '') +
         (fit ? '<br><span class="hint">' + esc(stdLine(x)) + '</span><br><a href="fitness.html" class="chip-btn small" style="display:inline-block;margin-top:6px;text-decoration:none">' + esc(t('fitOpen')) + '</a>' : '') + join + '</div>' +
         (me && ['signed', 'waitlist'].indexOf(me.status) >= 0 ? '<button class="btn outline small" data-ses-out="' + me.id + '">' + esc(t('sesWithdraw')) + '</button>' : '') + '</div>';
     }).join('') + '<div class="msg" id="sesMsg" hidden></div></div>';
@@ -1381,6 +1382,20 @@
     root.querySelectorAll('[data-waiver]').forEach(function (c) { c.onchange = function () { var b = root.querySelector('[data-ses-in="' + c.getAttribute('data-waiver') + '"]'); if (b) b.disabled = !c.checked; }; });
     root.querySelectorAll('[data-ses-in]').forEach(function (b) { b.onclick = async function () {
       b.disabled = true; var sid = parseInt(b.getAttribute('data-ses-in'), 10), x = SES.list.filter(function (y) { return y.id === sid; })[0];
+      // A by-invitation session asks for its registration code; the code
+      // never reaches the phone, the database checks it (143).
+      if (x && x.open_to === 'code') {
+        var code = window.prompt(t('sesCodeAsk'), '');
+        if (code === null || !String(code).trim()) { b.disabled = false; return; }
+        if (x.fee_cents > 0) {
+          var ok0 = await sb.rpc('session_code_ok', { p_session: sid, p_code: String(code).trim() });
+          if (ok0.error || !ok0.data) { b.disabled = false; say('sesMsg', t('sesCodeBad'), 'bad'); return; }
+          var paid1 = await payStart({ kind: 'session', id: sid, waiver: x.kind === 'fitness' }, 'sesMsg'); if (!paid1) b.disabled = false; return;
+        }
+        var rj = await sb.rpc('session_join', { p_session: sid, p_code: String(code).trim(), p_waiver: x.kind === 'fitness' });
+        if (rj.error) { b.disabled = false; say('sesMsg', /wrong code/i.test(rj.error.message || '') ? t('sesCodeBad') : rj.error.message, 'bad'); return; }
+        await loadSessions_(); renderDay(); return;
+      }
       if (x && x.fee_cents > 0) { var paid = await payStart({ kind: 'session', id: sid, waiver: x.kind === 'fitness' }, 'sesMsg'); if (!paid) b.disabled = false; return; }
       var n = SES.counts[String(sid)] || 0, status = x && x.capacity && n >= x.capacity ? 'waitlist' : 'signed';
       var row = { org_id: S.me.org_id, session_id: sid, person_id: S.me.person_id, name: S.me.first_name + ' ' + S.me.last_name, status: status };
@@ -1489,6 +1504,7 @@
       var res = function (r, k, label) { return '<button class="chip-btn small' + (r.status === k ? ' on' : '') + '" data-ses-res="' + r.id + '" data-res="' + k + '">' + esc(label) + '</button>'; };
       return '<div class="pad no-print" style="padding-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn outline small" id="sesBack">' + esc(t('back')) + '</button><button class="btn outline small" id="sesPrint">' + esc(t('print')) + '</button><button class="btn outline small" id="sesClose" style="margin-left:auto">' + esc(x.active ? t('sesCancel') : t('sesReopen')) + '</button><button class="btn outline small" id="sesDelete">' + esc(t('sesDelete')) + '</button></div>' +
         '<div class="pad" style="padding-top:12px"><div class="disp" style="font-size:30px">' + esc(x.title) + '</div><div class="hint">' + esc(t('sesKind.' + x.kind)) + '. ' + sessionLine(x) + (x.address ? '. ' + esc(x.address) : '') + '</div><div class="hint">' + n + (x.capacity ? ' / ' + x.capacity : '') + ' ' + esc(t('sesSignedUp')) + '</div></div>' +
+        '<div class="card no-print" style="gap:8px"><label class="hint" for="sesVideoUrl">' + esc(t('sesVideoField')) + '</label><input id="sesVideoUrl" type="url" value="' + esc(x.video_url || '') + '" placeholder="https://" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"><div class="hint">' + esc(t('sesVideoHint')) + '</div><button class="btn outline small" id="sesVideoSave">' + esc(t('save')) + '</button><div class="msg" id="sesVideoMsg" hidden></div></div>' +
         (x.kind === 'fitness' ? fitSheetHtml(x, roster) :
         (roster.length ? roster.map(function (r) { return '<div class="card" style="gap:6px"><div style="display:flex;justify-content:space-between;gap:8px"><b>' + refLink(r.name) + '</b><span class="hint">' + esc(r.status === 'waitlist' ? t('sesWaitlisted') : '') + '</span></div><div class="chips no-print">' + res(r, 'passed', t('sesMarkPassed')) + res(r, 'failed', t('sesMarkFailed')) + res(r, 'no_show', t('sesMarkNoShow')) + res(r, 'signed', t('sesMarkClear')) + '</div></div>'; }).join('') : '<div class="card"><div class="hint">' + esc(t('sesNobody')) + '</div></div>'));
     }
@@ -1503,7 +1519,8 @@
       '<label class="hint" for="sesVenue">' + esc(t('eodVenue')) + '</label>' + inp('sesVenue', f.venue) +
       '<label class="hint" for="sesAddr">' + esc(t('sesAddress')) + '</label>' + inp('sesAddr', f.address) +
       '<label class="hint" for="sesFee">' + esc(t('sesFee')) + '</label>' + inp('sesFee', f.fee, 'number', 'min="0" step="1" inputmode="decimal"') +
-      '<label class="hint" for="sesOpen">' + esc(t('sesOpenTo')) + '</label><select id="sesOpen" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' + ['all', 'regional', 'invite'].map(function (k) { return '<option value="' + k + '"' + (f.open_to === k ? ' selected' : '') + '>' + esc(t('sesOpen.' + k)) + '</option>'; }).join('') + '</select>' +
+      '<label class="hint" for="sesOpen">' + esc(t('sesOpenTo')) + '</label><select id="sesOpen" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' + ['all', 'regional', 'code', 'invite'].map(function (k) { return '<option value="' + k + '"' + (f.open_to === k ? ' selected' : '') + '>' + esc(t('sesOpen.' + k)) + '</option>'; }).join('') + '</select>' +
+      '<label class="hint" for="sesCode">' + esc(t('sesCodeField')) + '</label>' + inp('sesCode', f.join_code) + '<div class="hint">' + esc(t('sesCodeHint')) + '</div>' +
       '<label class="hint" for="sesNotes">' + esc(t('sesNotes')) + '</label><textarea id="sesNotes" style="min-height:70px">' + esc(f.notes || '') + '</textarea>' +
       '<label style="display:flex;gap:10px;align-items:center;min-height:44px"><input type="checkbox" id="sesBul"' + (f.bulletin ? ' checked' : '') + ' style="width:22px;height:22px"> ' + esc(t('sesBulletin')) + '</label>' +
       '<div class="actions" style="padding:0"><button class="btn primary" id="sesSave">' + esc(t('sesSave')) + '</button><button class="btn outline" id="sesCancelForm">' + esc(t('neverMind')) + '</button></div><div class="msg" id="sesFormMsg" hidden></div></div>';
@@ -1603,16 +1620,25 @@
     root.querySelectorAll('[data-ses-kind]').forEach(function (b) { b.onclick = function () { SES.form.kind = b.getAttribute('data-ses-kind'); SES.form.title = $('sesTitle').value; renderSetup(); }; });
     root.querySelectorAll('[data-ses-std]').forEach(function (b) { b.onclick = function () { SES.form.standard = b.getAttribute('data-ses-std'); SES.form.title = $('sesTitle').value; renderSetup(); }; });
     var sv = $('sesSave'); if (sv) sv.onclick = async function () {
-      var f = SES.form; f.title = $('sesTitle').value.trim(); f.date = $('sesDate').value; f.capacity = $('sesCap').value ? parseInt($('sesCap').value, 10) : null; f.start_time = $('sesStart').value || null; f.end_time = $('sesEnd').value || null; f.venue = $('sesVenue').value.trim(); f.address = $('sesAddr').value.trim(); f.open_to = $('sesOpen').value; f.notes = $('sesNotes').value.trim(); f.bulletin = $('sesBul').checked; f.fee = $('sesFee').value;
+      var f = SES.form; f.title = $('sesTitle').value.trim(); f.date = $('sesDate').value; f.capacity = $('sesCap').value ? parseInt($('sesCap').value, 10) : null; f.start_time = $('sesStart').value || null; f.end_time = $('sesEnd').value || null; f.venue = $('sesVenue').value.trim(); f.address = $('sesAddr').value.trim(); f.open_to = $('sesOpen').value; f.join_code = $('sesCode').value.trim(); f.notes = $('sesNotes').value.trim(); f.bulletin = $('sesBul').checked; f.fee = $('sesFee').value;
       if (!f.title || !f.date) { say('sesFormMsg', t('sesNeedTitleDate'), 'bad'); return; }
       sv.disabled = true;
-      var r = await sb.from('sessions').insert({ org_id: S.me.org_id, kind: f.kind, title: f.title, date: f.date, start_time: f.start_time, end_time: f.end_time, venue: f.venue, address: f.address, capacity: f.capacity, open_to: f.open_to, notes: f.notes, standard: f.kind === 'fitness' ? f.standard : null, fee_cents: f.fee && parseFloat(f.fee) > 0 ? Math.round(parseFloat(f.fee) * 100) : null, created_by: S.me.first_name + ' ' + S.me.last_name });
+      var r = await sb.from('sessions').insert({ org_id: S.me.org_id, kind: f.kind, title: f.title, date: f.date, start_time: f.start_time, end_time: f.end_time, venue: f.venue, address: f.address, capacity: f.capacity, open_to: f.open_to, join_code: f.open_to === 'code' && f.join_code ? f.join_code : null, notes: f.notes, standard: f.kind === 'fitness' ? f.standard : null, fee_cents: f.fee && parseFloat(f.fee) > 0 ? Math.round(parseFloat(f.fee) * 100) : null, created_by: S.me.first_name + ' ' + S.me.last_name });
       if (r.error) { sv.disabled = false; say('sesFormMsg', r.error.message, 'bad'); return; }
       // A bulletin so referees hear about it on Your day without anyone sending an email.
       if (f.bulletin) { try { await sb.rpc('post_bulletin', { p_title: t('sesKind.' + f.kind) + ': ' + f.title, p_body: t('sesBulletinBody').replace('{when}', sessionLine(f).replace(/&#39;/g, "'").replace(/&amp;/g, '&')) + (f.kind === 'fitness' ? ' ' + stdLine(f) + '. ' + t('fitWaiverBulletin') : ''), p_start: todayStr(), p_end: f.date, p_severity: 'info' }); } catch (e) {} }
       SES.form = null; await loadSessions_(); renderSetup();
     };
     root.querySelectorAll('[data-ses-open]').forEach(function (a) { a.onclick = function (e) { e.preventDefault(); openSession(parseInt(a.getAttribute('data-ses-open'), 10)); }; });
+    var vs = $('sesVideoSave'); if (vs) vs.onclick = async function () {
+      vs.disabled = true;
+      var u = $('sesVideoUrl').value.trim();
+      var r = await sb.from('sessions').update({ video_url: u || null }).eq('id', SES.open);
+      vs.disabled = false;
+      if (r.error) { say('sesVideoMsg', r.error.message, 'bad'); return; }
+      SES.list.concat(SES.past || []).forEach(function (y) { if (y.id === SES.open) y.video_url = u || null; });
+      say('sesVideoMsg', t('sesVideoSaved'), 'ok');
+    };
     var bk = $('sesBack'); if (bk) bk.onclick = function () { SES.open = null; renderSetup(); };
     var pr = $('sesPrint'); if (pr) pr.onclick = function () { window.print(); };
     var ex = $('sesExport'); if (ex) ex.onclick = function () { ex.disabled = true; exportFitnessSubmission().then(function () { ex.disabled = false; }); };
