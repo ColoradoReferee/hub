@@ -603,7 +603,9 @@ details.fold > .fold-body > .list { padding-top: 8px; }
 .tabbar.on { display: flex; }
 :root[data-theme="dark"] .tabbar { background: rgba(9,14,23,.92); border-top-color: rgba(255,196,0,.4); }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tabbar { background: rgba(9,14,23,.92); border-top-color: rgba(255,196,0,.4); } }
-.tabbar a { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 60px; padding: 6px 10px; border-radius: 10px; text-decoration: none; color: var(--muted); font-size: 11px; font-weight: 700; }
+.tabbar a { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 60px; padding: 6px 10px; border-radius: 10px; text-decoration: none; color: var(--muted); font-size: 11px; font-weight: 700; position: relative; }
+.tabbadge { position: absolute; top: 2px; right: 10px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--gold); color: #0D1525; font-size: 11px; font-weight: 800; line-height: 17px; text-align: center; }
+.fbnew { display: flex; flex-direction: column; gap: 2px; border: 2px solid var(--gold); text-decoration: none; color: var(--ink); margin-bottom: 10px; }
 .tabbar a[hidden] { display: none; }
 .tabbar a.on { color: var(--gold); background: rgba(200,146,26,.12); }
 :root[data-theme="dark"] .tabbar a.on { color: #FFC400; background: rgba(255,196,0,.1); }

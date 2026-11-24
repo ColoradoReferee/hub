@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.24-b';
+  var VERSION = '2026.11.24-c';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   // Unexpected client errors report themselves (135); five per page
@@ -451,6 +451,20 @@
     // name keys; notes now do too, so the Day box and My notes only ever
     // show the person being viewed.
     S.notes = (r[3].data || []).filter(function (n) { return keys.indexOf(key(n.ref_name)) >= 0; });
+    // Unread released feedback. The Hub is the channel, so the Hub says
+    // when something new is waiting: a badge on the Notes tab and a gold
+    // strip on Your day. Read tolerantly; the screen is whole without it.
+    S.unreadN = 0;
+    try {
+      var relIds = S.notes.filter(function (n) { return !n.cleanup_status || ['approved', 'edited'].indexOf(n.cleanup_status) >= 0; }).map(function (n) { return n.id; }).filter(Boolean);
+      if (relIds.length && S.me.person_id) {
+        var rr3 = await sb.from('note_reads').select('observation_id').eq('person_id', S.me.person_id).in('observation_id', relIds);
+        if (!rr3.error) {
+          var rd3 = {}; (rr3.data || []).forEach(function (x) { rd3[String(x.observation_id)] = 1; });
+          S.unreadN = relIds.filter(function (id) { return !rd3[String(id)]; }).length;
+        }
+      }
+    } catch (eU) {}
     S.bulletins = r[4].data || [];
     S.scores = {}; (r[5].data || []).forEach(function (x) { S.scores[String(x.game_id)] = x; });
     S.staffMsgs = r[7].data || [];
@@ -2334,6 +2348,9 @@
 
   function renderDay() {
     var me = S.me, h = new Date().getHours();
+    var fs = $('fbStrip');
+    if (fs) fs.innerHTML = S.unreadN > 0 ? '<a class="card fbnew" href="#notes"><b>' + esc(t('newFeedback').replace('{n}', S.unreadN)) + '</b><span class="hint">' + esc(t('newFeedbackHint')) + '</span></a>' : '';
+    updateNoteBadge();
     var greet = t(h < 12 ? 'greeting.morning' : h < 17 ? 'greeting.afternoon' : 'greeting.evening');
     var venue = S.games.length ? S.games[0].venue : '';
     $('dayLead').textContent = greet + ', ' + me.first_name + '.' + (S.games.length ? '' : ' ' + dayLong() + '.');
@@ -4810,12 +4827,13 @@
     $('personCard').innerHTML = '';
     var rows = LINK.rows.slice();
     if (LINK.sort === 'az') rows.sort(function (a, b) { return a.name_key < b.name_key ? -1 : a.name_key > b.name_key ? 1 : 0; });
+    else if (LINK.sort === 'notes') rows.sort(function (a, b) { return (b.notes || 0) - (a.notes || 0) || (b.games || 0) - (a.games || 0); });
     else rows.sort(function (a, b) { return (b.games || 0) - (a.games || 0); });
     $('peopleResults').innerHTML = '<div class="pad" style="padding-top:12px"><div class="disp" style="font-size:30px">' + esc(t('linkTitle')) + ' ' + LINK.rows.length + '</div><div class="hint">' + esc(t('linkLead')) + '</div>' +
-      '<div class="chips" style="margin-top:8px"><button class="chip-btn' + (LINK.sort === 'az' ? ' on' : '') + '" data-linksort="az">' + esc(t('linkSortAZ')) + '</button><button class="chip-btn' + (LINK.sort === 'games' ? ' on' : '') + '" data-linksort="games">' + esc(t('linkSortGames')) + '</button></div></div>' +
+      '<div class="chips" style="margin-top:8px"><button class="chip-btn' + (LINK.sort === 'az' ? ' on' : '') + '" data-linksort="az">' + esc(t('linkSortAZ')) + '</button><button class="chip-btn' + (LINK.sort === 'games' ? ' on' : '') + '" data-linksort="games">' + esc(t('linkSortGames')) + '</button><button class="chip-btn' + (LINK.sort === 'notes' ? ' on' : '') + '" data-linksort="notes">' + esc(t('linkSortNotes')) + '</button></div></div>' +
       (rows.length ? '<div class="pad">' + rows.map(function (n) {
         var open = LINK.pick && LINK.pick.name_key === n.name_key;
-        return '<div class="rowline" style="flex-direction:column;align-items:stretch;gap:6px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><a class="refname" href="#" data-link="' + esc(n.name_key) + '"><b>' + esc(n.name) + '</b></a><span class="hint">' + n.games + ' ' + esc(t('linkGames')) + ', ' + esc(n.last_game ? dayLong(n.last_game) : '') + '</span></div><div class="hint">' + esc(n.venues || '') + '</div>' +
+        return '<div class="rowline" style="flex-direction:column;align-items:stretch;gap:6px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><a class="refname" href="#" data-link="' + esc(n.name_key) + '"><b>' + esc(n.name) + '</b>' + ((n.notes || 0) > 0 ? ' <span class="pill" style="border:1px solid var(--gold);background:transparent">' + esc(t('linkNotes').replace('{n}', n.notes)) + '</span>' : '') + '</a><span class="hint">' + n.games + ' ' + esc(t('linkGames')) + ', ' + esc(n.last_game ? dayLong(n.last_game) : '') + '</span></div><div class="hint">' + esc(n.venues || '') + '</div>' +
           (open ? '<div class="hint" style="font-weight:700">' + esc(t('linkPick')) + '</div><div class="chips">' + (LINK.suggest.length ? LINK.suggest.map(function (p) { return '<button class="chip-btn" data-linkto="' + p.id + '">' + esc(p.first_name + ' ' + p.last_name) + (p.city ? ' <small>' + esc(p.city) + '</small>' : '') + '</button>'; }).join('') : '<span class="hint">' + esc(t('linkNoSuggest')) + '</span>') + '</div><div class="hint">' + esc(t('linkOther')) + '</div><button class="btn outline small" data-dismissname="1" style="margin-top:6px">' + esc(t('linkDismiss')) + '</button><div class="msg" id="linkMsg" hidden></div>' : '') + '</div>';
       }).join('') + '</div>' : '<div class="card"><div class="hint">' + esc(t('linkNone')) + '</div></div>');
     $('peopleResults').querySelectorAll('[data-linksort]').forEach(function (b) { b.onclick = function () { LINK.sort = b.getAttribute('data-linksort'); renderLinks(); }; });
@@ -4959,6 +4977,15 @@
   }
 
   // ── Notes ────────────────────────────────────────────────────────
+  function updateNoteBadge() {
+    var a = document.querySelector('[data-tab-notes]');
+    if (!a) return;
+    var b = a.querySelector('.tabbadge');
+    if (S.unreadN > 0) {
+      if (!b) { b = document.createElement('span'); b.className = 'tabbadge'; a.appendChild(b); }
+      b.textContent = S.unreadN > 9 ? '9+' : String(S.unreadN);
+    } else if (b) { b.remove(); }
+  }
   function markRead(notes) {
     var ids = (notes || []).map(function (n) { return n.id; }).filter(Boolean);
     if (!ids.length) return;
@@ -5003,6 +5030,8 @@
   // pill saying so and the raw note as the body meanwhile.
   function renderNotes() {
     markRead(S.notes);
+    S.unreadN = 0; updateNoteBadge();
+    var fs0 = $('fbStrip'); if (fs0) fs0.innerHTML = '';
     var cut = shiftDate(todayStr(), -30);
     var noteCard = function (n) {
       var body = n.final_note || n.cleaned_note || n.public_notes || '';
