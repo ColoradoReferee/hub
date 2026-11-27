@@ -9,7 +9,8 @@
      2026.11.27-c: no second watch. Video platforms list kickoff moments (Pixellot: P1 START, P2 START); typed in as sync anchors, Fill video times computes the video time for every incident from its match minute (the match clock never stops, so anchor plus minute is near exact). Typed times are never overwritten.
      2026.11.27-d: Discard also clears the video moments; they leaked into the next session.
      2026.11.27-e: Jeff's first full test run, twelve findings in one pass. Every log modal's minute is an editable box prefilled from the clock, so a played game re-enters with real times; a second caution backfills the first if it was never logged (flagged, minute unknown); Fill video times understands the clock's own forms ('42, 45+2, 42:30); the half length comes from Setup, the fold's own selector is gone; native dropdown lists are dark on white everywhere; the tap-to-edit hint is readable; License and Match Challenge carry one-line hints; the feeling score bands say what the national standard says (7.9 and below is Below Expectation at every difficulty); the dead outdoor button is gone (the working theme toggle is top right); video fold controls wear ink, not gold.
-     2026.11.27-f: never guess whether it saved. A Save to the Hub button on Post-Match and Export answers in plain words with the time; the leave warning only fires when the Hub copy is actually behind; the report overlay gains Share / Email through the device share sheet where one exists; light mode earns its contrast (deeper gold text, real fold edges). -->
+     2026.11.27-f: never guess whether it saved. A Save to the Hub button on Post-Match and Export answers in plain words with the time; the leave warning only fires when the Hub copy is actually behind; the report overlay gains Share / Email through the device share sheet where one exists; light mode earns its contrast (deeper gold text, real fold edges).
+     2026.11.27-g: completion sticks. The PDF marks the session complete; a later Save to the Hub no longer downgrades it to in progress. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1738,7 +1739,7 @@ function setLang(l) { LANG = l; try { localStorage.setItem('hub-lang', l); } cat
 // ═══════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════
-var EVAL_VERSION = '2026.11.27-f';
+var EVAL_VERSION = '2026.11.27-g';
 document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v' + EVAL_VERSION; });
 var MD = {};
 var OT = { active:false, half:0, len:10, otStarted:false };
@@ -4707,12 +4708,18 @@ checkResumeOnLoad();
     if (!ME || !KEY || ME.previewing) return false;
     var raw = null; try { raw = JSON.parse(localStorage.getItem('co_eval_v1') || 'null'); } catch (e) {}
     if (!raw) return false;
+    // Completion sticks: the PDF marks the session complete, and a later
+    // hand save must not quietly downgrade it to in progress (found on
+    // Jeff's test run, 27 Nov).
+    var doneKey = 'eval_done_' + KEY;
+    if (complete) { try { localStorage.setItem(doneKey, '1'); } catch (eD) {} }
+    var wasDone = false; try { wasDone = localStorage.getItem(doneKey) === '1'; } catch (eD2) {}
     var md = raw.MD || {};
     var row = { org_id: ME.org_id, session_key: KEY, coach_person_id: ME.person_id, coach_name: ME.first_name + ' ' + ME.last_name,
       game_id: GAME ? GAME.game_id : null, game_date: md.date || (GAME && GAME.date) || null, venue: md.venue || (GAME && GAME.venue) || null,
       competition: md.comp || null, ref_name: md.ref && md.ref !== 'Referee' ? md.ref : (GAME && GAME.cr) || null,
       purpose: md.purpose || null, license: md.license || null, method: md.method || null,
-      status: complete ? 'complete' : 'in_progress', session: raw, final_scores: raw.ratings || {}, request_id: ASSIGN ? ASSIGN.id : null };
+      status: (complete || wasDone) ? 'complete' : 'in_progress', session: raw, final_scores: raw.ratings || {}, request_id: ASSIGN ? ASSIGN.id : null };
     var r = await sb.from('evaluations').upsert(row, { onConflict: 'org_id,session_key' });
     // Whole crew: on completion, every assistant with a filled evaluation
     // gets a row of their own, so trackers and eval counts see them.
