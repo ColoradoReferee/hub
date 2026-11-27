@@ -1,4 +1,4 @@
-// lang.js · every word the Hub shows, in English and Spanish.
+// lang.js · every word the Hub shows, in English and Spanish. · 2026-11-27
 // The code never contains a sentence; it asks for one by key.
 window.LANG = {
   en: {
@@ -448,6 +448,7 @@ window.LANG = {
     evalReqPendingSent: 'Request sent. The payment is pending; Referee HQ will follow up on it.',
     evalReqShort: 'Request evaluation',
     evalReqWhy: 'What is it for? Tap one and the request goes to the Director of Referee Development.',
+    evalReqTrack: 'Upgrade path: see what you need',
     sending: 'Sending...',
     hoursWord: 'hours',
     daysWord: 'days',
@@ -1804,6 +1805,7 @@ window.LANG = {
     evalReqPendingSent: 'Solicitud enviada. El pago queda pendiente; la oficina de árbitros dará seguimiento.',
     evalReqShort: 'Pedir evaluación',
     evalReqWhy: '¿Para qué es? Toca una opción y la solicitud va al Director de Desarrollo de Árbitros.',
+    evalReqTrack: 'Camino de ascenso: mira lo que necesitas',
     sending: 'Enviando...',
     hoursWord: 'horas',
     daysWord: 'días',

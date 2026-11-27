@@ -1,4 +1,5 @@
-// app.js · Colorado Referees Hub · 2026-11-27 (a: View as resets the season
+// app.js · Colorado Referees Hub · 2026-11-27 (b: evaluation request chips
+// gated by grade and history, needs 151; a: View as resets the season
 // board and the badge counts, so an admin viewing as a referee sees that
 // referee's season, not their own; found live) · 2026-11-24 (b: Do not send asks why and the Not sent folder shows it (needs 137), gold nudge, unread fold speaks when empty; a: note nudge, coach writing tip (needs 136 + note-clean v2), never-seen counts in scheduling, released-but-unread fold; 2026-11-23 f: client errors report themselves, errors fold on the State view, needs 135; e: link extra sign-in emails on the person card, needs 134; d: sign-in bounce copy names the fix; c: board refetch floor, 15s, emergencies exempt; b: PWA shell: manifest, service worker, icons; a: dual-write retired for switches, bulletins and emergencies; needs 129, 130, 131)
 // Reads from the database as the signed-in person. Coaching notes write
@@ -7,7 +8,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.27-a';
+  var VERSION = '2026.11.27-b';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   // Unexpected client errors report themselves (135); five per page
@@ -5135,8 +5136,14 @@
         '<button class="btn go small" id="evalPayNow" style="margin-top:10px;width:100%">' + esc(t('evalPayBtn')) + ' · ' + money(req.fee_cents) + '</button>' +
         '<div class="msg" id="evalReqMsg" hidden></div></div>';
     }
+    // The chips a referee sees are the requests they can actually make
+    // (151): grade and history decide; the rest stays the Director of
+    // Referee Development's call. No options yet points at the tracker.
+    var gate = ER.gate;
+    var opts = ['maintenance', 'upgrade_regional', 'upgrade_national'].filter(function (p) { return !gate || !!gate[p]; });
+    if (!opts.length) return '<div class="pad" style="padding-top:10px"><a class="chip-btn small" href="#upgrade" style="display:inline-block;text-decoration:none">' + esc(t('evalReqTrack')) + '</a></div>';
     if (!ER.open) return '<div class="pad" style="padding-top:10px"><button class="chip-btn small" id="evalReqOpen">' + esc(t('evalReqShort')) + '</button></div>';
-    return '<div class="pad" style="padding-top:10px"><div class="hint" style="padding-bottom:6px">' + esc(t('evalReqWhy')) + '</div><div class="chips">' + ['maintenance', 'upgrade_regional', 'upgrade_national'].map(function (p) { return '<button class="chip-btn small" data-purpose="' + p + '">' + esc(t('evalPurpose.' + p) + (FEES.eval[evalFeeKey(p)] ? ' · ' + money(FEES.eval[evalFeeKey(p)]) : '')) + '</button>'; }).join('') + '<button class="chip-btn small" id="evalReqCancel">' + esc(t('neverMind')) + '</button></div><div class="msg" id="evalReqMsg" hidden></div></div>';
+    return '<div class="pad" style="padding-top:10px"><div class="hint" style="padding-bottom:6px">' + esc(t('evalReqWhy')) + '</div><div class="chips">' + opts.map(function (p) { return '<button class="chip-btn small" data-purpose="' + p + '">' + esc(t('evalPurpose.' + p) + (FEES.eval[evalFeeKey(p)] ? ' · ' + money(FEES.eval[evalFeeKey(p)]) : '')) + '</button>'; }).join('') + '<button class="chip-btn small" id="evalReqCancel">' + esc(t('neverMind')) + '</button></div><div class="msg" id="evalReqMsg" hidden></div></div>';
   }
   function wireEvalRequest(g) {
     var pn = $('evalPayNow'); if (pn) pn.onclick = async function () {
@@ -5166,8 +5173,14 @@
   }
   async function loadEvalRequests() {
     await loadFees_();
-    var r = await sb.from('eval_requests').select('id,game_id,game_date,venue,purpose,status,coach_person_id,ref_name,ref_person_id,note,created_at,fee_cents,paid_at').order('game_date');
-    ER.mine = r.data || [];
+    var r2 = await Promise.all([
+      sb.from('eval_requests').select('id,game_id,game_date,venue,purpose,status,coach_person_id,ref_name,ref_person_id,note,created_at,fee_cents,paid_at').order('game_date'),
+      sb.rpc('eval_req_gate')
+    ]);
+    ER.mine = r2[0].data || [];
+    // Which requests this referee may make (151). Null (an error, or the
+    // function not run yet) falls back to every chip, the old behavior.
+    ER.gate = r2[1].error ? null : (r2[1].data || null);
   }
 
   // ── Notes ────────────────────────────────────────────────────────
