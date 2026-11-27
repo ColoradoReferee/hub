@@ -6,7 +6,8 @@
      2026.11.20-d: GP score reference fold on the Post-Match screen (the scoring sequence, the bands by difficulty, the 8.5 rule, the evidence and CMI rules), both languages. The ten second check before entering a score.
      2026.11.27-a: Video review fold on the Post-Match screen for the National tier: match video link plus timestamped moments (video clock, category, what happened), stored in the session and cited by the Writer (eval-write v2). Shows when the method mentions video, the license is National or above, or video data exists. Both languages.
      2026.11.27-b: the live-first workflow (watch live, debrief, video arrives later): every logged CMI and CRE lists in the Video review fold with its own video time box, written onto the incident itself (vtime) and cited by the Writer next to the match minute. The free moments list stays for full video evaluations.
-     2026.11.27-c: no second watch. Video platforms list kickoff moments (Pixellot: P1 START, P2 START); typed in as sync anchors, Fill video times computes the video time for every incident from its match minute (the match clock never stops, so anchor plus minute is near exact). Typed times are never overwritten. -->
+     2026.11.27-c: no second watch. Video platforms list kickoff moments (Pixellot: P1 START, P2 START); typed in as sync anchors, Fill video times computes the video time for every incident from its match minute (the match clock never stops, so anchor plus minute is near exact). Typed times are never overwritten.
+     2026.11.27-d: Discard also clears the video moments; they leaked into the next session. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1719,7 +1720,7 @@ function setLang(l) { LANG = l; try { localStorage.setItem('hub-lang', l); } cat
 // ═══════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════
-var EVAL_VERSION = '2026.11.27-c';
+var EVAL_VERSION = '2026.11.27-d';
 document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v' + EVAL_VERSION; });
 var MD = {};
 var OT = { active:false, half:0, len:10, otStarted:false };
@@ -4055,6 +4056,7 @@ function doDiscard() {
   sessions = [newSess()]; curIdx = 0; MD = {}; homeAttacksDir = null;
   incidents = { ref:{cmi:[],cre:[]}, ar1:{cmi:[],cre:[]}, ar2:{cmi:[],cre:[]}, fourth:{cmi:[],cre:[]} };
   ratings = {}; ynState = {};
+  vidMoments = []; vidRender(); vidRenderInc();
   showScreen('setup');
 }
 
