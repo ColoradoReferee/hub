@@ -1,4 +1,6 @@
-// app.js · Colorado Referees Hub · 2026-11-27 (d: My evaluations on Your
+// app.js · Colorado Referees Hub · 2026-11-27 (e: Start an evaluation
+// button on Coaching, payment pills on My evaluations rows, the RefEval
+// score pre-fills from the evaluator's final score; d: My evaluations on Your
 // day for coaches, red count when reports wait, and the Coaching fold
 // opens itself; c: the evaluation screen
 // reads like the US Soccer form (match block, scores, the coach's words,
@@ -14,7 +16,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.27-d';
+  var VERSION = '2026.11.27-e';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   // Unexpected client errors report themselves (135); five per page
@@ -658,7 +660,7 @@
           (sec.part1 ? fold('evpart1', t('evalPart1Fold'), '', '<div class="pad" style="white-space:pre-wrap">' + esc(sec.part1) + '</div>', false) : '') +
           fold('evedit', t('evalEditFold'), '', ta, false);
       })() +
-      (canEdit ? '<div class="pad no-print" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-top:0"><div><label class="hint" for="evScore">' + esc(t('evalScore')) + '</label><input id="evScore" type="number" step="0.1" min="1" max="10" inputmode="decimal" value="' + esc(e.score == null ? '' : e.score) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div><div><label class="hint" for="evLevel">' + esc(t('evalLevel')) + '</label><select id="evLevel" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' + ['adult', 'youth', 'other'].map(function (l) { return '<option value="' + l + '"' + ((e.level || 'other') === l ? ' selected' : '') + '>' + esc(t('upLevel.' + l)) + '</option>'; }).join('') + '</select></div></div>' : (e.score != null ? '<div class="pad hint">' + esc(t('evalScore')) + ': ' + esc(e.score) + ', ' + esc(t('upLevel.' + (e.level || 'other'))) + '</div>' : '')) +
+      (canEdit ? '<div class="pad no-print" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-top:0"><div><label class="hint" for="evScore">' + esc(t('evalScore')) + '</label><input id="evScore" type="number" step="0.1" min="1" max="10" inputmode="decimal" value="' + esc(e.score == null ? (parseFloat((S_.fields || {})[(S_.slot || 'ref') + '-score-hidden']) || '') : e.score) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div><div><label class="hint" for="evLevel">' + esc(t('evalLevel')) + '</label><select id="evLevel" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' + ['adult', 'youth', 'other'].map(function (l) { return '<option value="' + l + '"' + ((e.level || 'other') === l ? ' selected' : '') + '>' + esc(t('upLevel.' + l)) + '</option>'; }).join('') + '</select></div></div>' : (e.score != null ? '<div class="pad hint">' + esc(t('evalScore')) + ': ' + esc(e.score) + ', ' + esc(t('upLevel.' + (e.level || 'other'))) + '</div>' : '')) +
       '<div class="pad no-print" style="display:flex;flex-wrap:wrap;gap:8px;padding-top:0">' + (canEdit ? '<button class="btn primary small" id="evSave">' + esc(t('save')) + '</button>' : '') +
       (canSubmit ? '<button class="btn outline small" id="evSubmit">' + esc(t('evalSubmit')) + '</button>' : '') +
       (isRev && rs === 'submitted' ? '<button class="btn primary small" id="evApprove">' + esc(t('evalApprove')) + '</button><button class="btn outline small" id="evReturn">' + esc(t('evalReturn')) + '</button>' : '') +
@@ -2736,7 +2738,7 @@
     S.coach.games = r[0].data || [];
     S.coach.mine = r[1].data || [];
     S.coach.evals = r[2].data || [];
-    try { var mv = await sb.from('evaluations').select('id,game_date,venue,competition,ref_name,purpose,status,report,report_status,updated_at').eq('coach_person_id', S.me.person_id).order('game_date', { ascending: false }).limit(30); S.coach.myEvals = mv.data || []; } catch (e) { S.coach.myEvals = []; }
+    try { var mv = await sb.from('evaluations').select('id,game_date,venue,competition,ref_name,purpose,status,report,report_status,paid_at,updated_at').eq('coach_person_id', S.me.person_id).order('game_date', { ascending: false }).limit(30); S.coach.myEvals = mv.data || []; } catch (e) { S.coach.myEvals = []; }
     S.coach.assignr = (r[3].data || []).filter(function (g) { return isCoachSlot(g) && ['cr', 'ar1', 'ar2', 'fourth'].some(function (k) { return keys.indexOf(key(g[k])) >= 0; }); });
     S.coach.assignr.filter(function (g) { return g.date === day; }).forEach(function (g) {
       if (!S.coach.mine.some(function (m) { return m.venue === g.venue; })) S.coach.mine.push({ venue: g.venue, block: 'all', fields: g.field ? [g.field] : [], note: t('fromAssignr') + (g.kickoff ? ', ' + clock(g.kickoff) : '') });
@@ -2866,8 +2868,9 @@
     var evalsCard = (S.coach.evals || []).length ? '<div class="card" style="border-color:var(--red);gap:6px"><b>' + esc(t('evalAssignedTitle')) + '</b>' + S.coach.evals.map(function (r) { return '<div>' + refLink(r.ref_name) + ', ' + esc(dayLong(r.game_date)) + ', ' + esc(r.venue || '') + '. ' + esc(t('evalPurpose.' + r.purpose)) + ' <a class="refname" href="#coach/game/' + esc(r.game_id) + '">' + esc(t('details')) + '</a></div>'; }).join('') + '<div class="hint">' + esc(t('evalAssignedHint')) + '</div></div>' : '';
     var upcoming = (S.coach.assignr || []).filter(function (g) { return g.date > coachDay(); });
     var upcomingCard = upcoming.length ? '<div class="card" style="gap:4px"><b>' + esc(t('comingUp')) + '</b>' + upcoming.map(function (g) { return '<div>' + esc(dayLong(g.date)) + ', ' + esc(clock(g.kickoff)) + ', ' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + ' <span class="hint">' + esc(t('fromAssignr')) + '</span></div>'; }).join('') + '</div>' : '';
-    var myEvalsFold = (S.coach.myEvals || []).length ? fold('myevals', t('myEvalsTitle'), S.coach.myEvals.length, '<div class="list">' + S.coach.myEvals.map(function (e) { return '<a class="item" href="#eval/' + e.id + '"><div><b>' + esc(e.ref_name || '') + '</b> <span class="pill' + (e.status === 'complete' && (!e.report || e.report_status === 'approved') ? ' ok' : e.report_status === 'returned' ? ' bad' : '') + '">' + esc(e.status === 'complete' ? (e.report ? t('evalRs.' + (e.report_status || 'draft')) : t('evalComplete')) : t('evalInProgress')) + '</span>' + evalDuePill(e) + '<br><span class="hint">' + esc(e.game_date ? dayLong(e.game_date) : '') + (e.venue ? ', ' + esc(e.venue) : '') + (e.competition ? ', ' + esc(e.competition) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>', (S.coach.myEvals || []).some(function (e) { return !e.report || e.report_status === 'returned' || (!e.report_status && e.report); })) : '';
-    expected = wbHtml() + evalsCard + expected + upcomingCard + myEvalsFold;
+    var myEvalsFold = (S.coach.myEvals || []).length ? fold('myevals', t('myEvalsTitle'), S.coach.myEvals.length, '<div class="list">' + S.coach.myEvals.map(function (e) { return '<a class="item" href="#eval/' + e.id + '"><div><b>' + esc(e.ref_name || '') + '</b> <span class="pill' + (e.status === 'complete' && (!e.report || e.report_status === 'approved') ? ' ok' : e.report_status === 'returned' ? ' bad' : '') + '">' + esc(e.status === 'complete' ? (e.report ? t('evalRs.' + (e.report_status || 'draft')) : t('evalComplete')) : t('evalInProgress')) + '</span>' + (e.paid_at ? ' <span class="pill ok">' + esc(t('evalPaidPill')) + '</span>' : (e.status === 'complete' && (e.report_status === 'submitted' || e.report_status === 'approved') ? ' <span class="pill">' + esc(t('evalAwaitPay')) + '</span>' : '')) + evalDuePill(e) + '<br><span class="hint">' + esc(e.game_date ? dayLong(e.game_date) : '') + (e.venue ? ', ' + esc(e.venue) : '') + (e.competition ? ', ' + esc(e.competition) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>', (S.coach.myEvals || []).some(function (e) { return !e.report || e.report_status === 'returned' || (!e.report_status && e.report); })) : '';
+    var startEvalBtn = iCan('evaluations') ? '<div class="pad no-print" style="padding-top:8px"><a class="btn outline" href="evaluator.html" style="width:100%">' + esc(t('startEval')) + '</a></div>' : '';
+    expected = wbHtml() + evalsCard + expected + upcomingCard + startEvalBtn + myEvalsFold;
     var availability = availCalHtml();
     expected = expected + availability;
     var vCount = {}; S.coach.games.forEach(function (g) { if (g.venue) vCount[g.venue] = (vCount[g.venue] || 0) + 1; });

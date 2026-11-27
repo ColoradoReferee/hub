@@ -11,7 +11,8 @@
      2026.11.27-e: Jeff's first full test run, twelve findings in one pass. Every log modal's minute is an editable box prefilled from the clock, so a played game re-enters with real times; a second caution backfills the first if it was never logged (flagged, minute unknown); Fill video times understands the clock's own forms ('42, 45+2, 42:30); the half length comes from Setup, the fold's own selector is gone; native dropdown lists are dark on white everywhere; the tap-to-edit hint is readable; License and Match Challenge carry one-line hints; the feeling score bands say what the national standard says (7.9 and below is Below Expectation at every difficulty); the dead outdoor button is gone (the working theme toggle is top right); video fold controls wear ink, not gold.
      2026.11.27-f: never guess whether it saved. A Save to the Hub button on Post-Match and Export answers in plain words with the time; the leave warning only fires when the Hub copy is actually behind; the report overlay gains Share / Email through the device share sheet where one exists; light mode earns its contrast (deeper gold text, real fold edges).
      2026.11.27-g: completion sticks. The PDF marks the session complete; a later Save to the Hub no longer downgrades it to in progress.
-     2026.11.27-h: the Export screen ends with a door. Once saved, Open the Hub deep-links to this evaluation's own screen, and the Next panel says what actually happens now: the Writer drafts, the coach verifies, the boxes copy into RefEval. -->
+     2026.11.27-h: the Export screen ends with a door. Once saved, Open the Hub deep-links to this evaluation's own screen, and the Next panel says what actually happens now: the Writer drafts, the coach verifies, the boxes copy into RefEval.
+     2026.11.27-i: events flagged Review Video during the match join the Video review list with their own time boxes, filled by the kickoff anchors like the CMIs and CREs, and their video times ride the event log into the draft (eval-write v3). -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -1740,7 +1741,7 @@ function setLang(l) { LANG = l; try { localStorage.setItem('hub-lang', l); } cat
 // ═══════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════
-var EVAL_VERSION = '2026.11.27-h';
+var EVAL_VERSION = '2026.11.27-i';
 document.querySelectorAll('.ver').forEach(function (el) { el.textContent = 'v' + EVAL_VERSION; });
 var MD = {};
 var OT = { active:false, half:0, len:10, otStarted:false };
@@ -2856,20 +2857,32 @@ function toggleVid() {
 function vidRenderInc() {
   var el = document.getElementById('vid-inc'); if (!el) return;
   var rows = [];
+  var mkRow = function (keyStr, label, brief, vtime) {
+    if (brief.length > 48) brief = brief.slice(0, 48) + '...';
+    rows.push('<div class="ecl" style="display:flex;gap:8px;align-items:center"><span style="flex:1"><b>' + label + '</b>' + (brief ? ' ' + vidEsc(brief) : '') + '</span><input data-vinc="' + keyStr + '" value="' + vidEsc(vtime || '') + '" placeholder="' + T('vid_time_ph') + '" style="width:76px;background:var(--fill2);border:1px solid var(--edge2);border-radius:8px;color:var(--ink);font-family:inherit;font-size:14px;padding:6px;text-align:center"></div>');
+  };
   ['ref', 'ar1', 'ar2', 'fourth'].forEach(function (who) {
     ['cmi', 'cre'].forEach(function (kind) {
       (((incidents || {})[who] || {})[kind] || []).forEach(function (x, i) {
-        var label = (who === 'ref' ? '' : who.toUpperCase() + ' ') + kind.toUpperCase() + ' ' + vidEsc(x.time || '') + ' ' + vidEsc(x.type || '');
-        var brief = String(x.brief || x.note || ''); if (brief.length > 48) brief = brief.slice(0, 48) + '...';
-        rows.push('<div class="ecl" style="display:flex;gap:8px;align-items:center"><span style="flex:1"><b>' + label + '</b>' + (brief ? ' ' + vidEsc(brief) : '') + '</span><input data-vinc="' + who + '|' + kind + '|' + i + '" value="' + vidEsc(x.vtime || '') + '" placeholder="' + T('vid_time_ph') + '" style="width:76px;background:var(--fill2);border:1px solid var(--edge2);border-radius:8px;color:var(--ink);font-family:inherit;font-size:14px;padding:6px;text-align:center"></div>');
+        mkRow(who + '|' + kind + '|' + i, (who === 'ref' ? '' : who.toUpperCase() + ' ') + kind.toUpperCase() + ' ' + vidEsc(x.time || '') + ' ' + vidEsc(x.type || ''), String(x.brief || x.note || ''), x.vtime);
       });
+    });
+  });
+  // Events flagged Review Video during the match earn a box too: the 46'
+  // DOGSO look was exactly this, flagged live, confirmed on film later.
+  (sessions || []).forEach(function (ss, si) {
+    (ss.events || []).forEach(function (ev, ei) {
+      if (ev.flag !== 2) return;
+      mkRow('ev|' + si + '|' + ei, vidEsc(ev.time || '') + ' ' + vidEsc(ev.type || ev.code || ''), String(ev.notes || ev.reason || ''), ev.vtime);
     });
   });
   el.innerHTML = rows.length ? '<div class="ecl" data-t="vid_inc_head">' + T('vid_inc_head') + '</div>' + rows.join('') : '';
   el.querySelectorAll('[data-vinc]').forEach(function (inp) {
     inp.onchange = function () {
       var p = inp.getAttribute('data-vinc').split('|');
-      var x = (((incidents || {})[p[0]] || {})[p[1]] || [])[parseInt(p[2], 10)];
+      var x = p[0] === 'ev'
+        ? (((sessions || [])[parseInt(p[1], 10)] || {}).events || [])[parseInt(p[2], 10)]
+        : (((incidents || {})[p[0]] || {})[p[1]] || [])[parseInt(p[2], 10)];
       if (!x) return;
       var v = inp.value.trim();
       if (v && !/^\d{1,2}(:\d{2}){1,2}$/.test(v)) { inp.style.borderColor = 'var(--bad, #e63946)'; return; }
@@ -2914,17 +2927,19 @@ function vidFill() {
   var a1 = ok.test(s1) ? vidSecs(s1) : null, a2 = ok.test(s2) ? vidSecs(s2) : null;
   var n = 0;
   if (a1 != null) {
+    var fillOne = function (x) {
+      if (x.vtime) return;
+      var mt = vidMatchSecs(x.time); if (mt == null) return;
+      if (mt >= half) { if (a2 == null) return; x.vtime = vidFmt(a2 + (mt - half)); }
+      else x.vtime = vidFmt(a1 + mt);
+      n++;
+    };
     ['ref', 'ar1', 'ar2', 'fourth'].forEach(function (who) {
       ['cmi', 'cre'].forEach(function (kind) {
-        (((incidents || {})[who] || {})[kind] || []).forEach(function (x) {
-          if (x.vtime) return;
-          var mt = vidMatchSecs(x.time); if (mt == null) return;
-          if (mt >= half) { if (a2 == null) return; x.vtime = vidFmt(a2 + (mt - half)); }
-          else x.vtime = vidFmt(a1 + mt);
-          n++;
-        });
+        (((incidents || {})[who] || {})[kind] || []).forEach(fillOne);
       });
     });
+    (sessions || []).forEach(function (ss) { (ss.events || []).forEach(function (ev) { if (ev.flag === 2) fillOne(ev); }); });
   }
   msg.style.display = 'block';
   msg.textContent = n ? T('vid_filled').replace('{n}', n) : T('vid_fill_none');
