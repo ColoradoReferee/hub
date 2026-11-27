@@ -1,4 +1,8 @@
-// app.js · Colorado Referees Hub · 2026-11-27 (b: evaluation request chips
+// app.js · Colorado Referees Hub · 2026-11-27 (c: the evaluation screen
+// reads like the US Soccer form (match block, scores, the coach's words,
+// metrics, capacity), the Writer's Draft button is primary and no longer
+// waits for the session to close, and the drafted report splits into
+// RefEval boxes with one-tap copy; b: evaluation request chips
 // gated by grade and history, needs 151; a: View as resets the season
 // board and the badge counts, so an admin viewing as a referee sees that
 // referee's season, not their own; found live) · 2026-11-24 (b: Do not send asks why and the Not sent folder shows it (needs 137), gold nudge, unread fold speaks when empty; a: note nudge, coach writing tip (needs 136 + note-clean v2), never-seen counts in scheduling, released-but-unread fold; 2026-11-23 f: client errors report themselves, errors fold on the State view, needs 135; e: link extra sign-in emails on the person card, needs 134; d: sign-in bounce copy names the fix; c: board refetch floor, 15s, emergencies exempt; b: PWA shell: manifest, service worker, icons; a: dual-write retired for switches, bulletins and emergencies; needs 129, 130, 131)
@@ -8,7 +12,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.27-b';
+  var VERSION = '2026.11.27-c';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   // Unexpected client errors report themselves (135); five per page
@@ -549,6 +553,61 @@
   // their own words before submitting. The backend allowed exactly this
   // all along; only the button was stricter.
   var EV = { row: null, busy: false };
+  // The screen reads like the US Soccer evaluation form: match block,
+  // scores, the coach's own words, event metrics, capacity. Everything
+  // comes from the session the evaluator saved.
+  function evalFormHtml(e, S_) {
+    var md = S_.MD || {}, fields = S_.fields || {}, yn = S_.ynState || {}, sessions = S_.sessions || [];
+    var slot = S_.slot || 'ref';
+    var F_ = function (k) { return fields[slot + '-' + k] || ''; };
+    var lastS = sessions[sessions.length - 1] || {};
+    var fscore = lastS.homeScore != null ? lastS.homeScore + ' - ' + lastS.awayScore : '';
+    var evAll = []; sessions.forEach(function (ss) { (ss.events || []).forEach(function (x) { evAll.push(x); }); });
+    var nC = evAll.filter(function (x) { return x.code === 'C' || x.code === 'F+C'; }).length;
+    var nRC = evAll.filter(function (x) { return x.code === 'RC' || x.code === 'F+RC'; }).length;
+    var nPK = evAll.filter(function (x) { return x.code === 'PK'; }).length;
+    var row = function (l, v) { return v ? '<div class="rowline"><div class="hint">' + esc(l) + '</div><b>' + esc(v) + '</b></div>' : ''; };
+    var matchCard = '<div class="card" style="gap:2px">' +
+      ((md.hName && md.aName) ? '<div class="vsline"><span>' + esc(md.hName) + '</span><span class="vs">' + (fscore ? esc(fscore) : 'vs') + '</span><span>' + esc(md.aName) + '</span></div>' : '') +
+      row(t('crew'), [md.ref, md.ar1, md.ar2, md.fourth].filter(function (x) { return x && !/^(ar1|ar2|4th|referee)$/i.test(x); }).join(', ')) +
+      row(t('evalMetricsC'), String(nC)) + row(t('evalMetricsRC'), String(nRC)) + (nPK ? row(t('evalMetricsPK'), String(nPK)) : '') + '</div>';
+    var scores = (F_('score-before') || F_('score-hidden') || F_('diff'))
+      ? '<div class="stats">' +
+        '<div class="stat"><b>' + esc(F_('score-before') || '-') + '</b><i>' + esc(t('evalBefore')) + '</i></div>' +
+        '<div class="stat"><b>' + esc(F_('score-hidden') || '-') + '</b><i>' + esc(t('evalFinalScore')) + '</i></div>' +
+        '<div class="stat"><b>' + esc(F_('diff') || '-') + '</b><i>' + esc(t('evalDiffW')) + '</i></div></div>'
+      : '';
+    var words = '';
+    if (F_('pos')) words += '<div class="card" style="gap:4px"><b>' + esc(t('evalPosT')) + '</b><div style="white-space:pre-wrap">' + esc(F_('pos')) + '</div></div>';
+    if (F_('dev')) words += '<div class="card" style="gap:4px"><b>' + esc(t('evalDevT')) + '</b><div style="white-space:pre-wrap">' + esc(F_('dev')) + '</div></div>';
+    var capLine = function (k, l) {
+      var v = yn[slot + '-' + k], note = F_(k + '-notes');
+      if (!v && !note) return '';
+      return '<div class="rowline"><div>' + esc(l) + (note ? '<div class="hint">' + esc(note) + '</div>' : '') + '</div><b>' + esc(v === 'y' ? t('yes') : v === 'n' ? t('no') : '') + '</b></div>';
+    };
+    var cap = capLine('rec', t('evalCapRec')) + capLine('cap', t('evalCapLvl')) + capLine('cap2', t('evalCapMore'));
+    if (cap) cap = '<div class="card" style="gap:2px"><b>' + esc(t('evalCapacityT')) + '</b>' + cap + '</div>';
+    return '<div class="pad" style="display:grid;gap:10px">' + matchCard + scores + words + cap + '</div>';
+  }
+  // The Writer's part two, split at its RefEval headings so each box
+  // copies into its RefEval field in one tap.
+  function evalSections(txt) {
+    var cut = txt.search(/\n=+\s*\n/);
+    if (cut < 0) return null;
+    var p1 = txt.slice(0, cut).trim(), p2 = txt.slice(cut).replace(/^\n=+\s*\n/, '');
+    var names = ['POSITIVE AREAS', 'AREAS FOR DEVELOPMENT', 'BRIEF DESCRIPTIONS', 'NEXT STEPS', 'CAPACITY', 'STANDARDS CHECK'];
+    var idx = [];
+    names.forEach(function (n) { var m = p2.search(new RegExp('^\\s*' + n + '\\s*:?', 'mi')); if (m >= 0) idx.push({ n: n, at: m }); });
+    idx.sort(function (a, b) { return a.at - b.at; });
+    if (idx.length < 2) return null;
+    var secs = [];
+    for (var i = 0; i < idx.length; i++) {
+      var seg = p2.slice(idx[i].at, i + 1 < idx.length ? idx[i + 1].at : p2.length);
+      seg = seg.replace(new RegExp('^\\s*' + idx[i].n + '\\s*:?\\s*', 'i'), '');
+      secs.push({ name: idx[i].n, text: seg.trim() });
+    }
+    return { part1: p1, secs: secs };
+  }
   async function renderEval(id) {
     var body = $('evalBody'); body.innerHTML = '<div class="card"><div class="hint">' + esc(t('loadingReview')) + '</div></div>';
     var r = await sb.from('evaluations').select('id,coach_person_id,coach_name,ref_name,ref_person_id,game_id,game_date,venue,competition,purpose,license,status,session,final_scores,report,report_at,report_status,review_note,reviewed_at,score,level').eq('id', id).limit(1);
@@ -568,17 +627,33 @@
     var rs = e.report_status || 'draft', isRev = iCan('review');
     var canEdit = isRev || (mine && (rs === 'draft' || rs === 'returned'));
     var canSubmit = mine && e.status === 'complete' && (rs === 'draft' || rs === 'returned');
-    var canDraft = (isRev || (mine && (rs === 'draft' || rs === 'returned'))) && e.status === 'complete';
+    // Drafting never waits for the evaluator session to close; only
+    // submitting does. The Writer reads whatever is saved.
+    var canDraft = isRev || (mine && (rs === 'draft' || rs === 'returned'));
     var rsPill = e.report ? ' <span class="pill' + (rs === 'approved' ? ' ok' : rs === 'returned' ? ' bad' : '') + '">' + esc(t('evalRs.' + rs)) + '</span>' : '';
     body.innerHTML = '<div class="pad" style="padding-top:12px"><div class="lead">' + esc(t('evalTitle')) + '</div><div class="disp" style="font-size:34px">' + esc(e.ref_name || '') + '</div><div class="hint">' + esc(e.game_date ? dayLong(e.game_date) : '') + (e.venue ? ', ' + esc(e.venue) : '') + (e.competition ? ', ' + esc(e.competition) : '') + '</div><div class="hint">' + esc(t('evalCoach')) + ' ' + esc(e.coach_name || '') + '. ' + esc(e.purpose || '') + (e.license ? ', ' + esc(e.license) : '') + ' <span class="pill' + (e.status === 'complete' ? ' ok' : '') + '">' + esc(e.status === 'complete' ? t('evalComplete') : t('evalInProgress')) + '</span></div></div>' +
       '<div class="stats">' + '<div class="stat"><b>' + nEv + '</b><i>' + esc(t('evalEvents')) + '</i></div><div class="stat"><b>' + nInc + '</b><i>' + esc(t('evalIncidents')) + '</i></div><div class="stat"><b>' + Object.keys(ratings).length + '</b><i>' + esc(t('evalRatings')) + '</i></div></div>' +
       (deb ? fold('evdebrief', t('evalDebrief'), nDisc || nInc, '<div class="pad hint" style="padding-top:0">' + esc(t('evalDebriefHint')) + '</div><div class="pad">' + deb + '</div>', false) : '') +
       (rated ? fold('evratings', t('evalRatingsTitle'), Object.keys(ratings).length, '<div class="pad">' + rated + '</div>', false) : '') +
+      evalFormHtml(e, S_) +
       (e.game_id ? '<div class="pad" style="padding-top:8px"><a class="btn outline small" href="evaluator.html?game=' + esc(e.game_id) + '">' + esc(t('evalOpenEvaluator')) + '</a></div>' : '') +
       '<div class="disp h2">' + esc(t('evalReport')) + rsPill + evalDuePill(e) + '</div><div class="pad hint" style="padding-top:0">' + esc(rs === 'approved' ? t('evalApprovedHint') : rs === 'submitted' && !isRev ? t('evalLocked') : t('evalReportHint')) + '</div>' +
       (rs === 'returned' && e.review_note ? '<div class="pad"><div class="card" style="border-color:var(--bad,#c0392b)"><b>' + esc(t('evalReviewNote')) + '</b><div style="white-space:pre-wrap">' + esc(e.review_note) + '</div></div></div>' : '') +
-      '<div class="pad no-print" style="padding-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' + (e.status !== 'complete' ? '<span class="hint">' + esc(t('evalFinishFirst')) + '</span>' : '') + (canDraft ? '<button class="btn outline small" id="evDraft">' + esc(e.report ? t('evalRedraft') : t('evalDraft')) + '</button><span class="hint">' + esc(t('evalReviewerDraft')) + '</span>' : '') + (e.report ? '<button class="btn outline small" id="evCopy">' + esc(t('evalCopy')) + '</button><button class="btn outline small" id="evPrint">' + esc(t('print')) + '</button>' : '') + '</div>' +
-      '<div class="pad" style="padding-top:8px"><textarea id="evText" style="min-height:360px;font:inherit;width:100%;padding:12px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)" placeholder="' + esc(t('evalEmpty')) + '"' + (canEdit ? '' : ' readonly') + '>' + esc(e.report || '') + '</textarea></div>' +
+      '<div class="pad no-print" style="padding-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' + (canDraft ? '<button class="btn primary" id="evDraft" style="flex:1 1 auto">' + esc(e.report ? t('evalRedraft') : t('evalDraft')) + '</button>' : '') + (e.report ? '<button class="btn outline small" id="evCopy">' + esc(t('evalCopy')) + '</button><button class="btn outline small" id="evPrint">' + esc(t('print')) + '</button>' : '') + '</div>' +
+      (canDraft && !e.report ? '<div class="pad hint no-print" style="padding-top:0">' + esc(t('evalDraftLead')) + '</div>' : '') +
+      (function () {
+        var sec = e.report ? evalSections(e.report) : null;
+        var ta = '<div class="pad" style="padding-top:8px"><textarea id="evText" style="min-height:360px;font:inherit;width:100%;padding:12px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)" placeholder="' + esc(t('evalEmpty')) + '"' + (canEdit ? '' : ' readonly') + '>' + esc(e.report || '') + '</textarea></div>';
+        if (!sec) return ta;
+        EV.secs = sec.secs;
+        var boxes = '<div class="pad hint" style="padding-top:0">' + esc(t('evalRefevalHint')) + '</div>' + sec.secs.map(function (s, i) {
+          var own = s.name === 'STANDARDS CHECK';
+          return '<div class="pad" style="padding-top:0"><div class="card" style="gap:6px' + (own ? ';border-color:var(--gold)' : '') + '"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>' + esc(s.name) + '</b>' + (own ? '<span class="pill" style="border:1px solid var(--gold)">' + esc(t('evalStdOnly')) + '</span>' : '<button class="btn outline small no-print" data-evsec="' + i + '">' + esc(t('evalCopyBox')) + '</button>') + '</div><div style="white-space:pre-wrap">' + esc(s.text) + '</div></div></div>';
+        }).join('');
+        return boxes +
+          (sec.part1 ? fold('evpart1', t('evalPart1Fold'), '', '<div class="pad" style="white-space:pre-wrap">' + esc(sec.part1) + '</div>', false) : '') +
+          fold('evedit', t('evalEditFold'), '', ta, false);
+      })() +
       (canEdit ? '<div class="pad no-print" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-top:0"><div><label class="hint" for="evScore">' + esc(t('evalScore')) + '</label><input id="evScore" type="number" step="0.1" min="1" max="10" inputmode="decimal" value="' + esc(e.score == null ? '' : e.score) + '" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)"></div><div><label class="hint" for="evLevel">' + esc(t('evalLevel')) + '</label><select id="evLevel" style="font:inherit;width:100%;padding:10px;border:1px solid var(--muted);border-radius:8px;background:var(--surface);color:var(--ink)">' + ['adult', 'youth', 'other'].map(function (l) { return '<option value="' + l + '"' + ((e.level || 'other') === l ? ' selected' : '') + '>' + esc(t('upLevel.' + l)) + '</option>'; }).join('') + '</select></div></div>' : (e.score != null ? '<div class="pad hint">' + esc(t('evalScore')) + ': ' + esc(e.score) + ', ' + esc(t('upLevel.' + (e.level || 'other'))) + '</div>' : '')) +
       '<div class="pad no-print" style="display:flex;flex-wrap:wrap;gap:8px;padding-top:0">' + (canEdit ? '<button class="btn primary small" id="evSave">' + esc(t('save')) + '</button>' : '') +
       (canSubmit ? '<button class="btn outline small" id="evSubmit">' + esc(t('evalSubmit')) + '</button>' : '') +
@@ -607,6 +682,11 @@
     var rt = $('evReturn'); if (rt) rt.onclick = async function () { var note = window.prompt(t('evalReturnPrompt'), ''); if (note === null) return; if (await evUpdate({ report_status: 'returned', reviewed_by: S.me.person_id, reviewed_at: new Date().toISOString(), review_note: note.trim() || null })) renderEval(id); };
     var rc = $('evRecall'); if (rc) rc.onclick = async function () { var note = window.prompt(t('evalRecallPrompt'), ''); if (note === null) return; if (!note.trim()) { say('evMsg', t('evalRecallNeedsReason'), 'bad'); return; } if (await evUpdate({ report_status: 'returned', reviewed_by: S.me.person_id, reviewed_at: new Date().toISOString(), review_note: note })) renderEval(id); };
     var cp = $('evCopy'); if (cp) cp.onclick = async function () { try { await navigator.clipboard.writeText($('evText').value); say('evMsg', t('evalCopied'), 'good'); } catch (err) { $('evText').select(); } };
+    body.querySelectorAll('[data-evsec]').forEach(function (b) { b.onclick = async function () {
+      var s = (EV.secs || [])[parseInt(b.getAttribute('data-evsec'), 10)]; if (!s) return;
+      try { await navigator.clipboard.writeText(s.text); } catch (err) { window.prompt(t('evalCopyBox'), s.text); return; }
+      var was = b.textContent; b.textContent = t('evalCopied'); setTimeout(function () { b.textContent = was; }, 1500);
+    }; });
     var pr = $('evPrint'); if (pr) pr.onclick = function () { window.print(); };
   }
   // Progress toward an upgrade or maintenance: one line, with the count that matters.
