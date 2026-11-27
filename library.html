@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- library.html v2026.11.24-b · 2026-11-24 · Colorado Referees Library -->
+<!-- library.html v2026.11.27-a · 2026-11-24 · Colorado Referees Library -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -493,7 +493,7 @@ a{color:inherit;text-decoration:none;}
       <img src="assets/co-referee-program.png" alt="Colorado Soccer Referee Program">
     </div>
     <div class="footer-text">
-      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.24-b<br>
+      <span data-l="foot1">Colorado Referees Library &middot; Colorado Soccer Association &middot; 2026/27 edition</span> &middot; Built with JAReferee &middot; v2026.11.27-a<br>
       <a href="https://coloradosoccer.org" class="footer-link">ColoradoSoccer.org</a> &middot;
       <span data-l="questions">Questions:</span> <a href="mailto:refeducation@coloradoreferees.com" class="footer-link">refeducation@coloradoreferees.com</a> &middot; 303.888.6863
     </div>
@@ -593,6 +593,29 @@ var MODULES = [
         bul("<strong>Light or dark:</strong> the sun and moon button. The Hub remembers your choice.") +
         bul("<strong>Spinning ball</strong> means it is loading. If it spins for more than a few seconds you probably have no signal.") +
         bul("<strong>Version number</strong> sits at the bottom of every screen. Mention it when you report a problem; new versions appear after you refresh the page."));
+    }
+  },
+  {
+    id:"hub-eval-flow", cat:"hub", icon:"&#127916;",
+    iconBg:"rgba(200,146,26,.14)",
+    title:"How a formal evaluation flows",
+    sub:"For referee coaches: field to RefEval in one path",
+    eyebrow:"Using the Hub &middot; for referee coaches",
+    keywords:"evaluation evaluator formal coach writer draft refeval video clips moments debrief save hub steps flow",
+    build: function() {
+      return ds("1 &middot; At the field",
+        stp(1, "Open the Evaluator: from <strong>Coaching</strong>, tap <strong>Start an evaluation</strong> (an assigned evaluation links straight from Your day). Fill the Setup screen, pick the method, and log the match live with the big buttons. Every entry carries a minute box, prefilled from the clock and yours to type, so a played game can be entered later too.") +
+        stp(2, "Flag anything you want to check on film as <strong>Review Video</strong>. Red cards and penalty kicks create their Critical Match Incidents by themselves.")) +
+      ds("2 &middot; After the whistle",
+        stp(1, "Walk the numbered steps across the Post-Match screen: Referee, AR1, AR2, 4th, Crew, Debrief. Each named official wears a dot that turns green when their feedback and final score are in. The Debrief tab hands you the questions to ask.") +
+        stp(2, "The <strong>Finish</strong> screen opens with a readiness card naming anyone still missing feedback. Tap <strong>Save to the Hub</strong> and it answers with the time saved. Generate the PDF for the debrief copy; Share sends it from your phone.")) +
+      ds("3 &middot; When the video arrives",
+        stp(1, "Open the <strong>Video review</strong> fold on Post-Match. Paste the match link, then type the two kickoff times from the video platform's own moments list and tap <strong>Fill video times</strong>: every incident gets its video time computed from its match minute. Confirm each one on film and nudge where needed.")) +
+      ds("4 &middot; Draft, verify, RefEval",
+        stp(1, "Tap <strong>Open this evaluation in the Hub</strong> at the bottom of Finish. The evaluation screen reads like the US Soccer form; tap <strong>Draft</strong> and the Writer builds the report from everything you logged, video citations included.") +
+        stp(2, "Verify every line. The STANDARDS CHECK block at the end is yours alone and lists anything the draft could not confirm. Edit the full text if a line is not what you would say.") +
+        stp(3, "Copy each box into its RefEval field: Positive Areas, Areas for Development, Brief Descriptions, Next Steps, Capacity. Then <strong>Submit</strong> in the Hub; once submitted, the evaluation joins the payment queue and the row shows Paid when it is paid.") +
+        callout("200,146,26","&#9733;","One path, every time: log it, walk the steps, save, confirm on film, draft, verify, copy, submit."));
     }
   },
   {
@@ -2263,6 +2286,26 @@ var ES = {
         bul("<strong>Claro u oscuro:</strong> el botón del sol y la luna. El Hub recuerda tu elección.") +
         bul("<strong>El balón girando</strong> significa que está cargando. Si gira por más de unos segundos, probablemente no tienes señal.") +
         bul("<strong>El número de versión</strong> está al pie de cada pantalla. Menciónalo cuando reportes un problema; las versiones nuevas aparecen después de actualizar la página."));
+    }
+  },
+
+  "hub-eval-flow": {
+    title: "Cómo fluye una evaluación formal", sub: "Para coaches de árbitros: de la cancha a RefEval en un solo camino", eyebrow: "Cómo usar el Hub &middot; para coaches de árbitros",
+    keywords: "evaluación evaluador formal coach redactor borrador refeval video momentos charla guardar hub pasos flujo",
+    build: function() {
+      return ds("1 &middot; En la cancha",
+        stp(1, "Abre el Evaluador: desde <strong>Coaching</strong>, toca <strong>Iniciar una evaluación</strong> (una evaluación asignada se abre directo desde Tu día). Llena la pantalla de inicio, elige el método y registra el partido en vivo con los botones grandes. Cada entrada lleva una caja de minuto, prellenada desde el reloj y tuya para escribir, así que un partido ya jugado también se puede capturar después.") +
+        stp(2, "Marca lo que quieras revisar en video como <strong>Review Video</strong>. Las rojas y los penales crean sus incidentes críticos solos.")) +
+      ds("2 &middot; Después del silbatazo",
+        stp(1, "Recorre los pasos numerados del Post-Match: Árbitro, AR1, AR2, 4to, Equipo, Charla. Cada oficial nombrado lleva un punto que se pone verde cuando su retroalimentación y puntaje final están. La pestaña de Charla te da las preguntas.") +
+        stp(2, "La pantalla <strong>Finalizar</strong> abre con una tarjeta que nombra a quien aún le falte retroalimentación. Toca <strong>Guardar en el Hub</strong> y responde con la hora guardada. Genera el PDF para la copia de la charla; Compartir lo envía desde tu teléfono.")) +
+      ds("3 &middot; Cuando llega el video",
+        stp(1, "Abre <strong>Revisión de video</strong> en Post-Match. Pega el enlace, escribe los dos tiempos de saque inicial de la lista de momentos del propio video y toca <strong>Llenar tiempos de video</strong>: cada incidente recibe su tiempo calculado desde su minuto. Confirma cada uno en la grabación y ajusta donde haga falta.")) +
+      ds("4 &middot; Redactar, verificar, RefEval",
+        stp(1, "Toca <strong>Abrir esta evaluación en el Hub</strong> al final de Finalizar. La pantalla se lee como el formulario de US Soccer; toca <strong>Redactar</strong> y el Redactor arma el informe con todo lo que registraste, citas de video incluidas.") +
+        stp(2, "Verifica cada línea. El bloque STANDARDS CHECK al final es solo tuyo y lista lo que el borrador no pudo confirmar. Edita el texto completo si una línea no es lo que tú dirías.") +
+        stp(3, "Copia cada caja en su campo de RefEval: Positive Areas, Areas for Development, Brief Descriptions, Next Steps, Capacity. Luego <strong>Enviar</strong> en el Hub; una vez enviada, la evaluación entra a la cola de pago y la fila muestra Pagada cuando se paga.") +
+        callout("200,146,26","&#9733;","Un solo camino, siempre: registra, recorre los pasos, guarda, confirma en video, redacta, verifica, copia, envía."));
     }
   },
 
