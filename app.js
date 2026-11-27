@@ -1,11 +1,13 @@
-// app.js · Colorado Referees Hub · 2026-11-24 (b: Do not send asks why and the Not sent folder shows it (needs 137), gold nudge, unread fold speaks when empty; a: note nudge, coach writing tip (needs 136 + note-clean v2), never-seen counts in scheduling, released-but-unread fold; 2026-11-23 f: client errors report themselves, errors fold on the State view, needs 135; e: link extra sign-in emails on the person card, needs 134; d: sign-in bounce copy names the fix; c: board refetch floor, 15s, emergencies exempt; b: PWA shell: manifest, service worker, icons; a: dual-write retired for switches, bulletins and emergencies; needs 129, 130, 131)
+// app.js · Colorado Referees Hub · 2026-11-27 (a: View as resets the season
+// board and the badge counts, so an admin viewing as a referee sees that
+// referee's season, not their own; found live) · 2026-11-24 (b: Do not send asks why and the Not sent folder shows it (needs 137), gold nudge, unread fold speaks when empty; a: note nudge, coach writing tip (needs 136 + note-clean v2), never-seen counts in scheduling, released-but-unread fold; 2026-11-23 f: client errors report themselves, errors fold on the State view, needs 135; e: link extra sign-in emails on the person card, needs 134; d: sign-in bounce copy names the fix; c: board refetch floor, 15s, emergencies exempt; b: PWA shell: manifest, service worker, icons; a: dual-write retired for switches, bulletins and emergencies; needs 129, 130, 131)
 // Reads from the database as the signed-in person. Coaching notes write
 // to the database directly; the 10 day submission countdown sits on
 // every evaluation not yet submitted.
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.24-j';
+  var VERSION = '2026.11.27-a';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   // Unexpected client errors report themselves (135); five per page
@@ -5530,6 +5532,12 @@
 
   async function start() {
     var painted = snapPaint();
+    // start() runs again when View as begins or ends, and these caches are
+    // keyed to a person: without the reset, the season board and the badge
+    // counts keep showing whoever loaded first (found live, viewing as a
+    // referee showed the admin's season).
+    SEAS = { year: null, data: null, tried: false, months: null, mTried: false, wall: null, wTried: false };
+    PILLS = { at: 0, d: {} };
     S.me = await loadMe();
     if (!S.me) {
       try { localStorage.removeItem('hub-snap'); } catch (e0) {}
