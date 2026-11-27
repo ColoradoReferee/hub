@@ -1,4 +1,6 @@
-// app.js · Colorado Referees Hub · 2026-11-27 (c: the evaluation screen
+// app.js · Colorado Referees Hub · 2026-11-27 (d: My evaluations on Your
+// day for coaches, red count when reports wait, and the Coaching fold
+// opens itself; c: the evaluation screen
 // reads like the US Soccer form (match block, scores, the coach's words,
 // metrics, capacity), the Writer's Draft button is primary and no longer
 // waits for the session to close, and the drafted report splits into
@@ -12,7 +14,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.27-c';
+  var VERSION = '2026.11.27-d';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   // Unexpected client errors report themselves (135); five per page
@@ -439,8 +441,10 @@
       loadSessions_(),
       sb.rpc('co90_card'),
       sb.rpc('asg_my'),
-      sb.rpc('premium_mine')
+      sb.rpc('premium_mine'),
+      iCan('evaluations') ? sb.from('evaluations').select('id', { count: 'exact', head: true }).eq('coach_person_id', S.me.person_id).or('report_status.is.null,report_status.in.(draft,returned)') : Promise.resolve({ count: 0 })
     ]);
+    S.myEvalsOpenN = (r[14] && r[14].count) || 0;
     S.co90 = r[11] && r[11].data || null;
     S.asg = r[12] && r[12].data || null;
     S.prem = r[13] && r[13].data || null;
@@ -2591,6 +2595,7 @@
       vq.onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(vt); runViewAs(); } };
       $('viewAsGo').onclick = runViewAs;
     }
+    $('evalsEntry').innerHTML = iCan('evaluations') ? '<a class="rowbtn" href="#coach" style="margin-top:8px"><span><span class="t">' + esc(t('myEvalsTitle')) + '</span>' + (S.myEvalsOpenN ? ' <span class="pillbadge">' + (S.myEvalsOpenN > 99 ? '99+' : S.myEvalsOpenN) + '</span>' : '') + '<br><span class="s">' + esc(t('evalsEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
     $('eodEntry').innerHTML = canEod() ? '<a class="rowbtn" href="#eod" style="margin-top:8px"><span><span class="t">' + esc(t('eodEntry')) + '</span>' + pillBadge('pay') + '<br><span class="s">' + esc(t('eodEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
     $('setupEntry').innerHTML = iCan('setup') ? '<a class="rowbtn" href="#setup" style="margin-top:8px"><span><span class="t">' + esc(t('setupEntry')) + '</span><br><span class="s">' + esc(t('setupEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
     $('peopleEntry').innerHTML = iCan('people') ? '<a class="rowbtn" href="#people" style="margin-top:8px"><span><span class="t">' + esc(t('peopleEntry')) + '</span>' + pillBadge('names') + '<br><span class="s">' + esc(t('peopleEntryHint')) + '</span></span><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>' : '';
@@ -2861,7 +2866,7 @@
     var evalsCard = (S.coach.evals || []).length ? '<div class="card" style="border-color:var(--red);gap:6px"><b>' + esc(t('evalAssignedTitle')) + '</b>' + S.coach.evals.map(function (r) { return '<div>' + refLink(r.ref_name) + ', ' + esc(dayLong(r.game_date)) + ', ' + esc(r.venue || '') + '. ' + esc(t('evalPurpose.' + r.purpose)) + ' <a class="refname" href="#coach/game/' + esc(r.game_id) + '">' + esc(t('details')) + '</a></div>'; }).join('') + '<div class="hint">' + esc(t('evalAssignedHint')) + '</div></div>' : '';
     var upcoming = (S.coach.assignr || []).filter(function (g) { return g.date > coachDay(); });
     var upcomingCard = upcoming.length ? '<div class="card" style="gap:4px"><b>' + esc(t('comingUp')) + '</b>' + upcoming.map(function (g) { return '<div>' + esc(dayLong(g.date)) + ', ' + esc(clock(g.kickoff)) + ', ' + esc(g.venue || '') + (g.field ? ', ' + esc(g.field) : '') + ' <span class="hint">' + esc(t('fromAssignr')) + '</span></div>'; }).join('') + '</div>' : '';
-    var myEvalsFold = (S.coach.myEvals || []).length ? fold('myevals', t('myEvalsTitle'), S.coach.myEvals.length, '<div class="list">' + S.coach.myEvals.map(function (e) { return '<a class="item" href="#eval/' + e.id + '"><div><b>' + esc(e.ref_name || '') + '</b> <span class="pill' + (e.status === 'complete' && (!e.report || e.report_status === 'approved') ? ' ok' : e.report_status === 'returned' ? ' bad' : '') + '">' + esc(e.status === 'complete' ? (e.report ? t('evalRs.' + (e.report_status || 'draft')) : t('evalComplete')) : t('evalInProgress')) + '</span>' + evalDuePill(e) + '<br><span class="hint">' + esc(e.game_date ? dayLong(e.game_date) : '') + (e.venue ? ', ' + esc(e.venue) : '') + (e.competition ? ', ' + esc(e.competition) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>', false) : '';
+    var myEvalsFold = (S.coach.myEvals || []).length ? fold('myevals', t('myEvalsTitle'), S.coach.myEvals.length, '<div class="list">' + S.coach.myEvals.map(function (e) { return '<a class="item" href="#eval/' + e.id + '"><div><b>' + esc(e.ref_name || '') + '</b> <span class="pill' + (e.status === 'complete' && (!e.report || e.report_status === 'approved') ? ' ok' : e.report_status === 'returned' ? ' bad' : '') + '">' + esc(e.status === 'complete' ? (e.report ? t('evalRs.' + (e.report_status || 'draft')) : t('evalComplete')) : t('evalInProgress')) + '</span>' + evalDuePill(e) + '<br><span class="hint">' + esc(e.game_date ? dayLong(e.game_date) : '') + (e.venue ? ', ' + esc(e.venue) : '') + (e.competition ? ', ' + esc(e.competition) : '') + '</span></div><svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M8 4l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></a>'; }).join('') + '</div>', (S.coach.myEvals || []).some(function (e) { return !e.report || e.report_status === 'returned' || (!e.report_status && e.report); })) : '';
     expected = wbHtml() + evalsCard + expected + upcomingCard + myEvalsFold;
     var availability = availCalHtml();
     expected = expected + availability;
