@@ -1,4 +1,6 @@
-// app.js · Colorado Referees Hub · 2026-11-27 (e: Start an evaluation
+// app.js · Colorado Referees Hub · 2026-11-27 (f: a failed draft says why
+// (the Edge Function's own message, never a bare non-2xx) and a fresh
+// draft names the model that wrote it; e: Start an evaluation
 // button on Coaching, payment pills on My evaluations rows, the RefEval
 // score pre-fills from the evaluator's final score; d: My evaluations on Your
 // day for coaches, red count when reports wait, and the Coaching fold
@@ -16,7 +18,7 @@
 (function () {
   'use strict';
   // The version. Goes up with every change to any file in this folder.
-  var VERSION = '2026.11.27-e';
+  var VERSION = '2026.11.27-f';
   var C = window.HUB, L = window.LANG;
   var sb = window.supabase.createClient(C.supabaseUrl, C.publishableKey);
   // Unexpected client errors report themselves (135); five per page
@@ -666,7 +668,7 @@
       (isRev && rs === 'submitted' ? '<button class="btn primary small" id="evApprove">' + esc(t('evalApprove')) + '</button><button class="btn outline small" id="evReturn">' + esc(t('evalReturn')) + '</button>' : '') +
       (isRev && rs === 'approved' ? '<button class="btn outline small" id="evRecall">' + esc(t('evalRecall')) + '</button>' : '') +
       '</div><div class="msg" id="evMsg" hidden></div>' +
-      (e.report_at ? '<div class="pad hint">' + esc(t('evalDraftedAt')) + ' ' + esc(dayLong(e.report_at.slice(0, 10))) + '</div>' : '');
+      (e.report_at ? '<div class="pad hint">' + esc(t('evalDraftedAt')) + ' ' + esc(dayLong(e.report_at.slice(0, 10))) + (EV.lastModel ? ', ' + esc(EV.lastModel) : '') + '</div>' : '');
     var dr = $('evDraft'); if (dr) dr.onclick = async function () {
       if (e.report && !window.confirm(t('evalRedraftConfirm'))) return;
       dr.disabled = true; dr.textContent = t('evalDrafting'); busy(true);
@@ -675,8 +677,11 @@
       try {
         var r = await sb.functions.invoke('eval-write', { body: { evalId: e.id } });
         var j = r.data;
+        // A failed function hides its reason in the response body; read it
+        // so the screen says what actually went wrong, never just non-2xx.
+        if (r.error && !j) { try { j = await r.error.context.json(); } catch (e2) {} }
         if (r.error || !j || j.status !== 'ok') throw new Error((j && j.message) || (r.error && r.error.message) || 'error');
-        e.report = j.report; e.report_at = j.reportAt; busy(false); renderEval(id);
+        e.report = j.report; e.report_at = j.reportAt; EV.lastModel = j.model || ''; busy(false); renderEval(id);
       }
       catch (err) { busy(false); dr.disabled = false; dr.textContent = t('evalDraft'); say('evMsg', err.message || String(err), 'bad'); }
     };
